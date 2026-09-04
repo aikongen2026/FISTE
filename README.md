@@ -1,6 +1,15 @@
-# Fiste guiden – REV 21
+# Fiste guiden – REV 22
 
 Mobilklar PWA som foreslår fiskesoner i sjø og ferskvann i Norge.
+
+## REV 22 – slukvalg varierer per fiskeplass
+
+- Slukmotoren rangerer fortsatt bare agn fra din egen fotograferte slukboks.
+- Valget bruker lys, skydekke, vind, eksponering, vannkant, dybde/grunnrisiko og art.
+- Nær like gode alternativer fordeles stabilt per sone, slik at appen ikke later som samme sluk er entydig best på alle punkter.
+- Sjøørret kan derfor veksle mellom blant annet prikkede/varme skjesluker, kontrastsluker, naturwobblere og blanke sjøsluker etter forholdene.
+- Makrell veksler mellom blank metallsluk, naturwobbler og egne allroundagn når de er egnet.
+
 
 ## REV 21 – Beste plass nå og STOR FISK
 

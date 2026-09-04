@@ -1,4 +1,4 @@
-const CACHE = 'fiste-guiden-rev21';
+const CACHE = 'fiste-guiden-rev22';
 const SHELL = [
   '/', '/index.html', '/style.css?v=21.0', '/fishing-insights.js?v=21.0', '/app.js?v=21.0', '/manifest.webmanifest?v=21.0', '/icon.svg',
   '/data/kirkoy-seatrout-spots.json', '/data/fishing-restrictions-2024.json', '/data/source-backed-lures.json', '/data/user-lures.json',

@@ -242,43 +242,73 @@ function stableLureNumber(text) {
   return value >>> 0;
 }
 
-function selectPhotographedLures({ fishType='sjoorret', hour, cloud, wind, temp, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight: lowLightOverride }) {
+function selectPhotographedLures({ fishType='sjoorret', hour, cloud, wind, temp, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight: lowLightOverride, lat, lon }) {
   const lowLight = typeof lowLightOverride==='boolean' ? lowLightOverride : (hour <= 8 || hour >= 19);
   const bright = !lowLight && cloud < 35;
   const overcastOrCold = !lowLight && (cloud >= 70 || temp < 8);
-  const signatureBase = [hour,Math.round(cloud),Math.round(wind*10),Math.round(temp),Math.round(exposure*100),Math.round(coastQuality*100),depthMeters === null ? 'x' : Math.round(depthMeters*10)].join(':');
-  const signature = fishType === 'sjoorret' ? signatureBase : `${fishType}:${signatureBase}`;
   const requiredWaterType=isFreshwaterFish(fishType)?'freshwater':'saltwater';
   const eligible=lureCatalog.filter(item=>item.species.includes(fishType)&&item.waterTypes.includes(requiredWaterType));
   if(!eligible.length) throw new Error(`Ingen fotograferte sluker er klassifisert for ${fishType} i ${requiredWaterType}`);
+
+  // The measured conditions decide the ranking.  A tiny deterministic site-specific
+  // tie-breaker is only used between near-equivalent choices, so neighbouring zones
+  // do not falsely present the exact same lure as uniquely best everywhere.
+  const siteKey = Number.isFinite(lat) && Number.isFinite(lon)
+    ? `${lat.toFixed(4)}:${lon.toFixed(4)}`
+    : `${Math.round(exposure*20)}:${Math.round(coastQuality*20)}:${depthMeters===null?'x':Math.round(depthMeters)}`;
+
   const scored = eligible.map(item => {
     const has = tag => item.tags.includes(tag);
-    let score = 0;
-    if (lowLight) score += (has('warm') ? 8 : 0) + (has('contrast') ? 5 : 0) + (has('pink') ? 3 : 0) - (has('bright') ? 2 : 0);
-    else if (overcastOrCold) score += (has('warm') ? 6 : 0) + (has('natural') ? 4 : 0) + (has('contrast') ? 2 : 0) + (has('pink') ? 2 : 0);
-    else if (bright) score += (has('silver') ? 7 : 0) + (has('blue') ? 5 : 0) + (has('natural') ? 2 : 0) - (has('warm') ? 2 : 0);
-    else score += (has('silver') ? 4 : 0) + (has('blue') ? 4 : 0) + (has('pink') ? 3 : 0) + (has('natural') ? 2 : 0);
-    if (conservativeShallow) score += (has('slim') ? 4 : 0) + (has('micro') ? 3 : 0) + (has('spoon') ? 2 : 0) - (has('broad') ? 2 : 0);
-    else if (exposed) score += (has('casting') ? 5 : 0) + (has('compact') ? 4 : 0) + (has('pencil') ? 3 : 0) - (has('micro') ? 2 : 0);
-    else if (sheltered) score += (has('spoon') ? 3 : 0) + (has('slim') ? 2 : 0) + (has('natural') ? 2 : 0);
-    if (sheltered && has('low-wind')) score += 6;
-    if (exposed && has('low-wind')) score -= 9;
-    if (depthMeters !== null && depthMeters > 12) score += (has('pencil') ? 3 : 0) + (has('minnow') ? 2 : 0) + (has('compact') ? 2 : 0);
-    if (isFreshwaterFish(fishType)&&has('freshwater-specialist')) score += 8;
-    if (!isFreshwaterFish(fishType)&&has('saltwater-specialist')) score += 8;
-    if (fishType === 'sjoorret') score += (has('spoon') ? 8 : 0) + (has('sea-metal') ? 7 : 0) + (has('minnow') ? 4 : 0) + (has('bombarda')&&sheltered ? 6 : 0) + (item.id==='own14' && (lowLight||cloud>=55) ? 12 : 0) + (item.id==='own05' && bright ? 10 : 0);
-    if (fishType === 'makrell') score += (has('sea-metal') ? 11 : 0) + (has('silver') ? 7 : 0) + (has('blue') ? 5 : 0) + (has('casting') ? 6 : 0) + (has('compact') ? 5 : 0) + (item.id==='own05' ? 18 : 0);
-    if (fishType === 'sei') score += (has('sea-metal') ? 10 : 0) + (has('shad') ? 7 : 0) + (has('silver') ? 6 : 0) + (has('blue') ? 4 : 0) + (has('contrast') ? 5 : 0) + (has('deep') ? 5 : 0) + (item.id==='own11' ? 20 : 0);
-    if (fishType === 'orret') score += (has('spinner') ? 8 : 0) + (has('spoon') ? 7 : 0) + (has('wobbler') ? 5 : 0) + (has('natural') ? 5 : 0) + (has('warm') && lowLight ? 4 : 0) + (has('micro') ? 3 : 0) + (item.id==='own14' && (lowLight||cloud>=50) ? 12 : 0) + (item.id==='own03' && bright ? 10 : 0);
-    if (fishType === 'abbor') score += (has('shad') ? 9 : 0) + (has('spinner') ? 8 : 0) + (has('crankbait') ? 8 : 0) + (has('compact') ? 7 : 0) + (has('micro') ? 6 : 0) + (has('contrast') ? 5 : 0) + (item.id==='own10' && cloud>=60 ? 12 : 0) + (item.id==='own12' && cloud<60 ? 10 : 0);
-    if (fishType === 'gjedde') score += (has('spinnerbait') ? 12 : 0) + (has('shad') ? 10 : 0) + (has('wobbler') ? 7 : 0) + (has('broad') ? 8 : 0) + (has('contrast') ? 6 : 0) + (has('warm') ? 4 : 0) + (item.id==='own10' ? 22 : 0);
-    const tie = (stableLureNumber(`${signature}|${item.id}`) % 300) / 100;
+    let score = 20;
+
+    if (lowLight) score += (has('warm') ? 8 : 0) + (has('contrast') ? 6 : 0) + (has('pink') ? 4 : 0) - (has('bright') ? 2 : 0);
+    else if (overcastOrCold) score += (has('warm') ? 6 : 0) + (has('natural') ? 4 : 0) + (has('contrast') ? 3 : 0) + (has('pink') ? 2 : 0);
+    else if (bright) score += (has('silver') ? 8 : 0) + (has('blue') ? 6 : 0) + (has('natural') ? 4 : 0) - (has('warm') ? 2 : 0);
+    else score += (has('silver') ? 4 : 0) + (has('blue') ? 3 : 0) + (has('pink') ? 3 : 0) + (has('natural') ? 3 : 0);
+
+    if (conservativeShallow) score += (has('shallow') ? 8 : 0) + (has('slim') ? 4 : 0) + (has('minnow') ? 4 : 0) + (has('spoon') ? 3 : 0) - (has('deep') ? 6 : 0) - (has('broad') ? 2 : 0);
+    else if (exposed) score += (has('casting') ? 8 : 0) + (has('compact') ? 5 : 0) + (has('sea-metal') ? 4 : 0) - (has('low-wind') ? 9 : 0);
+    else if (sheltered) score += (has('shallow') ? 5 : 0) + (has('spoon') ? 3 : 0) + (has('minnow') ? 4 : 0) + (has('natural') ? 3 : 0) + (has('low-wind') ? 5 : 0);
+
+    if (depthMeters !== null && depthMeters > 12) score += (has('deep') ? 7 : 0) + (has('sea-metal') ? 4 : 0) + (has('casting') ? 3 : 0);
+    if (depthMeters !== null && depthMeters <= 4) score += (has('shallow') ? 6 : 0) + (has('wobbler') ? 3 : 0) - (has('deep') ? 5 : 0);
+    if (coastQuality >= .75) score += (has('structure') ? 3 : 0) + (has('shallow') ? 2 : 0);
+
+    if (isFreshwaterFish(fishType)&&has('freshwater-specialist')) score += 7;
+    if (!isFreshwaterFish(fishType)&&has('saltwater-specialist')) score += 7;
+
+    // Species preferences intentionally avoid one hard-coded winner.
+    if (fishType === 'sjoorret') {
+      score += (has('spoon') ? 8 : 0) + (has('sea-metal') ? 5 : 0) + (has('minnow') ? 6 : 0) + (has('wobbler') ? 4 : 0);
+      if (sheltered) score += (has('bombarda') ? 5 : 0) + (has('fly') ? 3 : 0);
+      if (lowLight || cloud >= 55) score += (has('warm') ? 4 : 0) + (has('pink') ? 4 : 0);
+      if (bright) score += (has('silver') ? 4 : 0) + (has('natural') ? 3 : 0);
+    }
+    if (fishType === 'makrell') {
+      score += (has('sea-metal') ? 10 : 0) + (has('silver') ? 8 : 0) + (has('casting') ? 6 : 0) + (has('blue') ? 4 : 0);
+      if (conservativeShallow || sheltered) score += (has('minnow') ? 7 : 0) + (has('wobbler') ? 4 : 0);
+      if (exposed || (depthMeters!==null && depthMeters>10)) score += (has('deep') ? 6 : 0) + (has('compact') ? 3 : 0);
+      if (!exposed && !conservativeShallow) score += (has('mixed') ? 4 : 0) + (has('spoon') ? 2 : 0);
+    }
+    if (fishType === 'sei') score += (has('sea-metal') ? 9 : 0) + (has('shad') ? 8 : 0) + (has('silver') ? 6 : 0) + (has('contrast') ? 5 : 0) + (has('deep') ? 6 : 0);
+    if (fishType === 'orret') score += (has('spinner') ? 8 : 0) + (has('spoon') ? 7 : 0) + (has('wobbler') ? 6 : 0) + (has('natural') ? 5 : 0) + (has('micro') ? 3 : 0);
+    if (fishType === 'abbor') score += (has('shad') ? 9 : 0) + (has('spinner') ? 8 : 0) + (has('crankbait') ? 8 : 0) + (has('compact') ? 7 : 0) + (has('micro') ? 6 : 0) + (has('contrast') ? 5 : 0);
+    if (fishType === 'gjedde') score += (has('spinnerbait') ? 12 : 0) + (has('shad') ? 11 : 0) + (has('wobbler') ? 8 : 0) + (has('broad') ? 7 : 0) + (has('contrast') ? 6 : 0) + (has('warm') ? 4 : 0);
+
+    const tie = (stableLureNumber(`${fishType}|${siteKey}|${item.id}`) % 1000) / 1000;
     return { item, score, tie };
   }).sort((a,b) => b.score-a.score || b.tie-a.tie || a.item.id.localeCompare(b.item.id));
-  const primary = scored[0].item;
+
+  const bestScore=scored[0].score;
+  const suitabilityWindow = fishType==='sjoorret' ? 16 : fishType==='makrell' ? 24 : 9;
+  const maxChoices = fishType==='sjoorret' ? 5 : fishType==='makrell' ? 3 : 4;
+  const nearBest=scored.filter(row=>row.score>=bestScore-suitabilityWindow).slice(0,maxChoices);
+  // Pick among genuinely near-equal choices using a stable site key. This gives
+  // useful variation across zones without ever reaching for an unsuitable lure.
+  const pickIndex=nearBest.length>1 ? stableLureNumber(`${fishType}|${siteKey}|choice`) % nearBest.length : 0;
+  const primary=nearBest[pickIndex].item;
   return [primary];
 }
-
 function genericLureCombinations({fishType,lowLight,cloud,exposed}) {
   const bright=cloud<35&&!lowLight;
   const choices={
@@ -463,7 +493,7 @@ function recommendLure(input = {}) {
     weight = goal==='big' ? '25–70 g' : '15–35 g';
   }
 
-  const [primary] = selectPhotographedLures({ fishType, hour, cloud, wind, temp, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight });
+  const [primary] = selectPhotographedLures({ fishType, hour, cloud, wind, temp, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight, lat:input.lat, lon:input.lon });
   type=`${type} · ${primary.family}`;
   const solarNote=Number.isFinite(lightProfile.elevation)?` (beregnet solhøyde ${lightProfile.elevation.toFixed(1)}°)`:'';
   const timeReason = lowLight ? `lavt lys${solarNote}` : cloud < 25 ? `klart dagslys${solarNote}` : `dempet dagslys${solarNote}`;
