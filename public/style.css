@@ -46,3 +46,10 @@
 .popup-alternatives{display:grid;gap:3px;margin:8px 0;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:8px}
 .popup-alternatives span{font-size:11px;color:#d8e8e2}
 @media(max-width:900px){.alt-lure-grid{grid-template-columns:repeat(2,minmax(110px,1fr))}.alt-head{align-items:flex-start;flex-direction:column}.alt-lure img{height:78px}}
+
+/* REV26: base-toggle + flerartsvisning */
+#setBase.base-active{border-color:#38d477;color:#b9ffd7;box-shadow:inset 0 0 0 1px rgba(56,212,119,.35)}
+.multi-species-card{border-color:#315d50}.multi-species-guide{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}.multi-species-guide article{display:flex;align-items:flex-start;gap:.55rem;padding:.62rem;border:1px solid #285746;border-radius:.65rem;background:#081f19}.multi-species-guide b,.multi-species-guide span{display:block}.multi-species-guide b{font-size:.8rem}.multi-species-guide span{margin-top:.15rem;color:#b9d4c8;font-size:.69rem;line-height:1.4}.species-dot{flex:0 0 auto;width:.82rem;height:.82rem;border-radius:50%;margin-top:.12rem;box-shadow:0 0 0 2px rgba(255,255,255,.18)}.species-sjoorret{background:#ef4444}.species-makrell{background:#3b82f6}.species-sei{background:#22c55e}.species-badge{display:inline-flex!important;align-items:center;padding:.18rem .4rem;border-radius:99px;color:#fff!important;font-weight:900!important;font-size:.62rem!important;letter-spacing:.03em}.species-badge-sjoorret{background:#b91c1c}.species-badge-makrell{background:#1d4ed8}.species-badge-sei{background:#15803d}.fish-picker select:disabled{opacity:.55;cursor:not-allowed}.multi-species-card[hidden]{display:none!important}
+@media(max-width:700px){.multi-species-guide{grid-template-columns:1fr}}
+
+.zone-number-sjoorret{background:#ef4444!important}.zone-number-makrell{background:#3b82f6!important}.zone-number-sei{background:#22c55e!important}

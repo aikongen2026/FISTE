@@ -1,4 +1,4 @@
-# Fiste guiden – REV 25
+# Fiste guiden – REV 26
 
 ## ENKEL OPPLASTING
 
@@ -7,17 +7,26 @@
 3. Dra **alt innholdet inni denne mappen** inn i GitHub-vinduet.
 4. Trykk **Commit changes**.
 5. I Render: **Manual Deploy → Deploy latest commit** hvis den ikke starter automatisk.
-6. Kontroller `https://fiste.onrender.com/api/health` – den skal vise **REV 25**.
+6. Kontroller `https://fiste.onrender.com/api/health` – den skal vise **REV 26**.
 
-Du trenger ikke slette gamle løse filer i repo-roten først. REV25 ignorerer dem og serverer kun `/public`.
+Du trenger ikke slette gamle løse filer i repo-roten først. REV26 ignorerer dem og serverer kun `/public`.
 
 ---
 
 Mobilklar PWA som foreslår fiskesoner i sjø og ferskvann i Norge.
 
-## REV 25 – live sjøforhold, personlig læring og offline siste analyse
+## REV 26 – avstandsfilter, base-toggle og alle sjøarter samtidig
 
-REV 25 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
+REV 26 bygger videre på REV25 og retter arbeidsflyten rundt kart og base. Viktigste nytt:
+
+- **250 m / 500 m / 1 km / 2 km søker nå rundt selve basen**, uavhengig av hvilket kartutsnitt du hadde før. Kartet zoomer automatisk til valgt radius, og en grønn sirkel viser nøyaktig søkeområde.
+- **Base er nå en av/på-knapp:** trykk «Sett base» for å sette den, og trykk samme knapp igjen for å fjerne basen. Når basen fjernes settes avstandsfilteret til «Ingen grense».
+- Ny fisketype **«Ingen – vis alle sjøarter»** viser sjøørret, makrell og sei samtidig.
+- I flerartsmodus er **sjøørret rød, makrell blå og sei grønn** på kartet. Høyrepanelet forklarer fargene og hver anbefalt sone merkes med aktuell art og artstilpasset slukvalg.
+- Flerartsvisningen forsvinner automatisk så snart du velger én konkret fisketype igjen.
+- Kandidatpunktene varieres mellom sjøørret, makrell og sei, slik at flerartsmodus ikke bare legger tre farger oppå nøyaktig samme fire steder.
+
+Øvrige funksjoner videreført:
 
 - **Sjøtemperatur, bølgehøyde, bølgeretning og bølgeperiode** fra Open-Meteo Marine.
 - **Havstrøm og strømretning** samt modellert **tidevanns-/havnivåtrend** og neste beregnede høy-/lavvann.
@@ -32,7 +41,7 @@ REV 25 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
 - Eget **Båtramper-lag** henter registrerte slipper/båtramper fra OpenStreetMap i synlig kartutsnitt.
 - **Offline siste analyse:** siste vellykkede analyse lagres lokalt og kan vises uten nett dersom du fortsatt er i samme område (maks 35 km fra lagret sentrum).
 - **NVE HydAPI-støtte:** i ferskvannsmodus kan nærmeste aktive målestasjon vise vannstand, vannføring og vanntemperatur når serveren har miljøvariabelen `NVE_API_KEY`. Uten nøkkel feiler appen kontrollert og forklarer hva som mangler.
-- PWA-cache, API health og ressurser er oppdatert til REV 25.
+- PWA-cache, API health og ressurser er oppdatert til REV 26.
 
 ### Viktig om marine data
 
@@ -158,7 +167,7 @@ Analysen er veiledende. Kontroller lokale fiskeregler, fiskekort, fredningsbeste
 - Artsvekting er skjerpet så ulike arter prioriterer relevante agn i samlingen i stedet for samme standardvalg.
 
 
-## REV25
+## REV26
 - Fiskekart bruker Kartverkets Sjøkart Dybdedata WMS oppå et alltid synlig grunnkart, slik at trege/manglende kartfliser ikke gjør kartet svart.
 - Det grove fargelagte EMODnet-kartet er fjernet fra kartvelgeren; EMODnet brukes fortsatt kun som bakgrunnsestimat i analyse der tilgjengelig.
 - Eget valg for Kartverket sjøkart raster via WMS.
@@ -170,7 +179,7 @@ Analysen er veiledende. Kontroller lokale fiskeregler, fiskekort, fredningsbeste
 
 Serveren leverer **kun** filer fra `public/`. Ikke legg `index.html`, `app.js`, `style.css`, `sw.js`, `data/` eller `lures/` løst i repo-roten.
 
-REV 25 har en oppstartsjekk som stopper deploy hvis `package.json` sier REV 25 mens `public/index.html`, `public/app.js` eller service worker peker på en eldre revisjon. Dette hindrer at Render sier «deploy succeeded» mens nettsiden egentlig viser gammel kode.
+REV 26 har en oppstartsjekk som stopper deploy hvis `package.json` sier REV 26 mens `public/index.html`, `public/app.js` eller service worker peker på en eldre revisjon. Dette hindrer at Render sier «deploy succeeded» mens nettsiden egentlig viser gammel kode.
 
 ## GitHub nettleseropplasting
-Denne EASY-UPLOAD-utgaven er teknisk lik REV25, men de 79 individuelle slukbildene er pakket inn i `public/data/user-lures.json`. Hele prosjektet består derfor av under 100 filer og kan lastes opp i én operasjon i GitHubs nettlesergrensesnitt.
+Denne EASY-UPLOAD-utgaven er teknisk lik REV26, men de 79 individuelle slukbildene er pakket inn i `public/data/user-lures.json`. Hele prosjektet består derfor av under 100 filer og kan lastes opp i én operasjon i GitHubs nettlesergrensesnitt.

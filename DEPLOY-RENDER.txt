@@ -1,4 +1,4 @@
-FISTE GUIDEN REV 25 - ENKEL DEPLOY
+FISTE GUIDEN REV 26 - ENKEL DEPLOY
 
 1) Pakk ut ZIP-filen.
 2) I GitHub-repoet FISTE: Add file -> Upload files.
@@ -6,7 +6,7 @@ FISTE GUIDEN REV 25 - ENKEL DEPLOY
 4) Commit changes til main.
 5) Render deployer normalt automatisk. Ellers: Manual Deploy -> Deploy latest commit.
 6) Åpne https://fiste.onrender.com/api/health
-   Den skal vise revision: "REV 25".
+   Den skal vise revision: "REV 26".
 
 VIKTIG:
 - Det er under 100 filer i pakken, så GitHub web-upload godtar hele pakken i én opplasting.

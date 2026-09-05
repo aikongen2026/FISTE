@@ -6,9 +6,9 @@ const app=require('../server');
 const pkg=require('../package.json');
 const root=path.join(__dirname,'..','public');
 
-test('REV25 exports core scoring and environment helpers',()=>{
+test('REV26 exports core scoring and environment helpers',()=>{
   for(const name of ['computeScore','environmentalScoreAdjustments','moonInfo','deriveMarineSummary','validateZoneRequest','createServer','weather','marine','hydrology','boatRamps']) assert.equal(typeof app[name],'function',name);
-  assert.equal(pkg.appRevision,25);
+  assert.equal(pkg.appRevision,26);
 });
 
 test('score is bounded and reacts to marine conditions',()=>{
@@ -51,28 +51,44 @@ test('zone request validation still protects Norwegian bounds',()=>{
   assert.throws(()=>app.validateZoneRequest('3,57,32,72','13'),/stort/i);
 });
 
-test('health reports REV25, marine support and NVE configuration state',async t=>{
+test('REV26 base radius creates a search box centered on base',()=>{
+  const b=app.searchBoundsForBase(59.2,10.9,250,12);
+  assert.equal(b.zoom,16);
+  assert.ok(b.west<10.9&&b.east>10.9&&b.south<59.2&&b.north>59.2);
+  const centerLat=(b.south+b.north)/2,centerLon=(b.west+b.east)/2;
+  assert.ok(Math.abs(centerLat-59.2)<1e-9);assert.ok(Math.abs(centerLon-10.9)<1e-9);
+  const oneKm=app.searchBoundsForBase(59.2,10.9,1000,12);
+  assert.equal(oneKm.zoom,14);assert.ok((oneKm.east-oneKm.west)>(b.east-b.west));
+});
+
+test('REV26 accepts all-sea selection without treating it as a single species',()=>{
+  assert.equal(app.normalizeFishSelection('all'),'all');
+  assert.equal(app.normalizeFishSelection('makrell'),'makrell');
+  assert.throws(()=>app.normalizeFishType('all'),/Ugyldig/);
+});
+
+test('health reports REV26, marine support and NVE configuration state',async t=>{
   const server=app.createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>server.close());
   const health=await fetch(`http://127.0.0.1:${server.address().port}/api/health`).then(r=>r.json());
-  assert.equal(health.ok,true);assert.equal(health.version,'v11-rev25');assert.equal(health.revision,'REV 25');assert.equal(health.marine,true);assert.equal(typeof health.nveHydApiConfigured,'boolean');
+  assert.equal(health.ok,true);assert.equal(health.version,'v11-rev26');assert.equal(health.revision,'REV 26');assert.equal(health.marine,true);assert.equal(typeof health.nveHydApiConfigured,'boolean');
 });
 
 test('PWA shell exposes marine, NVE, catch export and owned-lure helpers',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  assert.match(html,/REV 25/);assert.match(html,/marineCard/);assert.match(html,/hydrologyCard/);assert.match(html,/conditionToggle/);assert.match(html,/boatRampToggle/);assert.match(html,/exportGpx/);assert.match(html,/ownedLures/);
-  assert.match(js,/applyPersonalRanking/);assert.match(js,/exportCatchGpx/);assert.match(js,/analysisCacheKey/);assert.match(js,/renderConditionVectors/);assert.match(js,/loadBoatRamps/);assert.match(js,/loadHydrologyAtCenter/);
+  assert.match(html,/REV 26/);assert.match(html,/multiSpeciesCard/);assert.match(html,/Ingen – vis alle sjøarter/);assert.match(html,/marineCard/);assert.match(html,/hydrologyCard/);assert.match(html,/conditionToggle/);assert.match(html,/boatRampToggle/);assert.match(html,/exportGpx/);assert.match(html,/ownedLures/);
+  assert.match(js,/applyPersonalRanking/);assert.match(js,/clearBasePoint/);assert.match(js,/focusBaseRadius/);assert.match(js,/speciesColors/);assert.match(js,/exportCatchGpx/);assert.match(js,/analysisCacheKey/);assert.match(js,/renderConditionVectors/);assert.match(js,/loadBoatRamps/);assert.match(js,/loadHydrologyAtCenter/);
 });
 
-test('asset versions and service worker cache are REV25',()=>{
+test('asset versions and service worker cache are REV26',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.match(html,/app\.js\?v=25\.0/);assert.match(html,/fishing-insights\.js\?v=25\.0/);assert.match(html,/style\.css\?v=25\.0/);
-  assert.match(sw,/fiste-guiden-rev25/);assert.doesNotMatch(sw,/rev22/);assert.match(sw,/\/api\//);
+  assert.match(html,/app\.js\?v=26\.0/);assert.match(html,/fishing-insights\.js\?v=26\.0/);assert.match(html,/style\.css\?v=26\.0/);
+  assert.match(sw,/fiste-guiden-rev26/);assert.doesNotMatch(sw,/rev22/);assert.match(sw,/\/api\//);
 });
 
 
-test('REV25 detailed fishing map uses Kartverket depth WMS and no EMODnet color overlay',()=>{
+test('REV26 detailed fishing map uses Kartverket depth WMS and no EMODnet color overlay',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
   assert.match(html,/Fiskekart – detaljerte dybder og skjær/);
@@ -98,7 +114,7 @@ test('catch data remains local and personal ranking has a minimum sample thresho
   assert.match(js,/localStorage\.setItem\(catchStorageKey/);assert.match(js,/insight\.sessions<3/);assert.match(js,/personalAdjustment/);assert.doesNotMatch(js,/fetch\([^\n]*catchStorageKey/);
 });
 
-test('REV25 personal lure box contains many individual photographed candidates',()=>{
+test('REV26 personal lure box contains many individual photographed candidates',()=>{
   const data=JSON.parse(fs.readFileSync(path.join(root,'data','user-lures.json'),'utf8'));
   assert.ok(data.lures.length>=45);assert.ok(data.lures.filter(item=>item.species.includes('sjoorret')).length>=35);assert.ok(data.lures.every(item=>item.image&&item.species&&item.waterTypes));
   const rec=app.recommendLure({fishType:'sjoorret',hour:19,cloud:65,wind:4,temp:13,exposure:.6,coastQuality:.8,depthMeters:4,lat:59.2,lon:10.9});
