@@ -1,6 +1,40 @@
-# Fiste guiden – REV 22
+# Fiste guiden – REV 23
 
 Mobilklar PWA som foreslår fiskesoner i sjø og ferskvann i Norge.
+
+## REV 23 – live sjøforhold, personlig læring og offline siste analyse
+
+REV 23 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
+
+- **Sjøtemperatur, bølgehøyde, bølgeretning og bølgeperiode** fra Open-Meteo Marine.
+- **Havstrøm og strømretning** samt modellert **tidevanns-/havnivåtrend** og neste beregnede høy-/lavvann.
+- **Lufttrykk og 3-timers trykktrend** fra MET Norway.
+- **Månefase** vises, men gis bevisst bare svak vekt i fiskescore.
+- Marine forhold påvirker nå artsmodellen for sjøørret, makrell og sei. Dårlige forhold kan gi negative poeng; UI viser derfor både + og - korrekt.
+- Nytt **Vind/strøm-kartlag** med retning og styrke på kartet.
+- **Personlig rangering:** etter minst tre registrerte turer kan egne data gi inntil +6 poeng basert på tidsrom, tidligere vellykket sluk og vær som ligner egne fangster. Dette skjer kun lokalt i nettleseren.
+- Når en anbefalt sone åpnes fylles fangstloggen automatisk med sted og anbefalt sluk fra din egen slukboks.
+- Fangstloggen lagrer også lufttrykk, sjøtemperatur, bølger, strøm og tidevannsstatus når data finnes.
+- **GPX-eksport** av fangst-/turpunkter og **JSON-backup** av hele fangstloggen.
+- Eget **Båtramper-lag** henter registrerte slipper/båtramper fra OpenStreetMap i synlig kartutsnitt.
+- **Offline siste analyse:** siste vellykkede analyse lagres lokalt og kan vises uten nett dersom du fortsatt er i samme område (maks 35 km fra lagret sentrum).
+- **NVE HydAPI-støtte:** i ferskvannsmodus kan nærmeste aktive målestasjon vise vannstand, vannføring og vanntemperatur når serveren har miljøvariabelen `NVE_API_KEY`. Uten nøkkel feiler appen kontrollert og forklarer hva som mangler.
+- PWA-cache, API health og ressurser er oppdatert til REV 23.
+
+### Viktig om marine data
+
+Tidevann og havstrøm fra Open-Meteo Marine er modellverdier. Oppløsning og nøyaktighet nær land er begrenset, så dataene brukes som fiskefaglig støtte og **aldri som navigasjonsgrunnlag**.
+
+### NVE HydAPI på Render (valgfritt)
+
+1. Opprett en gratis HydAPI-nøkkel hos NVE.
+2. I Render: **Environment → Add Environment Variable**.
+3. Key: `NVE_API_KEY`
+4. Value: din NVE-nøkkel.
+5. Redeploy.
+
+Uten denne nøkkelen fungerer resten av appen normalt; bare live HydAPI-kortet er deaktivert.
+
 
 ## REV 22 – slukvalg varierer per fiskeplass
 
@@ -32,8 +66,9 @@ Sjøørret er fortsatt standardvalg og beholder den etablerte sjøørretlogikken
 
 ## Datagrunnlag
 
-- MET Norway Locationforecast for vind, vindretning, skydekke, nedbør, lufttemperatur og temperaturtrend
+- MET Norway Locationforecast for vind, vindretning, skydekke, nedbør, lufttemperatur, lufttrykk og 3-timers trender
 - OpenStreetMap-vannmaske og beregnet vannkant
+- Open-Meteo Marine for sjøtemperatur, bølger, havstrøm og modellert havnivå/tidevann
 - Kartverket sjøkart for sjømodus
 - EMODnet-dybdeestimat bare i sjømodus
 - 17 historisk omtalte sjøørretområder på Kirkøy fra Rosareke, kartfestet som omtrentlige referanseområder – ikke fangstgaranti eller dokumentasjon på lovlig fiske

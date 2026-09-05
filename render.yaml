@@ -1,14 +1,14 @@
 services:
   - type: web
-    name: sjoorret-live-kart
+    name: fiste-guiden
     runtime: node
     plan: free
     buildCommand: "npm install"
-    startCommand: "node server.js"
+    startCommand: "npm start"
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: 20
       - key: MET_USER_AGENT
-        value: "sjoorret-live-kart/11 (+https://github.com/aikongen2026/sjoorret-live-kart)"
-      - key: WATERMASK_MODE
-        value: "tile"
+        value: "fiste-guiden/23 (+https://github.com/aikongen2026/sjoorret-live-kart)"
+# Valgfritt: legg NVE_API_KEY inn manuelt i Render Environment for live HydAPI-data.
