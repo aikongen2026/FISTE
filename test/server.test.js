@@ -6,9 +6,9 @@ const app=require('../server');
 const pkg=require('../package.json');
 const root=path.join(__dirname,'..','public');
 
-test('REV23 exports core scoring and environment helpers',()=>{
+test('REV24 exports core scoring and environment helpers',()=>{
   for(const name of ['computeScore','environmentalScoreAdjustments','moonInfo','deriveMarineSummary','validateZoneRequest','createServer','weather','marine','hydrology','boatRamps']) assert.equal(typeof app[name],'function',name);
-  assert.equal(pkg.appRevision,23);
+  assert.equal(pkg.appRevision,24);
 });
 
 test('score is bounded and reacts to marine conditions',()=>{
@@ -51,24 +51,36 @@ test('zone request validation still protects Norwegian bounds',()=>{
   assert.throws(()=>app.validateZoneRequest('3,57,32,72','13'),/stort/i);
 });
 
-test('health reports REV23, marine support and NVE configuration state',async t=>{
+test('health reports REV24, marine support and NVE configuration state',async t=>{
   const server=app.createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>server.close());
   const health=await fetch(`http://127.0.0.1:${server.address().port}/api/health`).then(r=>r.json());
-  assert.equal(health.ok,true);assert.equal(health.version,'v11-rev23');assert.equal(health.revision,'REV 23');assert.equal(health.marine,true);assert.equal(typeof health.nveHydApiConfigured,'boolean');
+  assert.equal(health.ok,true);assert.equal(health.version,'v11-rev24');assert.equal(health.revision,'REV 24');assert.equal(health.marine,true);assert.equal(typeof health.nveHydApiConfigured,'boolean');
 });
 
 test('PWA shell exposes marine, NVE, catch export and owned-lure helpers',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  assert.match(html,/REV 23/);assert.match(html,/marineCard/);assert.match(html,/hydrologyCard/);assert.match(html,/conditionToggle/);assert.match(html,/boatRampToggle/);assert.match(html,/exportGpx/);assert.match(html,/ownedLures/);
+  assert.match(html,/REV 24/);assert.match(html,/marineCard/);assert.match(html,/hydrologyCard/);assert.match(html,/conditionToggle/);assert.match(html,/boatRampToggle/);assert.match(html,/exportGpx/);assert.match(html,/ownedLures/);
   assert.match(js,/applyPersonalRanking/);assert.match(js,/exportCatchGpx/);assert.match(js,/analysisCacheKey/);assert.match(js,/renderConditionVectors/);assert.match(js,/loadBoatRamps/);assert.match(js,/loadHydrologyAtCenter/);
 });
 
-test('asset versions and service worker cache are REV23',()=>{
+test('asset versions and service worker cache are REV24',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.match(html,/app\.js\?v=23\.0/);assert.match(html,/fishing-insights\.js\?v=23\.0/);assert.match(html,/style\.css\?v=23\.0/);
-  assert.match(sw,/fiste-guiden-rev23/);assert.doesNotMatch(sw,/rev22/);assert.match(sw,/\/api\//);
+  assert.match(html,/app\.js\?v=24\.0/);assert.match(html,/fishing-insights\.js\?v=24\.0/);assert.match(html,/style\.css\?v=24\.0/);
+  assert.match(sw,/fiste-guiden-rev24/);assert.doesNotMatch(sw,/rev22/);assert.match(sw,/\/api\//);
+});
+
+
+test('REV24 detailed fishing map uses Kartverket depth WMS and no EMODnet color overlay',()=>{
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  assert.match(html,/Fiskekart – detaljerte dybder og skjær/);
+  assert.match(html,/Kartverket sjøkart/);
+  assert.match(js,/wms\.dybdedata2/);
+  assert.match(js,/layers:'Dybdedata2'/);
+  assert.doesNotMatch(js,/mean_multicolour/);
+  assert.match(js,/tileSize:512/);
 });
 
 test('map reload loop protection remains intact',()=>{
@@ -86,9 +98,11 @@ test('catch data remains local and personal ranking has a minimum sample thresho
   assert.match(js,/localStorage\.setItem\(catchStorageKey/);assert.match(js,/insight\.sessions<3/);assert.match(js,/personalAdjustment/);assert.doesNotMatch(js,/fetch\([^\n]*catchStorageKey/);
 });
 
-test('owned lure source still contains 14 photographed lure groups',()=>{
+test('REV24 personal lure box contains many individual photographed candidates',()=>{
   const data=JSON.parse(fs.readFileSync(path.join(root,'data','user-lures.json'),'utf8'));
-  assert.equal(data.lures.length,14);assert.ok(data.lures.every(item=>item.image&&item.species&&item.waterTypes));
+  assert.ok(data.lures.length>=45);assert.ok(data.lures.filter(item=>item.species.includes('sjoorret')).length>=35);assert.ok(data.lures.every(item=>item.image&&item.species&&item.waterTypes));
+  const rec=app.recommendLure({fishType:'sjoorret',hour:19,cloud:65,wind:4,temp:13,exposure:.6,coastQuality:.8,depthMeters:4,lat:59.2,lon:10.9});
+  assert.ok(rec.alternatives.length>=4);assert.notEqual(rec.alternatives[0].image,rec.image);
 });
 
 test('hydrology endpoint fails gracefully when no NVE key is configured',async()=>{
