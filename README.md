@@ -1,10 +1,10 @@
-# Fiste guiden – REV 23
+# Fiste guiden – REV 24
 
 Mobilklar PWA som foreslår fiskesoner i sjø og ferskvann i Norge.
 
-## REV 23 – live sjøforhold, personlig læring og offline siste analyse
+## REV 24 – live sjøforhold, personlig læring og offline siste analyse
 
-REV 23 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
+REV 24 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
 
 - **Sjøtemperatur, bølgehøyde, bølgeretning og bølgeperiode** fra Open-Meteo Marine.
 - **Havstrøm og strømretning** samt modellert **tidevanns-/havnivåtrend** og neste beregnede høy-/lavvann.
@@ -19,7 +19,7 @@ REV 23 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
 - Eget **Båtramper-lag** henter registrerte slipper/båtramper fra OpenStreetMap i synlig kartutsnitt.
 - **Offline siste analyse:** siste vellykkede analyse lagres lokalt og kan vises uten nett dersom du fortsatt er i samme område (maks 35 km fra lagret sentrum).
 - **NVE HydAPI-støtte:** i ferskvannsmodus kan nærmeste aktive målestasjon vise vannstand, vannføring og vanntemperatur når serveren har miljøvariabelen `NVE_API_KEY`. Uten nøkkel feiler appen kontrollert og forklarer hva som mangler.
-- PWA-cache, API health og ressurser er oppdatert til REV 23.
+- PWA-cache, API health og ressurser er oppdatert til REV 24.
 
 ### Viktig om marine data
 
@@ -138,8 +138,17 @@ Analysen er veiledende. Kontroller lokale fiskeregler, fiskekort, fredningsbeste
 
 ## REV 21 – kart, mobiltilstand og kun egne sluker
 - Kartverkets utdaterte `opencache.statkart.no`-URL er erstattet med offisiell `cache.kartverket.no` WMTS for sjøkart.
-- EMODnet bruker dokumentert Bathymetry WMS `/wms` og `emodnet:mean_multicolour`, med standardkart under som sikker fallback.
+- EMODnet brukes bare som grovt dybdeestimat i analyse. Det gamle fargelagte `mean_multicolour`-kartet er fjernet fra kartvelgeren. Kartvisningen bruker Kartverkets Sjøkart Dybdedata WMS oppå et alltid synlig grunnkart.
 - Valgt art, mål, radius, karttype, kartposisjon, zoom og base lagres lokalt og gjenopprettes etter modal/bak-knapp/reload på mobil.
 - Slukmotoren kan kun velge fra brukerens `user-lures.json`. Eksterne referanseagn, generiske alternativer og stock-wobblere er deaktivert i anbefalingen.
 - Hvert anbefalt slukbilde er beskåret til ett konkret agn fra brukerens egne fotografier (`public/lures/single/`).
 - Artsvekting er skjerpet så ulike arter prioriterer relevante agn i samlingen i stedet for samme standardvalg.
+
+
+## REV24
+- Fiskekart bruker Kartverkets Sjøkart Dybdedata WMS oppå et alltid synlig grunnkart, slik at trege/manglende kartfliser ikke gjør kartet svart.
+- Det grove fargelagte EMODnet-kartet er fjernet fra kartvelgeren; EMODnet brukes fortsatt kun som bakgrunnsestimat i analyse der tilgjengelig.
+- Eget valg for Kartverket sjøkart raster via WMS.
+- 43 sjørelaterte agn fra egne bilder er skilt i individuelle kandidater; total personlig slukboks har 49 kandidater.
+- Hver sone returnerer opptil fem alternative sluker i tillegg til BEST NÅ.
+- Navionics er ikke aktivert uten Garmin/Navionics developer key; vanlig Boating-abonnement alene gir ikke Web API-rettigheter.

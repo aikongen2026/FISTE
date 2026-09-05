@@ -10,7 +10,7 @@ const APP_REVISION = `REV ${String(PACKAGE.appRevision).padStart(2,'0')}`;
 
 const PORT = Number(process.env.PORT || 3000);
 const NVE_API_KEY = String(process.env.NVE_API_KEY || '').trim();
-const MET_USER_AGENT = process.env.MET_USER_AGENT || 'fiste-guiden/23 (https://github.com/aikongen2026/sjoorret-live-kart)';
+const MET_USER_AGENT = process.env.MET_USER_AGENT || 'fiste-guiden/24 (https://github.com/aikongen2026/sjoorret-live-kart)';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const OPEN_LURE_PHOTOS = JSON.parse(fs.readFileSync(path.join(PUBLIC_DIR,'lures','open','catalog.json'),'utf8')).photos;
 const OPEN_LURE_PHOTO_BY_ID = Object.freeze(Object.fromEntries(OPEN_LURE_PHOTOS.map(photo=>[photo.id,photo])));
@@ -350,14 +350,35 @@ function selectPhotographedLures({ fishType='sjoorret', hour, cloud, wind, temp,
   }).sort((a,b) => b.score-a.score || b.tie-a.tie || a.item.id.localeCompare(b.item.id));
 
   const bestScore=scored[0].score;
-  const suitabilityWindow = fishType==='sjoorret' ? 16 : fishType==='makrell' ? 24 : 9;
-  const maxChoices = fishType==='sjoorret' ? 5 : fishType==='makrell' ? 3 : 4;
-  const nearBest=scored.filter(row=>row.score>=bestScore-suitabilityWindow).slice(0,maxChoices);
-  // Pick among genuinely near-equal choices using a stable site key. This gives
-  // useful variation across zones without ever reaching for an unsuitable lure.
-  const pickIndex=nearBest.length>1 ? stableLureNumber(`${fishType}|${siteKey}|choice`) % nearBest.length : 0;
-  const primary=nearBest[pickIndex].item;
-  return [primary];
+  const suitabilityWindow = fishType==='sjoorret' ? 18 : fishType==='makrell' ? 22 : fishType==='sei' ? 18 : 12;
+  const maxChoices = fishType==='sjoorret' ? 8 : fishType==='makrell' ? 7 : fishType==='sei' ? 7 : 6;
+  const ranked=scored
+    .filter(row=>row.score>=bestScore-suitabilityWindow)
+    .map(row=>({ ...row, siteBias:(stableLureNumber(`${fishType}|${siteKey}|${row.item.id}|bias`) % 401)/100 }))
+    .sort((a,b)=>(b.score+b.siteBias)-(a.score+a.siteBias)||b.tie-a.tie);
+  const primary=ranked[0];
+  const picked=[primary];
+  const usedIds=new Set([primary.item.id]);
+  const usedGroups=new Set([primary.item.groupId||primary.item.id]);
+  // Show genuine variety: first take the best suitable candidate from other photo groups/families.
+  for(const row of ranked){
+    const group=row.item.groupId||row.item.id;
+    if(usedGroups.has(group)) continue;
+    picked.push(row); usedIds.add(row.item.id); usedGroups.add(group);
+    if(picked.length>=maxChoices) break;
+  }
+  // If there are fewer distinct groups, fill the remaining slots with other individual variants.
+  if(picked.length<maxChoices) for(const row of ranked){
+    if(usedIds.has(row.item.id)) continue;
+    picked.push(row); usedIds.add(row.item.id);
+    if(picked.length>=maxChoices) break;
+  }
+  const top=primary?.score ?? bestScore;
+  return picked.map((row,index)=>({
+    ...row.item,
+    matchScore:clamp(Math.round(100-Math.max(0,top-row.score)*2-index),65,100),
+    conditionScore:row.score
+  }));
 }
 function genericLureCombinations({fishType,lowLight,cloud,exposed}) {
   const bright=cloud<35&&!lowLight;
@@ -543,7 +564,8 @@ function recommendLure(input = {}) {
     weight = goal==='big' ? '25–70 g' : '15–35 g';
   }
 
-  const [primary] = selectPhotographedLures({ fishType, hour, cloud, wind, temp, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight, lat:input.lat, lon:input.lon });
+  const choices = selectPhotographedLures({ fishType, hour, cloud, wind, temp, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight, lat:input.lat, lon:input.lon });
+  const primary = choices[0];
   type=`${type} · ${primary.family}`;
   const solarNote=Number.isFinite(lightProfile.elevation)?` (beregnet solhøyde ${lightProfile.elevation.toFixed(1)}°)`:'';
   const timeReason = lowLight ? `lavt lys${solarNote}` : cloud < 25 ? `klart dagslys${solarNote}` : `dempet dagslys${solarNote}`;
@@ -583,14 +605,14 @@ function recommendLure(input = {}) {
     basis:'Eget bilde er klassifisert etter synlig agntype, form og farge. Ukjent modell, vekt og krokfinish behandles ikke som produsentdokumentasjon.',
     caveat:freshwater?'Kontroller lokale regler, fiskekort og tillatt krokoppsett.':'Saltvannsegnet krok og rustbeskyttelse kan ikke bekreftes fra bildet; skyll agnet i ferskvann og kontroller krok og splittring etter bruk.'
   };
-  const alternatives=[];
+  const alternatives=choices.slice(1,6).map(choice=>({name:choice.name,type:choice.family,color:choice.color,image:choice.image,inventoryNote:choice.inventoryNote,ownedPhoto:true,matchScore:choice.matchScore,weight}));
   const genericCombinations=[];
   const researchedChoice=null;
   const presentation=lurePresentationAdvice({fishType,depthMeters,lowLight,wind,exposed});
   const dropperFly=dropperFlyAdvice({fishType,lowLight,cloud,wind,exposed});
   const speciesReason = fishType === 'makrell' ? 'Makrell: søk i frie vannmasser og rundt strøm, odder eller stimer av småfisk' : fishType === 'sei' ? 'Sei: prioriter strøm, bratte kanter og vann med litt dybde' : fishType === 'orret' ? 'Ferskvannsørret: fisk langs vannkanter, odder, innløp og vindpåvirkede bredder' : fishType === 'abbor' ? 'Abbor: søk langs struktur, sivkanter, odder og lune bukter' : fishType === 'gjedde' ? 'Gjedde: prioriter grunne bukter, vegetasjon og kanter mot dypere vann' : null;
   const trophyNote=goal==='big'&&fishType==='gjedde'?' Stor-fisk-modus: fisk større agn sakte med tydelige pauser langs vegetasjon, odder og overgangen mot dypere vann.':'';
-  return { name:primary.name, type, weight, color:primary.color, image:primary.image, inventoryNote:primary.inventoryNote, ownedPhoto:true, waterEnvironment, reason: `${speciesReason ? `${speciesReason}; ` : ''}${timeReason}; ${tackleReason}.${trophyNote}`, depth, wobbler:null, alternatives, genericCombinations, researchedChoice, presentation, dropperFly };
+  return { name:primary.name, type, weight, color:primary.color, image:primary.image, inventoryNote:primary.inventoryNote, ownedPhoto:true, matchScore:primary.matchScore, waterEnvironment, reason: `${speciesReason ? `${speciesReason}; ` : ''}${timeReason}; ${tackleReason}.${trophyNote}`, depth, wobbler:null, alternatives, genericCombinations, researchedChoice, presentation, dropperFly };
 }
 
 function formatReason({ breakdown = {}, weather = {}, coastQuality = 0.5, exposure = 0.5, waterType = 'saltwater' } = {}) {
@@ -1154,7 +1176,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v11-rev23',revision:APP_REVISION,marine:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v11-rev24',revision:APP_REVISION,marine:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});

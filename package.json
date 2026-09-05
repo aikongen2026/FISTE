@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "11.2.0",
-  "appRevision": 23,
-  "description": "Mobilklar PWA for fiskesoner i sjø og ferskvann med vær, marine data, personlig fangstlæring og offline siste analyse",
+  "version": "11.3.0",
+  "appRevision": 24,
+  "description": "Mobilklar PWA for fiskesoner med detaljert Kartverket-dybdedata, utvidet personlig slukboks, marine data og fangstlæring",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

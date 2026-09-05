@@ -1,4 +1,4 @@
-DEPLOY FISTE GUIDEN REV 23 PÅ RENDER
+DEPLOY FISTE GUIDEN REV 24 PÅ RENDER
 
 1. Koble Render Web Service til GitHub-repoet.
 2. Runtime: Node.
@@ -9,6 +9,6 @@ DEPLOY FISTE GUIDEN REV 23 PÅ RENDER
 7. Valgfritt for ferskvanns-live-data: sett NVE_API_KEY til din gratis NVE HydAPI-nøkkel.
 
 Etter deploy skal /api/health blant annet svare med:
-{"ok":true,"version":"v11-rev23","revision":"REV 23","marine":true}
+{"ok":true,"version":"v11-rev24","revision":"REV 24","marine":true}
 
-Kjør npm test før deploy. REV23-testpakken skal gi 15/15 bestått.
+Kjør npm test før deploy. REV24-testpakken skal gi 16/16 bestått.
