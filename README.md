@@ -152,3 +152,12 @@ Analysen er veiledende. Kontroller lokale fiskeregler, fiskekort, fredningsbeste
 - 43 sjørelaterte agn fra egne bilder er skilt i individuelle kandidater; total personlig slukboks har 49 kandidater.
 - Hver sone returnerer opptil fem alternative sluker i tillegg til BEST NÅ.
 - Navionics er ikke aktivert uten Garmin/Navionics developer key; vanlig Boating-abonnement alene gir ikke Web API-rettigheter.
+
+## VIKTIG – riktig GitHub-struktur
+
+Serveren leverer **kun** filer fra `public/`. Ikke legg `index.html`, `app.js`, `style.css`, `sw.js`, `data/` eller `lures/` løst i repo-roten.
+
+REV 24 har en oppstartsjekk som stopper deploy hvis `package.json` sier REV 24 mens `public/index.html`, `public/app.js` eller service worker peker på en eldre revisjon. Dette hindrer at Render sier «deploy succeeded» mens nettsiden egentlig viser gammel kode.
+
+## GitHub nettleseropplasting
+Denne EASY-UPLOAD-utgaven er teknisk lik REV24, men de 79 individuelle slukbildene er pakket inn i `public/data/user-lures.json`. Hele prosjektet består derfor av under 100 filer og kan lastes opp i én operasjon i GitHubs nettlesergrensesnitt.

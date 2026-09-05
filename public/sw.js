@@ -1,6 +1,6 @@
-const CACHE = 'fiste-guiden-rev23';
+const CACHE = 'fiste-guiden-rev24-clean';
 const SHELL = [
-  '/', '/index.html', '/style.css?v=23.0', '/fishing-insights.js?v=23.0', '/app.js?v=23.0', '/manifest.webmanifest?v=23.0', '/icon.svg',
+  '/', '/index.html', '/style.css?v=24.0', '/fishing-insights.js?v=24.0', '/app.js?v=24.0', '/manifest.webmanifest?v=24.0', '/icon.svg',
   '/data/kirkoy-seatrout-spots.json', '/data/fishing-restrictions-2024.json', '/data/source-backed-lures.json', '/data/user-lures.json',
   '/lures/spoon-light-silver.jpg', '/lures/spoon-warm-copper.jpg', '/lures/spoon-blue-silver.jpg', '/lures/spoon-compact-spotted.jpg',
   '/lures/blue-silver-shallow.jpg', '/lures/black-silver-diving.jpg', '/lures/gold-orange-lowlight.jpg', '/lures/trout-natural.jpg',
@@ -16,6 +16,85 @@ const SHELL = [
   '/lures/generated/fly-shrimp-dark.svg', '/lures/generated/fly-shrimp-light.svg',
   '/lures/generated/fly-baitfish-dark.svg', '/lures/generated/fly-baitfish-light.svg',
   '/lures/generated/fly-wet-dark.svg', '/lures/generated/fly-wet-light.svg',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   '/lures/open/catalog.json', '/lures/open/inline-spinner.jpg', '/lures/open/spinnerbait.jpg',
   '/lures/open/spoon.jpg', '/lures/open/weedless-spoon.jpg', '/lures/open/soft-shad.jpg',
   '/lures/open/micro-jig.jpg', '/lures/open/wobbler.jpg', '/lures/open/lure-reference.jpg'

@@ -8,12 +8,13 @@ const map = L.map('map', { zoomControl: true }).setView(initialCenter, initialZo
 const standardLayer=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
 const satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
 const hybridLabelsLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Labels © Esri'});
-const seaChartLayer = L.tileLayer('https://cache.kartverket.no/v1/wmts/1.0.0/sjokartraster/default/webmercator/{z}/{y}/{x}.png', { opacity: 1, maxZoom: 18, attribution: '© Kartverket · sjøkart' });
-const marineDepthLayer=L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms',{layers:'emodnet:mean_multicolour',styles:'',format:'image/png',transparent:true,version:'1.1.1',opacity:.82,maxZoom:18,attribution:'EMODnet Bathymetry · modellert dybde'});
+const seaChartLayer=L.tileLayer.wms('https://wms.geonorge.no/skwms1/wms.sjokartraster2',{layers:'all',styles:'',format:'image/png',transparent:false,version:'1.3.0',tileSize:512,updateWhenIdle:true,updateWhenZooming:false,keepBuffer:1,maxZoom:18,attribution:'© Kartverket · sjøkart raster'});
+const detailedDepthLayer=L.tileLayer.wms('https://wms.geonorge.no/skwms1/wms.dybdedata2',{layers:'Dybdedata2',styles:'',format:'image/png',transparent:true,version:'1.3.0',tileSize:512,updateWhenIdle:true,updateWhenZooming:false,keepBuffer:1,opacity:.94,maxZoom:18,attribution:'© Kartverket · Sjøkart Dybdedata'});
 const nveDepthLayer = L.tileLayer.wms('https://kart.nve.no/enterprise/services/Innsjodatabase2/MapServer/WMSServer', { layers: 'DybdeKurve,DybdePunkt', format: 'image/png', transparent: true, version: '1.3.0', maxZoom: 18, attribution: 'Kilde: <a href="https://data.norge.no/nb/datasets/a797219c-8378-3914-9bde-1ae4db09e370/dybdekart" target="_blank" rel="noopener">NVE – Innsjødatabase/Dybdekart</a>' });
-let seaChartTileErrors=0;
-seaChartLayer.on('tileerror',()=>{ if(++seaChartTileErrors===3 && $('mapStyle')?.value==='fishing'){ $('warnings').textContent='Kartverkets sjøkart svarte ikke. Bytter midlertidig til standardkart.'; $('mapStyle').value='standard'; applyMapStyle(); } });
-marineDepthLayer.on('tileerror',()=>{ if($('mapStyle')?.value==='marine-depth') $('warnings').textContent='EMODnet-dybdelaget svarer ikke akkurat nå. Standardkartet beholdes under, så kartet forsvinner ikke.'; });
+let seaChartTileErrors=0,depthTileErrors=0;
+seaChartLayer.on('tileerror',()=>{ if(++seaChartTileErrors===3 && $('mapStyle')?.value==='chart') $('warnings').textContent='Kartverkets sjøkart bruker litt tid eller mangler en kartflis. Standardkartet ligger under og blir stående synlig mens sjøkartet lastes.'; });
+detailedDepthLayer.on('tileerror',()=>{ if(++depthTileErrors===3 && $('mapStyle')?.value==='fishing') $('warnings').textContent='Kartverkets dybdedata bruker litt tid eller mangler en kartflis. Grunnkartet beholdes under, så kartet blir ikke svart.'; });
+seaChartLayer.on('tileload',()=>{seaChartTileErrors=0;}); detailedDepthLayer.on('tileload',()=>{depthTileErrors=0;});
 
 const $ = id => document.getElementById(id);
 const zoneLayer = L.layerGroup().addTo(map);
@@ -34,7 +35,7 @@ let latestZones=[];
 const labels = { vind:'Vind', skydekke:'Skydekke', kyst:'Kyst', vannkant:'Vannkant', eksponering:'Eksponering', temperatur:'Temperatur', lufttemperatur:'Lufttemperatur', tidspunkt:'Tidspunkt', dybde:'Dybde', storfisk:'Stor fisk', lufttrykk:'Lufttrykk', sjoetemperatur:'Sjøtemp', boelger:'Bølger', havstroem:'Havstrøm', tidevann:'Tidevann', maane:'Måne', personlig:'Mine fangster' };
 const freshwaterFishTypes = new Set(['orret','abbor','gjedde']);
 const catchStorageKey='fiste-guiden-catch-log-v1';
-const analysisCacheKey='fiste-guiden-last-analysis-v23';
+const analysisCacheKey='fiste-guiden-last-analysis-v24';
 const fishLabels={sjoorret:'Sjøørret',makrell:'Makrell',sei:'Sei',orret:'Ørret (ferskvann)',abbor:'Abbor',gjedde:'Gjedde'};
 let latestWeather=null;
 let latestMarine=null;
@@ -344,9 +345,9 @@ function renderSources(weather,stats={}) {
 function applyMapStyle() {
   const style=$('mapStyle').value;
   const freshwater=freshwaterFishTypes.has($('fishType').value);
-  for(const layer of [standardLayer,satelliteLayer,hybridLabelsLayer,seaChartLayer,marineDepthLayer]) if(map.hasLayer(layer)) map.removeLayer(layer);
-  if(style==='marine-depth'&&!freshwater){ standardLayer.addTo(map); marineDepthLayer.addTo(map); }
-  else if(style==='fishing'&&!freshwater) seaChartLayer.addTo(map);
+  for(const layer of [standardLayer,satelliteLayer,hybridLabelsLayer,seaChartLayer,detailedDepthLayer]) if(map.hasLayer(layer)) map.removeLayer(layer);
+  if(style==='fishing'&&!freshwater){ standardLayer.addTo(map); detailedDepthLayer.addTo(map); }
+  else if(style==='chart'&&!freshwater){ standardLayer.addTo(map); seaChartLayer.addTo(map); }
   else if(style==='satellite'||style==='hybrid') satelliteLayer.addTo(map); else standardLayer.addTo(map);
   if(style==='hybrid') hybridLabelsLayer.addTo(map);
   saveUiState();
@@ -356,7 +357,8 @@ function updateWaterModeUI() {
   const fishType=$('fishType').value;
   const hasSelection=Object.hasOwn(fishLabels,fishType);
   const freshwater=freshwaterFishTypes.has(fishType);
-  if(freshwater&&['fishing','marine-depth'].includes($('mapStyle').value)) $('mapStyle').value='standard';
+  if($('mapStyle').value==='marine-depth') $('mapStyle').value=freshwater?'standard':'fishing';
+  if(freshwater&&['fishing','chart'].includes($('mapStyle').value)) $('mapStyle').value='standard';
   $('nveDepthToggle').hidden=!freshwater;
   $('conditionToggle').hidden=!hasSelection||freshwater;
   $('marineCard').hidden=!hasSelection||freshwater;
@@ -417,8 +419,14 @@ async function loadReferenceLayers() {
     warning.textContent=`${warning.textContent} Kildelag for Kirkøy/fredningsgrenser er midlertidig utilgjengelig.`.trim();
   }
 }
-function alternativeLuresHtml(){ return ''; }
-function popupAlternativeLuresHtml(){ return ''; }
+function alternativeLuresHtml(alternatives=[]){
+  if(!Array.isArray(alternatives)||!alternatives.length) return '';
+  return `<div class="lure-alternatives"><div class="alt-head"><b>BYTT TIL DISSE HVIS DET ER DØDT</b><span>${alternatives.length} reelle alternativer fra din slukboks</span></div><div class="alt-lure-grid">${alternatives.map((alt,index)=>`<article class="alt-lure"><span class="alt-rank">${index+2}</span><img class="zoomable-lure" src="${escapeHtml(alt.image||'')}" alt="${escapeHtml(alt.name||'Alternativ sluk')}" loading="lazy" tabindex="0" role="button"><div><b>${escapeHtml(alt.name||alt.type||'Alternativ')}</b><small>${escapeHtml(alt.color||'')} · match ${Number.isFinite(alt.matchScore)?alt.matchScore:'–'}/100</small></div></article>`).join('')}</div></div>`;
+}
+function popupAlternativeLuresHtml(alternatives=[]){
+  if(!Array.isArray(alternatives)||!alternatives.length) return '';
+  return `<div class="popup-alternatives"><b>Alternativer:</b>${alternatives.slice(0,3).map(alt=>`<span>${escapeHtml(alt.name||alt.type||'Sluk')} · ${escapeHtml(alt.color||'')}</span>`).join('')}</div>`;
+}
 function genericCombinationsHtml(){ return ''; }
 function sourceBackedLureHtml(){ return ''; }
 function presentationTacticsHtml(lure={}) {
@@ -433,13 +441,13 @@ function waterEnvironmentHtml(environment={}) {
 }
 function lureHtml(lure={}) {
   const depth = lure.depth || {};
-  return `<div class="lure-cell"><div class="lure-main"><img class="lure-photo zoomable-lure" src="${escapeHtml(lure.image || '')}" alt="${escapeHtml(lure.name || 'Anbefalt sluk fra din samling')}" loading="lazy" tabindex="0" role="button"><div><span class="lure-label">BEST NÅ · KUN FRA DIN EGEN SLUKBOKS</span><b>${escapeHtml(lure.name || lure.type || 'Valgt sluk')}</b><span class="lure-color">◉ ${escapeHtml(lure.color || '')}</span><span class="depth-note">${escapeHtml(lure.type||'')} · ${escapeHtml(lure.weight||'')}</span><span class="depth-note">Dybde: ${escapeHtml(depth.label || 'ukjent')}</span></div></div><small>${escapeHtml(lure.reason || 'Tilpass innsveivingen etter forholdene.')}</small>${waterEnvironmentHtml(lure.waterEnvironment)}${presentationTacticsHtml(lure)}</div>`;
+  return `<div class="lure-cell"><div class="lure-main"><img class="lure-photo zoomable-lure" src="${escapeHtml(lure.image || '')}" alt="${escapeHtml(lure.name || 'Anbefalt sluk fra din samling')}" loading="lazy" tabindex="0" role="button"><div><span class="lure-label">BEST NÅ · KUN FRA DIN EGEN SLUKBOKS</span><b>${escapeHtml(lure.name || lure.type || 'Valgt sluk')}</b><span class="lure-color">◉ ${escapeHtml(lure.color || '')}</span><span class="depth-note">${escapeHtml(lure.type||'')} · ${escapeHtml(lure.weight||'')}</span><span class="depth-note">Dybde: ${escapeHtml(depth.label || 'ukjent')}</span></div></div><small>${escapeHtml(lure.reason || 'Tilpass innsveivingen etter forholdene.')}</small>${alternativeLuresHtml(lure.alternatives)}${waterEnvironmentHtml(lure.waterEnvironment)}${presentationTacticsHtml(lure)}</div>`;
 }
 function compactPopupHtml(zone,index) {
   const lure=zone.lure || {};
   const presentation=lure.presentation||{};
   const fly=lure.dropperFly||{};
-  return `<div class="compact-popup"><div class="compact-popup-head"><span>Sone ${index+1}</span><b>${zone.name}</b></div><div class="popup-score"><span>Fiskeforhold</span><b>${zone.score}/100</b><small>Veiledende rangering – ikke fangstsannsynlighet</small></div><div class="popup-factors">${strongestFactorsHtml(zone.breakdown)}</div><div class="popup-quality"><span>Datagrunnlag</span><b>${zone.dataQuality?.level || 'Begrenset'}</b><small>${zone.dataQuality?.summary || 'Kildestatus ukjent'}</small></div><div class="popup-primary"><img class="popup-lure-thumb zoomable-lure" src="${lure.image || '/lures/spoon-blue-silver.jpg'}" alt="${lure.name || 'Anbefalt sluk'} – ${lure.color || 'Sølv/blå'}" tabindex="0" role="button"><div><span>Ditt bildevalg · ${escapeHtml(lure.waterEnvironment?.label||'riktig vannmiljø')}</span><b>${lure.name ? `${lure.name} · ` : ''}${lure.type || 'Smal kystsluk'} · ${lure.weight || '18–22 g'}</b><small>${lure.color || 'Sølv/blå'}${lure.inventoryNote?`<br>På bildet: ${escapeHtml(lure.inventoryNote)}`:''}</small></div></div><div class="popup-tactics"><b>Slukhøyde:</b> ${presentation.band||'Søk trinnvis'}<br><b>Opphengerflue:</b> ${fly.recommended?'Ja':'Nei'}${fly.recommended&&fly.color?` · ${fly.color}`:''}</div><button type="button" class="popup-details" data-zone="${zone.id}">Vis alle detaljer i listen</button></div>`;
+  return `<div class="compact-popup"><div class="compact-popup-head"><span>Sone ${index+1}</span><b>${zone.name}</b></div><div class="popup-score"><span>Fiskeforhold</span><b>${zone.score}/100</b><small>Veiledende rangering – ikke fangstsannsynlighet</small></div><div class="popup-factors">${strongestFactorsHtml(zone.breakdown)}</div><div class="popup-quality"><span>Datagrunnlag</span><b>${zone.dataQuality?.level || 'Begrenset'}</b><small>${zone.dataQuality?.summary || 'Kildestatus ukjent'}</small></div><div class="popup-primary"><img class="popup-lure-thumb zoomable-lure" src="${lure.image || '/lures/spoon-blue-silver.jpg'}" alt="${lure.name || 'Anbefalt sluk'} – ${lure.color || 'Sølv/blå'}" tabindex="0" role="button"><div><span>Ditt bildevalg · ${escapeHtml(lure.waterEnvironment?.label||'riktig vannmiljø')}</span><b>${lure.name ? `${lure.name} · ` : ''}${lure.type || 'Smal kystsluk'} · ${lure.weight || '18–22 g'}</b><small>${lure.color || 'Sølv/blå'}${lure.inventoryNote?`<br>På bildet: ${escapeHtml(lure.inventoryNote)}`:''}</small></div></div>${popupAlternativeLuresHtml(lure.alternatives)}<div class="popup-tactics"><b>Slukhøyde:</b> ${presentation.band||'Søk trinnvis'}<br><b>Opphengerflue:</b> ${fly.recommended?'Ja':'Nei'}${fly.recommended&&fly.color?` · ${fly.color}`:''}</div><button type="button" class="popup-details" data-zone="${zone.id}">Vis alle detaljer i listen</button></div>`;
 }
 function lureText(zone={}) { const lure=zone.lure||{}; return [lure.name,lure.type,lure.color,lure.weight].filter(Boolean).join(' '); }
 function tokenOverlap(a,b) {
@@ -476,7 +484,7 @@ function exportCatchGpx() {
   if(!entries.length){$('catchStatus').textContent='Ingen loggposter med kartposisjon å eksportere.';return;}
   const xmlEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const waypoints=entries.map(entry=>`<wpt lat="${entry.mapCenter.lat}" lon="${entry.mapCenter.lon}"><time>${xmlEscape(entry.time)}</time><name>${xmlEscape(entry.place||fishLabels[entry.fish]||'Fisketur')}</name><desc>${xmlEscape(`${entry.result==='fangst'?'Fangst':'Ingen fangst'} · ${fishLabels[entry.fish]||entry.fish}${entry.lure?' · '+entry.lure:''}`)}</desc><type>${entry.result==='fangst'?'catch':'session'}</type></wpt>`).join('');
-  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV23" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
+  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV24" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
   $('catchStatus').textContent=`Eksporterte ${entries.length} posisjoner som GPX.`;
 }
 function exportCatchJson() { const entries=readCatchEntries();downloadTextFile(`fiste-guiden-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2),'application/json');$('catchStatus').textContent=`Backup med ${entries.length} loggposter er eksportert.`; }
@@ -593,12 +601,13 @@ map.on('locationerror', () => setState('error','Kunne ikke hente posisjonen. Til
 window.addEventListener('online', () => loadZones({immediate:true}));
 window.addEventListener('offline', () => {const cached=readCachedAnalysis();setState(cached?'ready':'error',cached?'Du er offline. Siste lagrede analyse er tilgjengelig.':'Du er offline. Kartskallet virker; lagret analyse vises når den finnes.');});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/user-lures.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=23.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=24.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;
 if(['0','250','500','1000','2000'].includes(String(savedUiState.baseRadius))) $('baseRadius').value=String(savedUiState.baseRadius);
-if(['standard','satellite','hybrid','fishing','marine-depth'].includes(savedUiState.mapStyle)) $('mapStyle').value=savedUiState.mapStyle;
+if(savedUiState.mapStyle==='marine-depth') $('mapStyle').value='fishing';
+else if(['standard','satellite','hybrid','fishing','chart'].includes(savedUiState.mapStyle)) $('mapStyle').value=savedUiState.mapStyle;
 if(basePoint){baseMarker=L.marker([basePoint.lat,basePoint.lon]).addTo(map).bindPopup('<b>Lagret base</b>');$('setBase').textContent='✓ Base satt';}
 initCatchLog();
 $('exportGpx')?.addEventListener('click',exportCatchGpx);
