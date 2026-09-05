@@ -1,14 +1,14 @@
-DEPLOY FISTE GUIDEN REV 24 PÅ RENDER
+FISTE GUIDEN REV 25 - ENKEL DEPLOY
 
-1. Koble Render Web Service til GitHub-repoet.
-2. Runtime: Node.
-3. Build command: npm install
-4. Start command: npm start
-5. Health check path: /api/health
-6. Anbefalt: sett MET_USER_AGENT til en nøytral identifikator med prosjektadresse/kontakt.
-7. Valgfritt for ferskvanns-live-data: sett NVE_API_KEY til din gratis NVE HydAPI-nøkkel.
+1) Pakk ut ZIP-filen.
+2) I GitHub-repoet FISTE: Add file -> Upload files.
+3) Dra ALT INNHOLDET inni den utpakkede mappen inn i GitHub.
+4) Commit changes til main.
+5) Render deployer normalt automatisk. Ellers: Manual Deploy -> Deploy latest commit.
+6) Åpne https://fiste.onrender.com/api/health
+   Den skal vise revision: "REV 25".
 
-Etter deploy skal /api/health blant annet svare med:
-{"ok":true,"version":"v11-rev24","revision":"REV 24","marine":true}
-
-Kjør npm test før deploy. REV24-testpakken skal gi 16/16 bestått.
+VIKTIG:
+- Det er under 100 filer i pakken, så GitHub web-upload godtar hele pakken i én opplasting.
+- Gamle duplikatfiler i repo-roten stopper ikke lenger deploy.
+- Serveren bruker bare /public for nettsiden.

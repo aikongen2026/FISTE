@@ -1,0 +1,13 @@
+FISTE GUIDEN REV 25 - GJØR BARE DETTE
+
+1. Pakk ut denne ZIP-filen på PC-en.
+2. Åpne GitHub-repoet: aikongen2026/FISTE.
+3. Velg Add file -> Upload files.
+4. Marker ALT INNHOLD inni mappen Fiste-guiden-REV25-ONE-UPLOAD og dra det inn i GitHub-vinduet.
+5. Trykk Commit changes.
+6. Vent på Render. Hvis Render ikke starter selv: Manual Deploy -> Deploy latest commit.
+7. Sjekk https://fiste.onrender.com/api/health
+   Det skal stå: "revision":"REV 25"
+
+IKKE slett gamle filer først. REV25 tåler gamle løse duplikatfiler i repo-roten og ignorerer dem.
+Du skal ikke flytte enkeltfiler eller legge inn noen hotfix etterpå.

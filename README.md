@@ -1,10 +1,23 @@
-# Fiste guiden – REV 24
+# Fiste guiden – REV 25
+
+## ENKEL OPPLASTING
+
+1. Pakk ut ZIP-filen.
+2. Åpne GitHub-repoet `FISTE` → **Add file → Upload files**.
+3. Dra **alt innholdet inni denne mappen** inn i GitHub-vinduet.
+4. Trykk **Commit changes**.
+5. I Render: **Manual Deploy → Deploy latest commit** hvis den ikke starter automatisk.
+6. Kontroller `https://fiste.onrender.com/api/health` – den skal vise **REV 25**.
+
+Du trenger ikke slette gamle løse filer i repo-roten først. REV25 ignorerer dem og serverer kun `/public`.
+
+---
 
 Mobilklar PWA som foreslår fiskesoner i sjø og ferskvann i Norge.
 
-## REV 24 – live sjøforhold, personlig læring og offline siste analyse
+## REV 25 – live sjøforhold, personlig læring og offline siste analyse
 
-REV 24 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
+REV 25 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
 
 - **Sjøtemperatur, bølgehøyde, bølgeretning og bølgeperiode** fra Open-Meteo Marine.
 - **Havstrøm og strømretning** samt modellert **tidevanns-/havnivåtrend** og neste beregnede høy-/lavvann.
@@ -19,7 +32,7 @@ REV 24 bygger direkte på REV 22 og beholder den sonevarierte slukmotoren. Nytt:
 - Eget **Båtramper-lag** henter registrerte slipper/båtramper fra OpenStreetMap i synlig kartutsnitt.
 - **Offline siste analyse:** siste vellykkede analyse lagres lokalt og kan vises uten nett dersom du fortsatt er i samme område (maks 35 km fra lagret sentrum).
 - **NVE HydAPI-støtte:** i ferskvannsmodus kan nærmeste aktive målestasjon vise vannstand, vannføring og vanntemperatur når serveren har miljøvariabelen `NVE_API_KEY`. Uten nøkkel feiler appen kontrollert og forklarer hva som mangler.
-- PWA-cache, API health og ressurser er oppdatert til REV 24.
+- PWA-cache, API health og ressurser er oppdatert til REV 25.
 
 ### Viktig om marine data
 
@@ -145,7 +158,7 @@ Analysen er veiledende. Kontroller lokale fiskeregler, fiskekort, fredningsbeste
 - Artsvekting er skjerpet så ulike arter prioriterer relevante agn i samlingen i stedet for samme standardvalg.
 
 
-## REV24
+## REV25
 - Fiskekart bruker Kartverkets Sjøkart Dybdedata WMS oppå et alltid synlig grunnkart, slik at trege/manglende kartfliser ikke gjør kartet svart.
 - Det grove fargelagte EMODnet-kartet er fjernet fra kartvelgeren; EMODnet brukes fortsatt kun som bakgrunnsestimat i analyse der tilgjengelig.
 - Eget valg for Kartverket sjøkart raster via WMS.
@@ -157,7 +170,7 @@ Analysen er veiledende. Kontroller lokale fiskeregler, fiskekort, fredningsbeste
 
 Serveren leverer **kun** filer fra `public/`. Ikke legg `index.html`, `app.js`, `style.css`, `sw.js`, `data/` eller `lures/` løst i repo-roten.
 
-REV 24 har en oppstartsjekk som stopper deploy hvis `package.json` sier REV 24 mens `public/index.html`, `public/app.js` eller service worker peker på en eldre revisjon. Dette hindrer at Render sier «deploy succeeded» mens nettsiden egentlig viser gammel kode.
+REV 25 har en oppstartsjekk som stopper deploy hvis `package.json` sier REV 25 mens `public/index.html`, `public/app.js` eller service worker peker på en eldre revisjon. Dette hindrer at Render sier «deploy succeeded» mens nettsiden egentlig viser gammel kode.
 
 ## GitHub nettleseropplasting
-Denne EASY-UPLOAD-utgaven er teknisk lik REV24, men de 79 individuelle slukbildene er pakket inn i `public/data/user-lures.json`. Hele prosjektet består derfor av under 100 filer og kan lastes opp i én operasjon i GitHubs nettlesergrensesnitt.
+Denne EASY-UPLOAD-utgaven er teknisk lik REV25, men de 79 individuelle slukbildene er pakket inn i `public/data/user-lures.json`. Hele prosjektet består derfor av under 100 filer og kan lastes opp i én operasjon i GitHubs nettlesergrensesnitt.
