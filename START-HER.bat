@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Fiste guiden REV 26
+title Fiste guiden REV 27
 cd /d "%~dp0"
 
 where node >nul 2>nul
@@ -17,7 +17,7 @@ if not exist "node_modules\pngjs\package.json" (
   )
 )
 
-echo Starter Fiste guiden REV 26...
+echo Starter Fiste guiden REV 27...
 start "Fiste guiden-server" /min cmd /c "node server.js"
 timeout /t 2 /nobreak >nul
 start "" http://localhost:3000

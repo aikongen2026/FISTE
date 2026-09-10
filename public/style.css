@@ -53,3 +53,11 @@
 @media(max-width:700px){.multi-species-guide{grid-template-columns:1fr}}
 
 .zone-number-sjoorret{background:#ef4444!important}.zone-number-makrell{background:#3b82f6!important}.zone-number-sei{background:#22c55e!important}
+
+
+/* REV27 – LIVE GPS for dorging og forflytning */
+#live.live-button{border-color:#38d477;color:#b9ffd7;white-space:nowrap}
+#live.live-active{background:#38d477;color:#052016;border-color:#38d477;box-shadow:0 0 0 3px rgba(56,212,119,.16),0 8px 24px rgba(56,212,119,.22)}
+.live-hud{position:absolute;z-index:650;top:1rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.6rem;padding:.58rem .78rem;border:1px solid rgba(56,212,119,.55);border-radius:.8rem;background:rgba(6,23,19,.92);box-shadow:0 8px 26px rgba(0,0,0,.32);backdrop-filter:blur(8px);pointer-events:none;min-width:190px}
+.live-hud[hidden]{display:none!important}.live-dot{width:.7rem;height:.7rem;border-radius:50%;background:#38d477;box-shadow:0 0 0 5px rgba(56,212,119,.14);animation:livePulse 1.2s infinite}.live-hud div{display:grid;gap:.08rem}.live-hud b{font-size:.72rem;letter-spacing:.08em;color:#b9ffd7}.live-hud span{font-size:.7rem;color:#d9efe5;white-space:nowrap}@keyframes livePulse{50%{box-shadow:0 0 0 10px rgba(56,212,119,0)}}
+@media(max-width:850px){.live-hud{top:.65rem;min-width:0;max-width:calc(100% - 6rem);padding:.5rem .65rem}.live-hud span{white-space:normal}.actions #live{min-height:44px}}
