@@ -10,7 +10,7 @@ const APP_REVISION = `REV ${String(PACKAGE.appRevision).padStart(2,'0')}`;
 
 const PORT = Number(process.env.PORT || 3000);
 const NVE_API_KEY = String(process.env.NVE_API_KEY || '').trim();
-const MET_USER_AGENT = process.env.MET_USER_AGENT || 'fiste-guiden/26 (https://github.com/aikongen2026/FISTE)';
+const MET_USER_AGENT = process.env.MET_USER_AGENT || 'fiste-guiden/28 (https://github.com/aikongen2026/FISTE)';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const OPEN_LURE_PHOTOS = JSON.parse(fs.readFileSync(path.join(PUBLIC_DIR,'lures','open','catalog.json'),'utf8')).photos;
 const OPEN_LURE_PHOTO_BY_ID = Object.freeze(Object.fromEntries(OPEN_LURE_PHOTOS.map(photo=>[photo.id,photo])));
@@ -19,7 +19,7 @@ const SOURCE_BACKED_LURE_DATA = JSON.parse(fs.readFileSync(path.join(PUBLIC_DIR,
 const SOURCE_BACKED_LURES = Object.freeze(SOURCE_BACKED_LURE_DATA.lures);
 const OFFICIAL_NO_FISHING_ZONES = JSON.parse(fs.readFileSync(path.join(PUBLIC_DIR,'data','fishing-restrictions-2024.json'),'utf8')).zones;
 const MAX_ZONE_COUNT = 12;
-const MAX_ZONE_CANDIDATES = 180;
+const MAX_ZONE_CANDIDATES = 120;
 const FISH_TYPES = Object.freeze({
   sjoorret:'Sjøørret', makrell:'Makrell', sei:'Sei',
   orret:'Ørret (ferskvann)', abbor:'Abbor', gjedde:'Gjedde'
@@ -1190,7 +1190,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v11-rev27',revision:APP_REVISION,marine:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v11-rev28',revision:APP_REVISION,marine:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});

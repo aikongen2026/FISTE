@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "11.6.0",
-  "appRevision": 27,
-  "description": "Mobilklar PWA for fiskesoner med LIVE GPS for dorging, fungerende base-/avstandsfilter, alle-sjoarter-visning, detaljert Kartverket-dybdedata, personlig slukboks og marine data",
+  "version": "11.7.0",
+  "appRevision": 28,
+  "description": "Fiste guiden REV28 – Mistra-inspirert sømløs kartmodus med 10 beste soner, Live GPS, kompakt høyrepanel og filbaserte slukbilder for raskere API.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",
