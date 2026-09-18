@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "11.7.0",
-  "appRevision": 28,
-  "description": "Fiste guiden REV28 – Mistra-inspirert sømløs kartmodus med 10 beste soner, Live GPS, kompakt høyrepanel og filbaserte slukbilder for raskere API.",
+  "version": "11.8.0",
+  "appRevision": 30,
+  "description": "Fiste guiden REV30 – kompakt HSI-inspirert kartanalyse med habitat/Nå/total-score, datakvalitet, strukturprofil, skjulte marine habitatdata, fredningsfilter, Live GPS og sluk fra egen boks.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",

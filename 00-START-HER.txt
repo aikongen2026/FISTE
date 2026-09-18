@@ -1,1 +1,13 @@
-FISTE GUIDEN REV28 – last opp innholdet i denne mappen til roten av GitHub-repoet. Render bruker samme Node-oppsett som før.
+FISTE REV 30
+============
+
+ENKLESTE OPPDATERING:
+Pakk ut ZIP-en og dobbeltklikk:
+  1-OPPDATER-OG-APNE-FISTE.bat
+
+Den synkroniserer appfilene til GitHub-repoet aikongen2026/FISTE.
+Render Auto-Deploy bygger deretter den nye versjonen automatisk og appen åpnes når deployen er bekreftet.
+
+Første gang kan GitHub be om innlogging. Ingen passord eller tokens er lagret i pakken.
+
+Hvis du bare vil kjøre appen lokalt, bruk vanlig npm-oppsett fra README.md.
