@@ -1465,7 +1465,7 @@ async function bathymetryRaster({west,south,east,north,zoom=13}) {
     const params=new URLSearchParams({service:'wcs',version:'1.0.0',request:'getcoverage',coverage:'emodnet:mean',crs:'EPSG:4326',BBOX:`${west},${south},${east},${north}`,format:'image/tiff',interpolation:'bilinear',resx:String(resx),resy:String(resy)});
     const buffer=await fetchBuffer(`https://ows.emodnet-bathymetry.eu/wcs?${params}`,{'User-Agent':MET_USER_AGENT},14000);
     if(!buffer?.length||buffer.length<512) throw new Error('EMODnet returnerte ikke et gyldig dybderaster.');
-    return {buffer,samples,source:'EMODnet Bathymetry DTM',resolutionApproxM:Math.round(Math.max(resx*111320*Math.cos(((south+north)/2)*Math.PI/180),resy*110540))};
+    return {buffer,samples,source:'EMODnet Bathymetry DTM',sourceResolutionM:115,samplingApproxM:Math.round(Math.max(resx*111320*Math.cos(((south+north)/2)*Math.PI/180),resy*110540))};
   });
 }
 
@@ -1476,7 +1476,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v13-rev33',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v13-rev34',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
@@ -1498,7 +1498,7 @@ async function handleApi(req,res,url) {
     }
     if(url.pathname==='/api/bathymetry-raster') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
-      try{const result=await bathymetryRaster(input);return send(res,200,result.buffer,'image/tiff',{'X-Fiste-Bathymetry-Source':result.source,'X-Fiste-Resolution-M':String(result.resolutionApproxM),'Cache-Control':'public, max-age=21600'});}catch(error){return send(res,502,{error:error.message});}
+      try{const result=await bathymetryRaster(input);return send(res,200,result.buffer,'image/tiff',{'X-Fiste-Bathymetry-Source':result.source,'X-Fiste-Source-Resolution-M':String(result.sourceResolutionM),'X-Fiste-Sampling-M':String(result.samplingApproxM),'Cache-Control':'public, max-age=21600'});}catch(error){return send(res,502,{error:error.message});}
     }
     if(url.pathname==='/api/depth-profile') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon')),coastNormal=Number(url.searchParams.get('coastNormal'));

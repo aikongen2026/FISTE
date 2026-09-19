@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
   "version": "13.0.0",
-  "appRevision": 33,
-  "description": "Fiste guiden REV33 – REV30 HSI-oppsett med robust ferskvannsdeteksjon, HSI-score, Live GPS, egne slukbilder og valgfri 3D topo/terrengvisning med MapLibre og 3D bunnvisning med EMODnet Bathymetry.",
+  "appRevision": 34,
+  "description": "Fiste guiden REV34 – REV30 HSI-oppsett med robust ferskvannsdeteksjon, HSI-score, Live GPS, egne slukbilder og valgfri 3D topo/terrengvisning med MapLibre og 3D bunnvisning med EMODnet Bathymetry.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",

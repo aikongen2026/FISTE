@@ -1,0 +1,12 @@
+FISTE GUIDEN REV34 - 3D BUNN KARTFIX
+
+Rettet:
+1. Land ble feilaktig tolket som sjødybde fordi signed elevation ble kjørt gjennom Math.abs().
+2. GeoTIFF-bounds brukes direkte for å holde 3D-modellen geografisk synkron med kartet.
+3. X/Y gjøres om til lokale meter for riktig fysisk skalering.
+4. Land, sjøbunn og vannflate er separate 3D-overflater.
+5. Hotspots og kartets referansepunkt bruker samme lokale koordinatsystem.
+6. Kildeoppløsning og intern resampling er nå skilt i API-headerne.
+7. Ny regresjonstest hindrer at absoluttverdifeilen kommer tilbake.
+
+Test: npm test = 34/34 bestått. npm run verify = OK.

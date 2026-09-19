@@ -1,4 +1,12 @@
-## Nytt i REV33 – 3D bunn
+## REV34 – 3D-bunn kartfiks
+- Retter hovedfeilen i REV33: høyder over havet blir ikke lenger gjort om til falske dybder med absoluttverdi.
+- GeoTIFF-ens faktiske geografiske avgrensning brukes, slik at 3D-modellen ligger på samme sted som 2D-kartet.
+- Lengdegrad/breddegrad omregnes til lokale meter før 3D-rendering, slik at kystlinje og bunn ikke strekkes feil.
+- Sjøbunn, landterreng og vannflate rendres separat for en FjordSpot-lignende 3D-presentasjon.
+- Hotspots og referansepunkt plasseres i samme koordinatsystem som bunnmodellen.
+- Status viser faktisk kilderaster (~115 m for EMODnet) i stedet for å kalle frontend-resampling for datagrunnlag.
+
+## Nytt i REV34 – 3D bunn
 - Nytt kartvalg **3D bunn / dybder** for sjø.
 - Henter EMODnet Bathymetry-raster først når 3D-bunn åpnes, så vanlig appstart forblir rask.
 - Interaktiv roterbar bunnmodell med dybdekurver, dybdeskala og Fistes 10 beste punkter som flagg/etiketter over modellen.
@@ -6,11 +14,11 @@
 - Dybden er modellert bathymetri og er ikke ekkolodd eller navigasjonsgrunnlag.
 - Ferskvann bruker fortsatt 3D terreng og NVE-dybdekart der NVE har publisert data.
 
-# Fiste guiden REV33 – smart, kompakt analyse
+# Fiste guiden REV34 – smart, kompakt analyse
 
-REV33 bygger direkte på REV31 og beholder den raske Mistra-inspirerte arbeidsflyten: kart først, valgt sone øverst, 10 beste steder, Live GPS og faktiske slukbilder fra brukerens egen slukboks.
+REV34 bygger direkte på REV31 og beholder den raske Mistra-inspirerte arbeidsflyten: kart først, valgt sone øverst, 10 beste steder, Live GPS og faktiske slukbilder fra brukerens egen slukboks.
 
-## Nytt i REV33
+## Nytt i REV34
 
 - Nytt kartvalg **3D topo / terreng**. MapLibre lastes først når 3D velges, slik at vanlig 2D-kart fortsatt starter like raskt.
 - 3D-visningen bruker terreng-Dem og Kartverket-topografi, med skrå/roterbar kameravisning.
@@ -64,7 +72,7 @@ Resten ligger lukket som standard:
 
 EMODnet-profilen er modellert og har grov oppløsning. Den skal brukes til fiskestruktur, ikke navigasjon. Kartverket sitt dybdekart/sjøkart er fortsatt tilgjengelig som kartlag der tjenesten dekker området.
 
-Marine naturtypekart har ufullstendig geografisk dekning. REV33 rapporterer derfor egen confidence/datadekning og bruker ikke manglende registrering som et negativt bevis.
+Marine naturtypekart har ufullstendig geografisk dekning. REV34 rapporterer derfor egen confidence/datadekning og bruker ikke manglende registrering som et negativt bevis.
 
 ## Datakilder brukt i analysen
 
@@ -83,8 +91,8 @@ Den enkleste måten er fortsatt:
 1. Pakk ut ZIP-en.
 2. Dobbeltklikk `1-OPPDATER-OG-APNE-FISTE.bat`.
 3. Scriptet synkroniserer til `aikongen2026/FISTE`.
-4. Render Auto-Deploy bygger REV33.
-5. Scriptet venter på `/api/health` og åpner appen når REV33 er live.
+4. Render Auto-Deploy bygger REV34.
+5. Scriptet venter på `/api/health` og åpner appen når REV34 er live.
 
 Første gang kan Git/GitHub be om innlogging.
 

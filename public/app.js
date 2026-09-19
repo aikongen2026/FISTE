@@ -161,7 +161,7 @@ function stopLiveMode({message=true}={}){
 }
 let latestZones=[];
 let selectedZoneId=null;
-// REV33: optional lazy-loaded MapLibre 3D terrain view. Leaflet remains the analysis engine;
+// REV34: optional lazy-loaded MapLibre 3D terrain view. Leaflet remains the analysis engine;
 // the two maps are synchronized so 3D never changes the scoring logic or Live GPS behavior.
 let threeDMap=null;
 let threeDReady=false;
@@ -294,7 +294,9 @@ function disable3DMap(){
   threeDActive=false;document.querySelector('.map-wrap')?.classList.remove('three-d-active');if($('map3d'))$('map3d').hidden=true;if($('threeDHud'))$('threeDHud').hidden=true;const notice=document.querySelector('.map-notice');if(notice)notice.textContent='Klikk i kartet = nytt referansepunkt. De 10 beste sonene oppdateres automatisk.';setTimeout(()=>map.invalidateSize({pan:false}),0);
 }
 
-// REV33: optional 3D bathymetry surface. Loaded only when selected, so normal map startup stays fast.
+// REV34: corrected 3D bathymetry. Signed elevation is preserved (sea < 0, land >= 0),
+// the GeoTIFF's own geographic bounds are used, and lon/lat is converted to local metres so the
+// rendered coastline/bottom has the same physical proportions as the 2D map.
 let bathyActive=false;
 let bathyLoadToken=0;
 let bathyPlotReady=false;
@@ -321,66 +323,115 @@ function bathyBounds(){
   const c=map.getCenter(),maxSpan=.16;
   if(east-west>maxSpan){west=c.lng-maxSpan/2;east=c.lng+maxSpan/2;}
   if(north-south>maxSpan){south=c.lat-maxSpan/2;north=c.lat+maxSpan/2;}
-  return {west,south,east,north};
+  return {west,south,east,north,centerLat:c.lat,centerLon:c.lng};
 }
 function bathyCamera(kind='pitch'){
   if(!window.Plotly||!bathyPlotReady)return;
-  const camera=kind==='top'?{eye:{x:0,y:0,z:2.35},up:{x:0,y:1,z:0}}:{eye:{x:1.55,y:-1.85,z:1.18},up:{x:0,y:0,z:1}};
+  const camera=kind==='top'?{eye:{x:0,y:0,z:2.35},up:{x:0,y:1,z:0}}:{eye:{x:1.55,y:-1.85,z:1.12},up:{x:0,y:0,z:1}};
   window.Plotly.relayout('bathy3d',{'scene.camera':camera});
 }
+function bathyCellFromElevation(raw,noData){
+  if(!Number.isFinite(raw)||Math.abs(raw)>=12000||(Number.isFinite(noData)&&Math.abs(raw-noData)<=1e-6)) return {elevation:null,depth:null,isSea:false,isLand:false};
+  // EMODnet DTM is elevation relative to sea level: negative below water, positive on land.
+  if(raw<-.05) return {elevation:raw,depth:-raw,isSea:true,isLand:false};
+  return {elevation:Math.max(0,raw),depth:null,isSea:false,isLand:true};
+}
+function bathyLocalFrame(grid){
+  const centerLat=(grid.south+grid.north)/2,centerLon=(grid.west+grid.east)/2;
+  const metresPerLon=111320*Math.cos(centerLat*Math.PI/180),metresPerLat=110540;
+  return {
+    centerLat,centerLon,metresPerLon,metresPerLat,
+    xForLon:lon=>(lon-centerLon)*metresPerLon,
+    yForLat:lat=>(lat-centerLat)*metresPerLat
+  };
+}
+function bathyGridValueAt(grid,lon,lat){
+  if(lon<grid.west||lon>grid.east||lat<grid.south||lat>grid.north)return null;
+  const col=Math.max(0,Math.min(grid.width-1,Math.round((lon-grid.west)/(grid.east-grid.west)*Math.max(1,grid.width-1))));
+  const row=Math.max(0,Math.min(grid.height-1,Math.round((grid.north-lat)/(grid.north-grid.south)*Math.max(1,grid.height-1))));
+  return grid.elevations?.[row]?.[col]??null;
+}
 async function fetchBathymetryGrid(){
-  const b=bathyBounds(),zoom=Math.max(10,Math.min(18,Math.round(map.getZoom())));
-  const url=`/api/bathymetry-raster?bbox=${encodeURIComponent([b.west,b.south,b.east,b.north].join(','))}&zoom=${zoom}`;
+  const requested=bathyBounds(),zoom=Math.max(10,Math.min(18,Math.round(map.getZoom())));
+  const url=`/api/bathymetry-raster?bbox=${encodeURIComponent([requested.west,requested.south,requested.east,requested.north].join(','))}&zoom=${zoom}`;
   const [GeoTIFF,response]=await Promise.all([ensureGeoTiff(),fetch(url)]);
   if(!response.ok){let message='Kunne ikke hente 3D-bunn';try{const j=await response.json();message=j.error||message;}catch{}throw new Error(message);}
-  const resolution=Number(response.headers.get('X-Fiste-Resolution-M'))||null;
+  const sourceResolution=Number(response.headers.get('X-Fiste-Source-Resolution-M'))||115;
+  const sampling=Number(response.headers.get('X-Fiste-Sampling-M'))||null;
+  const source=response.headers.get('X-Fiste-Bathymetry-Source')||'EMODnet Bathymetry DTM';
   const arrayBuffer=await response.arrayBuffer();
   const tiff=await GeoTIFF.fromArrayBuffer(arrayBuffer),image=await tiff.getImage();
   const width=image.getWidth(),height=image.getHeight(),rasters=await image.readRasters(),data=rasters[0];
-  const noData=Number(image.getGDALNoData()),depths=[];let maxDepth=0,valid=0;
-  for(let y=0;y<height;y++){
-    const row=[];
-    for(let x=0;x<width;x++){
-      const raw=Number(data[y*width+x]);let depth=null;
-      if(Number.isFinite(raw)&&(!Number.isFinite(noData)||Math.abs(raw-noData)>1e-6)&&Math.abs(raw)<12000){
-        depth=Math.abs(raw);if(depth<.08)depth=0;if(depth<=3000){maxDepth=Math.max(maxDepth,depth);valid++;}else depth=null;
-      }
-      row.push(depth);
+  const noData=Number(image.getGDALNoData());
+  let west=requested.west,south=requested.south,east=requested.east,north=requested.north;
+  try{
+    const bb=image.getBoundingBox?.();
+    if(Array.isArray(bb)&&bb.length===4&&bb.every(Number.isFinite)){
+      west=Math.min(bb[0],bb[2]);east=Math.max(bb[0],bb[2]);south=Math.min(bb[1],bb[3]);north=Math.max(bb[1],bb[3]);
     }
-    depths.push(row);
+  }catch{}
+  const elevations=[],depths=[];let maxDepth=0,maxLand=0,validSea=0,validLand=0;
+  for(let y=0;y<height;y++){
+    const elevationRow=[],depthRow=[];
+    for(let x=0;x<width;x++){
+      const cell=bathyCellFromElevation(Number(data[y*width+x]),noData);
+      elevationRow.push(cell.elevation);depthRow.push(cell.depth);
+      if(cell.isSea){maxDepth=Math.max(maxDepth,cell.depth);validSea++;}
+      if(cell.isLand){maxLand=Math.max(maxLand,cell.elevation);validLand++;}
+    }
+    elevations.push(elevationRow);depths.push(depthRow);
   }
-  if(valid<Math.max(20,width*height*.04))throw new Error('For lite dybdedata i dette utsnittet. Flytt kartet mot sjøen eller zoom nærmere.');
-  return {...b,width,height,depths,maxDepth,resolution};
+  if(validSea<Math.max(20,width*height*.025))throw new Error('For lite sjødybdedata i dette utsnittet. Flytt kartet mot sjøen eller zoom nærmere.');
+  return {west,south,east,north,width,height,elevations,depths,maxDepth,maxLand,validSea,validLand,sourceResolution,sampling,source};
 }
 function buildBathyPlot(grid){
-  const x=Array.from({length:grid.width},(_,i)=>grid.west+(grid.east-grid.west)*i/Math.max(1,grid.width-1));
-  const y=Array.from({length:grid.height},(_,i)=>grid.north-(grid.north-grid.south)*i/Math.max(1,grid.height-1));
-  const z=[],surfaceColor=[],water=[];const depthCap=Math.max(10,Math.min(120,Math.ceil(grid.maxDepth/10)*10));
+  const frame=bathyLocalFrame(grid);
+  const lonForCol=i=>grid.west+(grid.east-grid.west)*i/Math.max(1,grid.width-1);
+  const latForRow=i=>grid.north-(grid.north-grid.south)*i/Math.max(1,grid.height-1);
+  const x=Array.from({length:grid.width},(_,i)=>frame.xForLon(lonForCol(i)));
+  const y=Array.from({length:grid.height},(_,i)=>frame.yForLat(latForRow(i)));
+  const seabed=[],seaColor=[],land=[],landColor=[],water=[];
+  const depthCap=Math.max(10,Math.min(180,Math.ceil(grid.maxDepth/10)*10));
+  const landCap=Math.max(12,Math.min(140,Math.ceil(Math.min(grid.maxLand||0,140)/10)*10||20));
   for(let r=0;r<grid.height;r++){
-    const zr=[],cr=[],wr=[];
+    const sr=[],scr=[],lr=[],lcr=[],wr=[];
     for(let c=0;c<grid.width;c++){
-      const d=grid.depths[r][c],sea=Number.isFinite(d)&&d>.05;
-      zr.push(sea?-d:0);cr.push(sea?d:-6);wr.push(sea?0:null);
+      const elevation=grid.elevations[r][c],depth=grid.depths[r][c],sea=Number.isFinite(depth);
+      sr.push(sea?elevation:null);scr.push(sea?Math.min(depth,depthCap):null);
+      lr.push(!sea&&Number.isFinite(elevation)?Math.min(elevation,landCap):null);lcr.push(!sea&&Number.isFinite(elevation)?Math.min(elevation,landCap):null);
+      wr.push(sea?0:null);
     }
-    z.push(zr);surfaceColor.push(cr);water.push(wr);
+    seabed.push(sr);seaColor.push(scr);land.push(lr);landColor.push(lcr);water.push(wr);
   }
-  const colorscale=[[0,'#183027'],[.045,'#183027'],[.05,'#9de8ef'],[.18,'#67d1e2'],[.38,'#2c9fca'],[.62,'#1265a1'],[1,'#062d5d']];
-  const bottom={type:'surface',x,y,z,surfacecolor:surfaceColor,cmin:-6,cmax:depthCap,colorscale,showscale:false,hovertemplate:'Dybde: %{customdata:.1f} m<extra></extra>',customdata:grid.depths,lighting:{ambient:.62,diffuse:.88,roughness:.82,specular:.12},lightposition:{x:-1200,y:-900,z:1400},contours:{z:{show:true,usecolormap:false,color:'#7fc8d3',width:1,project:{z:true}}}};
-  const waterSurface={type:'surface',x,y,z:water,showscale:false,opacity:.18,hoverinfo:'skip',colorscale:[[0,'#93ecf5'],[1,'#93ecf5']]};
+  const seaScale=[[0,'#a9eef2'],[.12,'#7cdae8'],[.32,'#42b4d4'],[.58,'#1c79b0'],[.8,'#0b4f86'],[1,'#062f5d']];
+  const landScale=[[0,'#29463a'],[.35,'#203b31'],[.7,'#172f28'],[1,'#10251f']];
+  const bottom={type:'surface',x,y,z:seabed,surfacecolor:seaColor,cmin:0,cmax:depthCap,colorscale:seaScale,showscale:false,connectgaps:false,hovertemplate:'Dybde: %{customdata:.1f} m<extra></extra>',customdata:grid.depths,lighting:{ambient:.56,diffuse:.9,roughness:.78,specular:.16,fresnel:.08},lightposition:{x:-1600,y:-1200,z:1700},contours:{z:{show:true,usecolormap:false,color:'rgba(210,248,255,.44)',width:1,project:{z:true}}}};
+  const landSurface={type:'surface',x,y,z:land,surfacecolor:landColor,cmin:0,cmax:landCap,colorscale:landScale,showscale:false,connectgaps:false,hovertemplate:'Terreng: %{z:.0f} moh.<extra></extra>',lighting:{ambient:.48,diffuse:.94,roughness:.92,specular:.06},lightposition:{x:-1600,y:-1200,z:1700}};
+  const waterSurface={type:'surface',x,y,z:water,showscale:false,opacity:.22,connectgaps:false,hoverinfo:'skip',colorscale:[[0,'#7adce8'],[1,'#7adce8']]};
   const zones=latestZones.filter(v=>v?.marker&&v.marker.lon>=grid.west&&v.marker.lon<=grid.east&&v.marker.lat>=grid.south&&v.marker.lat<=grid.north).slice(0,10);
-  const zoneTrace={type:'scatter3d',mode:'markers+text',x:zones.map(v=>v.marker.lon),y:zones.map(v=>v.marker.lat),z:zones.map(()=>2),text:zones.map((v,i)=>`🚩 ${i+1} · ${Math.round(v.score)}`),textposition:'top center',textfont:{color:'#fff',size:12},marker:{size:7,color:zones.map(v=>threeDFeatureColor(v)),line:{color:'#fff',width:1.5}},customdata:zones.map(v=>v.id),hovertext:zones.map((v,i)=>`#${i+1} ${v.name||v.fishLabel||'Fiskeplass'} · ${Math.round(v.score)}/100`),hoverinfo:'text'};
-  const layout={paper_bgcolor:'#10231e',plot_bgcolor:'#10231e',margin:{l:0,r:0,t:0,b:0},showlegend:false,uirevision:'fiste-bathy',scene:{bgcolor:'#10231e',xaxis:{visible:false},yaxis:{visible:false},zaxis:{title:'Dybde (m)',color:'#d7eee4',gridcolor:'rgba(255,255,255,.10)',zerolinecolor:'rgba(255,255,255,.28)',range:[-depthCap*1.12,Math.max(4,depthCap*.08)]},aspectmode:'manual',aspectratio:{x:1.8,y:1.25,z:.58},camera:{eye:{x:1.55,y:-1.85,z:1.18},up:{x:0,y:0,z:1}}},hoverlabel:{bgcolor:'#071b16',bordercolor:'#38d477',font:{color:'#fff'}}};
+  const zoneTrace={type:'scatter3d',mode:'markers+text',x:zones.map(v=>frame.xForLon(v.marker.lon)),y:zones.map(v=>frame.yForLat(v.marker.lat)),z:zones.map(v=>Math.max(.8,(bathyGridValueAt(grid,v.marker.lon,v.marker.lat)||0)+1.2)),text:zones.map((v,i)=>`🚩 ${i+1} · ${Math.round(v.score)}`),textposition:'top center',textfont:{color:'#fff',size:12},marker:{size:7,color:zones.map(v=>threeDFeatureColor(v)),line:{color:'#fff',width:1.5}},customdata:zones.map(v=>v.id),hovertext:zones.map((v,i)=>`#${i+1} ${v.name||v.fishLabel||'Fiskeplass'} · ${Math.round(v.score)}/100`),hoverinfo:'text'};
+  const center=map.getCenter();
+  const centerInBounds=center.lng>=grid.west&&center.lng<=grid.east&&center.lat>=grid.south&&center.lat<=grid.north;
+  const referenceTrace={type:'scatter3d',mode:'markers',x:centerInBounds?[frame.xForLon(center.lng)]:[],y:centerInBounds?[frame.yForLat(center.lat)]:[],z:centerInBounds?[Math.max(1,(bathyGridValueAt(grid,center.lng,center.lat)||0)+1.8)]:[],marker:{size:8,color:'#ef4444',symbol:'circle',line:{color:'#fff',width:2}},hovertext:['Kartets referansepunkt'],hoverinfo:'text'};
+  const widthM=Math.max(1,Math.abs(x[x.length-1]-x[0])),heightM=Math.max(1,Math.abs(y[0]-y[y.length-1]));
+  const maxXY=Math.max(widthM,heightM),verticalSpan=Math.max(depthCap+landCap,20);
+  const requestedExaggeration=Math.max(1.2,Math.min(4.5,(maxXY/verticalSpan)*.12));
+  const zRatio=Math.max(.18,Math.min(.70,(verticalSpan*requestedExaggeration)/maxXY));
+  const verticalExaggeration=zRatio*maxXY/verticalSpan;
+  const layout={paper_bgcolor:'#10231e',plot_bgcolor:'#10231e',margin:{l:0,r:0,t:0,b:0},showlegend:false,uirevision:'fiste-bathy-rev34',scene:{bgcolor:'#10231e',xaxis:{visible:false},yaxis:{visible:false},zaxis:{title:'Høyde / dybde (m)',color:'#d7eee4',gridcolor:'rgba(255,255,255,.10)',zerolinecolor:'rgba(255,255,255,.35)',range:[-depthCap*1.08,landCap*1.08]},aspectmode:'manual',aspectratio:{x:widthM/maxXY,y:heightM/maxXY,z:zRatio},camera:{eye:{x:1.55,y:-1.85,z:1.12},up:{x:0,y:0,z:1}}},hoverlabel:{bgcolor:'#071b16',bordercolor:'#38d477',font:{color:'#fff'}}};
   $('bathyDepthMax').textContent=`${depthCap} m+`;
-  return {data:[bottom,waterSurface,zoneTrace],layout};
+  return {data:[bottom,landSurface,waterSurface,zoneTrace,referenceTrace],layout,verticalExaggeration};
 }
 async function refreshBathy3D(){
-  if(!bathyActive)return;const token=++bathyLoadToken,status=$('bathyStatus');if(status)status.textContent='Henter EMODnet-dybder …';
+  if(!bathyActive)return;const token=++bathyLoadToken,status=$('bathyStatus');if(status)status.textContent='Henter riktig bunngeometri …';
   try{
     const [Plotly,grid]=await Promise.all([ensurePlotly(),fetchBathymetryGrid()]);if(token!==bathyLoadToken||!bathyActive)return;
     bathyLastGrid=grid;const plot=buildBathyPlot(grid);const el=$('bathy3d');await Plotly.react(el,plot.data,plot.layout,{displaylogo:false,responsive:true,scrollZoom:true,modeBarButtonsToRemove:['toImage','sendDataToCloud','lasso3d','select2d']});
     if(el&&!el._fisteClickBound&&typeof el.on==='function'){el.on('plotly_click',event=>{const id=event?.points?.[0]?.customdata;if(id)selectZone(id,{scroll:true});});el._fisteClickBound=true;}
-    bathyPlotReady=true;if(status)status.textContent=`Modellert bunn · ca. ${grid.resolution||125} m datagrunnlag · ${latestZones.filter(v=>v?.marker&&v.marker.lon>=grid.west&&v.marker.lon<=grid.east&&v.marker.lat>=grid.south&&v.marker.lat<=grid.north).slice(0,10).length} punkt`;
-    const notice=document.querySelector('.map-notice');if(notice)notice.textContent='3D bunn: modellert fra EMODnet DTM. Roter og zoom fritt. Flaggene er Fistes anbefalte punkter.';
+    bathyPlotReady=true;
+    const pointCount=latestZones.filter(v=>v?.marker&&v.marker.lon>=grid.west&&v.marker.lon<=grid.east&&v.marker.lat>=grid.south&&v.marker.lat<=grid.north).slice(0,10).length;
+    if(status)status.textContent=`Korrigert bunn · kilde ca. ${grid.sourceResolution} m · ${pointCount} punkt`;
+    const notice=document.querySelector('.map-notice');if(notice)notice.textContent=`3D bunn: sjø/land er skilt korrekt, kartet bruker samme geografiske utsnitt som 2D-kartet og X/Y vises i meter. Vertikal overdrivelse ca. ${plot.verticalExaggeration.toFixed(1)}×.`;
   }catch(error){if(token!==bathyLoadToken)return;if(status)status.textContent='3D bunn kunne ikke lastes';const w=$('warnings');if(w)w.textContent=`3D bunn: ${error.message} Vanlige 2D- og 3D-topokart fungerer fortsatt.`;}
 }
 async function enableBathy3D(){
@@ -396,7 +447,7 @@ function syncBathyZones(){if(isBathy3DMode()&&bathyPlotReady&&bathyLastGrid&&win
 const labels = { vind:'Vind', skydekke:'Skydekke', kyst:'Kyst', vannkant:'Vannkant', eksponering:'Eksponering', temperatur:'Temperatur', lufttemperatur:'Lufttemperatur', tidspunkt:'Tidspunkt', dybde:'Dybde', storfisk:'Stor fisk', lufttrykk:'Lufttrykk', sjoetemperatur:'Sjøtemp', boelger:'Bølger', havstroem:'Havstrøm', tidevann:'Tidevann', maane:'Måne', personlig:'Mine fangster', habitat:'Habitat', forhold:'Nå' };
 const freshwaterFishTypes = new Set(['orret','abbor','gjedde']);
 const catchStorageKey='fiste-guiden-catch-log-v1';
-const analysisCacheKey='fiste-guiden-last-analysis-v33';
+const analysisCacheKey='fiste-guiden-last-analysis-v34';
 const fishLabels={all:'Alle sjøarter',sjoorret:'Sjøørret',makrell:'Makrell',sei:'Sei',orret:'Ørret (ferskvann)',abbor:'Abbor',gjedde:'Gjedde'};
 const speciesColors={sjoorret:'#ef4444',makrell:'#3b82f6',sei:'#22c55e'};
 let latestWeather=null;
@@ -920,7 +971,7 @@ function exportCatchGpx() {
   if(!entries.length){$('catchStatus').textContent='Ingen loggposter med kartposisjon å eksportere.';return;}
   const xmlEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const waypoints=entries.map(entry=>`<wpt lat="${entry.mapCenter.lat}" lon="${entry.mapCenter.lon}"><time>${xmlEscape(entry.time)}</time><name>${xmlEscape(entry.place||fishLabels[entry.fish]||'Fisketur')}</name><desc>${xmlEscape(`${entry.result==='fangst'?'Fangst':'Ingen fangst'} · ${fishLabels[entry.fish]||entry.fish}${entry.lure?' · '+entry.lure:''}`)}</desc><type>${entry.result==='fangst'?'catch':'session'}</type></wpt>`).join('');
-  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV33" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
+  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV34" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
   $('catchStatus').textContent=`Eksporterte ${entries.length} posisjoner som GPX.`;
 }
 function exportCatchJson() { const entries=readCatchEntries();downloadTextFile(`fiste-guiden-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2),'application/json');$('catchStatus').textContent=`Backup med ${entries.length} loggposter er eksportert.`; }
@@ -1101,7 +1152,7 @@ window.addEventListener('offline', () => {const cached=readCachedAnalysis();setS
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&liveActive) acquireLiveWakeLock();});
 window.addEventListener('pagehide',()=>{if(liveWatchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(liveWatchId); releaseLiveWakeLock();});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/owned-lure-names.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=33.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=34.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;
