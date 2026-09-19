@@ -1455,6 +1455,20 @@ async function boatRamps({west,south,east,north}) {
   });
 }
 
+async function bathymetryRaster({west,south,east,north,zoom=13}) {
+  const spanLon=east-west,spanLat=north-south;
+  if(spanLon<=0||spanLat<=0||spanLon>0.18||spanLat>0.18) throw new Error('Zoom nærmere for 3D-bunn (maks ca. 15–20 km utsnitt).');
+  const samples=Math.max(36,Math.min(64,Math.round(42+(zoom-10)*3)));
+  const resx=spanLon/samples,resy=spanLat/samples;
+  const key=`bathy-tif:${west.toFixed(4)},${south.toFixed(4)},${east.toFixed(4)},${north.toFixed(4)},${samples}`;
+  return cached(key,6*60*60*1000,async()=>{
+    const params=new URLSearchParams({service:'wcs',version:'1.0.0',request:'getcoverage',coverage:'emodnet:mean',crs:'EPSG:4326',BBOX:`${west},${south},${east},${north}`,format:'image/tiff',interpolation:'bilinear',resx:String(resx),resy:String(resy)});
+    const buffer=await fetchBuffer(`https://ows.emodnet-bathymetry.eu/wcs?${params}`,{'User-Agent':MET_USER_AGENT},14000);
+    if(!buffer?.length||buffer.length<512) throw new Error('EMODnet returnerte ikke et gyldig dybderaster.');
+    return {buffer,samples,source:'EMODnet Bathymetry DTM',resolutionApproxM:Math.round(Math.max(resx*111320*Math.cos(((south+north)/2)*Math.PI/180),resy*110540))};
+  });
+}
+
 function send(res, code, data, type='application/json; charset=utf-8', extraHeaders={}) {
   res.writeHead(code, {'Content-Type':type,'Access-Control-Allow-Origin':'*','Cache-Control':type.startsWith('application/json')?'no-store':'public, max-age=3600', ...extraHeaders});
   const body=type.startsWith('application/json')&&!Buffer.isBuffer(data)&&typeof data!=='string'?JSON.stringify(data):data;
@@ -1462,7 +1476,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v12-rev32',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v13-rev33',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
@@ -1481,6 +1495,10 @@ async function handleApi(req,res,url) {
     if(url.pathname==='/api/ramps') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'12');}catch(error){return send(res,400,{error:error.message});}
       return send(res,200,await boatRamps(input));
+    }
+    if(url.pathname==='/api/bathymetry-raster') {
+      let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
+      try{const result=await bathymetryRaster(input);return send(res,200,result.buffer,'image/tiff',{'X-Fiste-Bathymetry-Source':result.source,'X-Fiste-Resolution-M':String(result.resolutionApproxM),'Cache-Control':'public, max-age=21600'});}catch(error){return send(res,502,{error:error.message});}
     }
     if(url.pathname==='/api/depth-profile') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon')),coastNormal=Number(url.searchParams.get('coastNormal'));
@@ -1535,4 +1553,4 @@ function createServer() {
 }
 function startServer(port=PORT) { const server=createServer(); return server.listen(port,()=>{ let ip='localhost'; for(const list of Object.values(os.networkInterfaces())) for(const item of list||[]) if(item.family==='IPv4'&&!item.internal) ip=item.address; console.log(`Fiste guiden kjører på http://${ip}:${port}`); }); }
 if(require.main===module) startServer();
-module.exports={computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};
+module.exports={bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};

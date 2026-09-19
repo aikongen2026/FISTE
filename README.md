@@ -1,8 +1,16 @@
-# Fiste guiden REV32 – smart, kompakt analyse
+## Nytt i REV33 – 3D bunn
+- Nytt kartvalg **3D bunn / dybder** for sjø.
+- Henter EMODnet Bathymetry-raster først når 3D-bunn åpnes, så vanlig appstart forblir rask.
+- Interaktiv roterbar bunnmodell med dybdekurver, dybdeskala og Fistes 10 beste punkter som flagg/etiketter over modellen.
+- **Ovenfra**, **3D skrå** og **Oppdater bunn** ligger i et lite kart-HUD.
+- Dybden er modellert bathymetri og er ikke ekkolodd eller navigasjonsgrunnlag.
+- Ferskvann bruker fortsatt 3D terreng og NVE-dybdekart der NVE har publisert data.
 
-REV32 bygger direkte på REV31 og beholder den raske Mistra-inspirerte arbeidsflyten: kart først, valgt sone øverst, 10 beste steder, Live GPS og faktiske slukbilder fra brukerens egen slukboks.
+# Fiste guiden REV33 – smart, kompakt analyse
 
-## Nytt i REV32
+REV33 bygger direkte på REV31 og beholder den raske Mistra-inspirerte arbeidsflyten: kart først, valgt sone øverst, 10 beste steder, Live GPS og faktiske slukbilder fra brukerens egen slukboks.
+
+## Nytt i REV33
 
 - Nytt kartvalg **3D topo / terreng**. MapLibre lastes først når 3D velges, slik at vanlig 2D-kart fortsatt starter like raskt.
 - 3D-visningen bruker terreng-Dem og Kartverket-topografi, med skrå/roterbar kameravisning.
@@ -56,7 +64,7 @@ Resten ligger lukket som standard:
 
 EMODnet-profilen er modellert og har grov oppløsning. Den skal brukes til fiskestruktur, ikke navigasjon. Kartverket sitt dybdekart/sjøkart er fortsatt tilgjengelig som kartlag der tjenesten dekker området.
 
-Marine naturtypekart har ufullstendig geografisk dekning. REV32 rapporterer derfor egen confidence/datadekning og bruker ikke manglende registrering som et negativt bevis.
+Marine naturtypekart har ufullstendig geografisk dekning. REV33 rapporterer derfor egen confidence/datadekning og bruker ikke manglende registrering som et negativt bevis.
 
 ## Datakilder brukt i analysen
 
@@ -75,8 +83,8 @@ Den enkleste måten er fortsatt:
 1. Pakk ut ZIP-en.
 2. Dobbeltklikk `1-OPPDATER-OG-APNE-FISTE.bat`.
 3. Scriptet synkroniserer til `aikongen2026/FISTE`.
-4. Render Auto-Deploy bygger REV32.
-5. Scriptet venter på `/api/health` og åpner appen når REV32 er live.
+4. Render Auto-Deploy bygger REV33.
+5. Scriptet venter på `/api/health` og åpner appen når REV33 er live.
 
 Første gang kan Git/GitHub be om innlogging.
 
