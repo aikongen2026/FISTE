@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "13.1.0",
-  "appRevision": 36,
-  "description": "Fiste guiden REV36 – mobilfikset 3D topo og 3D bunn som nedtrekk under kartet, med Kartverket-data og lokal Canvas-rendering uten Plotly.",
+  "version": "13.2.0",
+  "appRevision": 37,
+  "description": "Fiste guiden REV37 – robust innebygd 3D topo/terreng uten MapLibre-avhengighet, samt 3D bunn under kartet med Kartverket-data og lokal Canvas-rendering.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",

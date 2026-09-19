@@ -109,6 +109,7 @@ function updateLiveMapPosition(position){
   renderLiveHud();
   sync3DReferenceAndLive();
   if(is3DMode()&&threeDMap){threeDProgrammaticMove=true;threeDMap.easeTo({center:[longitude,latitude],zoom:Math.max(15,threeDMap.getZoom()),pitch:62,duration:liveLastFix?320:500});threeDSyncing=true;map.setView(latlng,Math.max(15,map.getZoom()),{animate:false});setTimeout(()=>{threeDSyncing=false;},0);}
+  else if(is3DMode()){map.setView(latlng,Math.max(15,map.getZoom()),{animate:!liveLastFix});scheduleNative3DRefresh(240);}
   else if(!liveLastFix) map.setView(latlng,Math.max(15,map.getZoom()),{animate:true});
   else map.panTo(latlng,{animate:true,duration:.35,noMoveStart:true});
   const now=Date.now();
@@ -170,6 +171,13 @@ let threeDActive=false;
 let threeDSyncing=false;
 let threeDProgrammaticMove=false;
 let threeDErrorCount=0;
+let forceNative3DTerrain=false;
+let nativeThreeDLoadToken=0;
+let nativeThreeDReady=false;
+let nativeThreeDScene=null;
+let nativeThreeDResizeObserver=null;
+let nativeThreeDProjectedZones=[];
+const nativeThreeDView={yaw:-0.55,pitch:0.88,zoom:1,pointers:new Map(),moved:false,lastPinch:0};
 const THREE_D_LIB_VERSION='6.10.0';
 function is3DMode(){return threeDActive&&$('mapStyle')?.value==='3d';}
 function ensureMapLibre(){
@@ -215,6 +223,7 @@ function ensure3DDataLayers(){
 }
 function threeDFeatureColor(zone){const fish=zone.fishType||$('fishType')?.value;return $('fishType')?.value==='all'?(speciesColors[fish]||scoreColor(zone.score)):scoreColor(zone.score);}
 function sync3DZones(){
+  if((!threeDMap||!threeDReady)&&native3DActiveNow()){renderNative3DCanvas();return;}
   if(!threeDMap||!threeDReady) return;
   ensure3DDataLayers();
   const zoneSource=threeDMap.getSource('fiste-zones'),castSource=threeDMap.getSource('fiste-casts');
@@ -223,8 +232,10 @@ function sync3DZones(){
   zoneSource.setData({type:'FeatureCollection',features});
   const castFeatures=latestZones.slice(0,3).filter(zone=>Number.isFinite(zone.castBearing)).map((zone,index)=>{const length=index===0?90:60,rad=zone.castBearing*Math.PI/180,dLat=(Math.sin(rad)*length)/110540,dLon=(Math.cos(rad)*length)/(111320*Math.max(.2,Math.cos(zone.marker.lat*Math.PI/180)));return {type:'Feature',geometry:{type:'LineString',coordinates:[[zone.marker.lon,zone.marker.lat],[zone.marker.lon+dLon,zone.marker.lat+dLat]]},properties:{id:zone.id}};});
   castSource.setData({type:'FeatureCollection',features:castFeatures});
+  if(native3DActiveNow()) renderNative3DCanvas();
 }
 function sync3DReferenceAndLive(){
+  if((!threeDMap||!threeDReady)&&native3DActiveNow()){renderNative3DCanvas();return;}
   if(!threeDMap||!threeDReady) return;
   ensure3DDataLayers();
   const ref=threeDMap.getSource('fiste-reference'),track=threeDMap.getSource('fiste-live-track');
@@ -233,6 +244,7 @@ function sync3DReferenceAndLive(){
   track?.setData({type:'FeatureCollection',features:liveTrackPoints.length>1?[{type:'Feature',geometry:{type:'LineString',coordinates:liveTrackPoints.map(p=>[p.lng,p.lat])},properties:{}}]:[]});
 }
 function sync3DReferenceLayers(){
+  if((!threeDMap||!threeDReady)&&native3DActiveNow()){renderNative3DCanvas();return;}
   if(!threeDMap||!threeDReady)return;
   ensure3DDataLayers();
   const freshwater=freshwaterFishTypes.has($('fishType')?.value);
@@ -248,6 +260,7 @@ function sync3DReferenceLayers(){
     for(const spot of sourceSpotData.spots||[]) spotFeatures.push({type:'Feature',geometry:{type:'Point',coordinates:[spot.lon,spot.lat]},properties:{name:spot.name||'',color:spot.status==='restricted'?'#ff5d55':'#f2c94c'}});
   }
   threeDMap.getSource('fiste-source-spots')?.setData({type:'FeatureCollection',features:spotFeatures});
+  if(native3DActiveNow()) renderNative3DCanvas();
 }
 function sync3DWaterMode(){
   if(!threeDMap||!threeDReady||!threeDMap.getLayer('depth-overlay'))return;
@@ -257,7 +270,7 @@ function sync3DWaterMode(){
 function focusMapOnZone(zone,zoom=15){
   if(!zone?.marker)return;
   if(is3DMode()&&threeDMap){threeDProgrammaticMove=true;threeDMap.easeTo({center:[zone.marker.lon,zone.marker.lat],zoom:Math.max(threeDMap.getZoom(),zoom),pitch:62,bearing:threeDMap.getBearing(),duration:550});}
-  else map.setView([zone.marker.lat,zone.marker.lon],Math.max(map.getZoom(),zoom),{animate:true});
+  else{map.setView([zone.marker.lat,zone.marker.lon],Math.max(map.getZoom(),zoom),{animate:true});if(is3DMode())scheduleNative3DRefresh(180);}
 }
 function syncLeafletFrom3D({reload=true}={}){
   if(!threeDMap||!threeDActive)return;
@@ -270,6 +283,7 @@ async function enable3DMap(){
   const wrap=document.querySelector('.map-wrap'),container=$('map3d'),hud=$('threeDHud');
   wrap?.classList.add('three-d-active');if(container)container.hidden=false;if(hud)hud.hidden=false;
   const notice=document.querySelector('.map-notice');if(notice)notice.textContent='Laster 3D topo … 10 beste punkter, GPS-spor og dybdeetiketter vises også i 3D.';
+  if(forceNative3DTerrain){await enableNative3DMap();return;}
   try{
     const lib=await ensureMapLibre();
     if(!threeDActive||$('mapStyle')?.value!=='3d')return;
@@ -289,12 +303,80 @@ async function enable3DMap(){
       const c=map.getCenter();threeDProgrammaticMove=true;threeDMap.jumpTo({center:[c.lng,c.lat],zoom:map.getZoom(),pitch:62});threeDMap.resize();sync3DZones();syncBathyZones();sync3DReferenceAndLive();sync3DReferenceLayers();sync3DWaterMode();
     }
   }catch(error){
-    threeDActive=false;wrap?.classList.remove('three-d-active');if(container)container.hidden=true;if(hud)hud.hidden=true;$('mapStyle').value='topo';topoLayer.addTo(map);const w=$('warnings');if(w)w.textContent=`3D-kart kunne ikke startes: ${error.message}. Detaljert topo vises i stedet.`;saveUiState();
+    forceNative3DTerrain=true;
+    const w=$('warnings');if(w)w.textContent=`3D-topo byttet til innebygd terrengvisning fordi MapLibre ikke kunne lastes (${error.message}).`;
+    await enableNative3DMap();
   }
 }
 function disable3DMap(){
   threeDActive=false;document.querySelector('.map-wrap')?.classList.remove('three-d-active');if($('map3d'))$('map3d').hidden=true;if($('threeDHud'))$('threeDHud').hidden=true;const notice=document.querySelector('.map-notice');if(notice)notice.textContent='Klikk i kartet = nytt referansepunkt. De 10 beste sonene oppdateres automatisk.';setTimeout(()=>map.invalidateSize({pan:false}),0);
 }
+
+function ensureNative3DCanvas(){
+  const container=$('map3d');
+  if(!container||container.dataset.nativeTerrain==='1') return;
+  container.dataset.nativeTerrain='1';
+  container.innerHTML='<canvas id="terrain3DCanvas" aria-label="Interaktivt 3D topografisk kart. Dra for å rotere, bruk to fingre eller musehjul for zoom."></canvas><div id="terrain3DEmpty" class="terrain3d-empty">Åpner 3D terreng …</div><div id="terrain3DAttribution" class="terrain3d-attribution">Kartverket terreng og dybdedata · innebygd 3D</div>';
+}
+function native3DCanvas(){return $('terrain3DCanvas');}
+function native3DEmpty(){return $('terrain3DEmpty');}
+function native3DActiveNow(){return threeDActive&&$('mapStyle')?.value==='3d';}
+function renderNative3DCanvas(){
+  const canvas=native3DCanvas();
+  if(!canvas||!nativeThreeDScene||!native3DActiveNow()) return;
+  const {ctx,w,h}=bathyEnsureCanvasSize(canvas),scene=nativeThreeDScene;if(w<20||h<20)return;
+  const bg=ctx.createLinearGradient(0,0,0,h);bg.addColorStop(0,'#173a31');bg.addColorStop(.38,'#0e241d');bg.addColorStop(1,'#061713');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  const polys=scene.triangles.map(t=>{const p=t.v.map(v=>bathyProject(scene,v,w,h,nativeThreeDView));return {t,p,d:(p[0].depth+p[1].depth+p[2].depth)/3};}).sort((a,b)=>a.d-b.d);
+  for(const item of polys){const {t,p}=item;const shade=.9+bathyClamp((item.d+1)*.085,0,.18);ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);ctx.lineTo(p[1].x,p[1].y);ctx.lineTo(p[2].x,p[2].y);ctx.closePath();ctx.fillStyle=t.sea?bathySeaColor(t.depth,scene.depthCap,shade):bathyLandColor(Math.max(0,t.z),scene.landCap,shade);ctx.fill();ctx.strokeStyle=t.sea?'rgba(210,248,255,.14)':'rgba(170,210,190,.12)';ctx.lineWidth=.55;ctx.stroke();}
+  ctx.strokeStyle='rgba(195,246,252,.72)';ctx.lineWidth=1.15;ctx.beginPath();
+  for(let r=0;r<scene.grid.height;r++)for(let c=0;c<scene.grid.width-1;c++){const a=scene.vertices[r][c],b=scene.vertices[r][c+1];if(a&&b&&a.sea!==b.sea){const pa=bathyProject(scene,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:0},w,h,nativeThreeDView);ctx.moveTo(pa.x-1,pa.y);ctx.lineTo(pa.x+1,pa.y);}}
+  ctx.stroke();
+  nativeThreeDProjectedZones=[];
+  const zones=latestZones.filter(v=>v?.marker&&v.marker.lon>=scene.grid.west&&v.marker.lon<=scene.grid.east&&v.marker.lat>=scene.grid.south&&v.marker.lat<=scene.grid.north).slice(0,10);
+  zones.forEach((zone,index)=>{const z=(bathyGridValueAt(scene.grid,zone.marker.lon,zone.marker.lat)??0)+2;const p=bathyProject(scene,{x:scene.frame.xForLon(zone.marker.lon),y:scene.frame.yForLat(zone.marker.lat),z},w,h,nativeThreeDView);nativeThreeDProjectedZones.push({x:p.x,y:p.y,id:zone.id});ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fillStyle=threeDFeatureColor(zone);ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();ctx.font='700 11px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.78)';ctx.shadowBlur=3;ctx.fillText(`${index+1} · ${Math.round(zone.score||0)}`,p.x,p.y-10);ctx.shadowBlur=0;});
+  const focusPoint=liveActive&&livePosition?{lat:livePosition.lat,lon:livePosition.lon,color:'#38d477',radius:7}:{lat:map.getCenter().lat,lon:map.getCenter().lng,color:'#ef4444',radius:6};
+  if(focusPoint.lon>=scene.grid.west&&focusPoint.lon<=scene.grid.east&&focusPoint.lat>=scene.grid.south&&focusPoint.lat<=scene.grid.north){const z=(bathyGridValueAt(scene.grid,focusPoint.lon,focusPoint.lat)??0)+3;const p=bathyProject(scene,{x:scene.frame.xForLon(focusPoint.lon),y:scene.frame.yForLat(focusPoint.lat),z},w,h,nativeThreeDView);ctx.beginPath();ctx.arc(p.x,p.y,focusPoint.radius,0,Math.PI*2);ctx.fillStyle=focusPoint.color;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+  ctx.fillStyle='rgba(222,244,234,.92)';ctx.font='700 11px system-ui,sans-serif';ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText('3D terreng / bunn',12,12);
+  ctx.font='600 11px system-ui,sans-serif';ctx.textBaseline='alphabetic';ctx.fillStyle='rgba(222,244,234,.88)';ctx.fillText('Kartverket · interaktiv 3D',12,h-14);
+}
+function native3DCamera(kind='pitch'){
+  if(kind==='top'){nativeThreeDView.yaw=0;nativeThreeDView.pitch=0;nativeThreeDView.zoom=.98;}
+  else{nativeThreeDView.yaw=-0.55;nativeThreeDView.pitch=0.88;nativeThreeDView.zoom=1;}
+  renderNative3DCanvas();
+}
+function bindNative3DCanvas(){
+  const canvas=native3DCanvas();if(!canvas||canvas.dataset.bound==='1')return;canvas.dataset.bound='1';
+  const point=e=>({x:e.clientX,y:e.clientY});
+  canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture?.(e.pointerId);nativeThreeDView.pointers.set(e.pointerId,point(e));nativeThreeDView.moved=false;if(nativeThreeDView.pointers.size===2){const q=[...nativeThreeDView.pointers.values()];nativeThreeDView.lastPinch=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);}});
+  canvas.addEventListener('pointermove',e=>{const prev=nativeThreeDView.pointers.get(e.pointerId);if(!prev)return;const now=point(e),dx=now.x-prev.x,dy=now.y-prev.y;nativeThreeDView.pointers.set(e.pointerId,now);if(Math.abs(dx)+Math.abs(dy)>2)nativeThreeDView.moved=true;if(nativeThreeDView.pointers.size===1){nativeThreeDView.yaw+=dx*.009;nativeThreeDView.pitch=bathyClamp(nativeThreeDView.pitch-dy*.006,0,1.28);renderNative3DCanvas();}else if(nativeThreeDView.pointers.size>=2){const q=[...nativeThreeDView.pointers.values()].slice(0,2),dist=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);if(nativeThreeDView.lastPinch>0)nativeThreeDView.zoom=bathyClamp(nativeThreeDView.zoom*(dist/nativeThreeDView.lastPinch),.58,2.7);nativeThreeDView.lastPinch=dist;renderNative3DCanvas();}});
+  const end=e=>{const pos=point(e);nativeThreeDView.pointers.delete(e.pointerId);if(nativeThreeDView.pointers.size<2)nativeThreeDView.lastPinch=0;if(!nativeThreeDView.moved){let best=null;for(const z of nativeThreeDProjectedZones){const d=Math.hypot(z.x-(pos.x-canvas.getBoundingClientRect().left),z.y-(pos.y-canvas.getBoundingClientRect().top));if(d<28&&(!best||d<best.d))best={...z,d};}if(best)selectZone(best.id,{scroll:true});}};
+  canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
+  canvas.addEventListener('wheel',e=>{e.preventDefault();nativeThreeDView.zoom=bathyClamp(nativeThreeDView.zoom*(e.deltaY>0?.92:1.08),.58,2.7);renderNative3DCanvas();},{passive:false});
+  canvas.addEventListener('dblclick',e=>{e.preventDefault();native3DCamera('pitch');});
+  if('ResizeObserver' in window&&!nativeThreeDResizeObserver){nativeThreeDResizeObserver=new ResizeObserver(()=>renderNative3DCanvas());nativeThreeDResizeObserver.observe(canvas);}
+}
+async function refreshNative3DMap(){
+  if(!native3DActiveNow()) return;
+  ensureNative3DCanvas();
+  const token=++nativeThreeDLoadToken;const empty=native3DEmpty();
+  if(empty){empty.hidden=false;empty.textContent='Henter terreng- og dybdedata fra Kartverket …';}
+  const notice=document.querySelector('.map-notice');if(notice)notice.textContent='3D terreng: dra for å rotere, bruk musehjul eller to fingre for zoom. Velg sone under til høyre for å hoppe i utsnittet.';
+  try{
+    const grid=await fetchBathymetryGrid();
+    if(token!==nativeThreeDLoadToken||!native3DActiveNow()) return;
+    nativeThreeDScene=buildBathyScene(grid);nativeThreeDReady=true;bindNative3DCanvas();requestAnimationFrame(()=>{renderNative3DCanvas();if(empty)empty.hidden=true;});
+  }catch(error){
+    if(token!==nativeThreeDLoadToken) return;
+    nativeThreeDReady=false;nativeThreeDScene=null;
+    if(empty){empty.hidden=false;empty.textContent=error.message;}
+    const w=$('warnings');if(w)w.textContent=`3D terreng: ${error.message}`;
+  }
+}
+async function enableNative3DMap(){
+  ensureNative3DCanvas();
+  await refreshNative3DMap();
+}
+function scheduleNative3DRefresh(delay=650){if(!native3DActiveNow()) return;clearTimeout(scheduleNative3DRefresh._t);scheduleNative3DRefresh._t=setTimeout(()=>refreshNative3DMap(),delay);}
 
 // REV36: mobile-first 3D bathymetry lives in a collapsible panel BELOW the normal map.
 // The renderer uses the browser's native 2D canvas instead of a third-party 3D CDN,
@@ -375,12 +457,12 @@ function buildBathyScene(grid){
   $('bathyDepthMax').textContent=`${depthCap} m+`;
   return {grid,frame,vertices,triangles,depthCap,landCap,widthM,heightM,maxXY,verticalExaggeration};
 }
-function bathyProject(scene,v,w,h){
-  const yaw=bathyView.yaw,pitch=bathyView.pitch,cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+function bathyProject(scene,v,w,h,view=bathyView){
+  const yaw=view.yaw,pitch=view.pitch,cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
   const nx=v.x/scene.maxXY,ny=v.y/scene.maxXY,nz=(v.z*scene.verticalExaggeration)/scene.maxXY;
   const rx=nx*cy-ny*sy,ry=nx*sy+ny*cy;
   const py=ry*cp+nz*sp,depth=ry*sp-nz*cp;
-  const scale=Math.min(w,h)*.76*bathyView.zoom;
+  const scale=Math.min(w,h)*.76*view.zoom;
   return {x:w*.5+rx*scale,y:h*.56-py*scale,depth};
 }
 function bathyEnsureCanvasSize(canvas){
@@ -969,7 +1051,7 @@ function exportCatchGpx() {
   if(!entries.length){$('catchStatus').textContent='Ingen loggposter med kartposisjon å eksportere.';return;}
   const xmlEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const waypoints=entries.map(entry=>`<wpt lat="${entry.mapCenter.lat}" lon="${entry.mapCenter.lon}"><time>${xmlEscape(entry.time)}</time><name>${xmlEscape(entry.place||fishLabels[entry.fish]||'Fisketur')}</name><desc>${xmlEscape(`${entry.result==='fangst'?'Fangst':'Ingen fangst'} · ${fishLabels[entry.fish]||entry.fish}${entry.lure?' · '+entry.lure:''}`)}</desc><type>${entry.result==='fangst'?'catch':'session'}</type></wpt>`).join('');
-  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV36" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
+  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV37" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
   $('catchStatus').textContent=`Eksporterte ${entries.length} posisjoner som GPX.`;
 }
 function exportCatchJson() { const entries=readCatchEntries();downloadTextFile(`fiste-guiden-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2),'application/json');$('catchStatus').textContent=`Backup med ${entries.length} loggposter er eksportert.`; }
@@ -1118,7 +1200,7 @@ async function loadZones({ immediate=false }={}) {
 // ResizeObserver/invalidateSize can emit moveend without user interaction.
 // Listening to dragend instead prevents a render → resize → reload feedback loop.
 map.on('click',event=>{setBasePoint(event.latlng,{label:'Kartklikk',focus:false});setState('ready','Kartklikk satt som referansepunkt. Oppdaterer 10 beste soner …');});
-map.on('dragend zoomend', () => {if(threeDSyncing)return;saveUiState();renderConditionVectors();if(showBoatRamps)loadBoatRamps();loadZones();scheduleBathyRefresh(750);});
+map.on('dragend zoomend', () => {if(threeDSyncing)return;saveUiState();renderConditionVectors();if(showBoatRamps)loadBoatRamps();loadZones();scheduleBathyRefresh(750);scheduleNative3DRefresh(750);});
 $('locate').addEventListener('click', () => { setState('locating','Finner posisjonen din …'); map.locate({ setView:true, maxZoom:14, enableHighAccuracy:true }); });
 $('live').addEventListener('click',startLiveMode);
 $('retry').addEventListener('click', () => loadZones({immediate:true}));
@@ -1127,13 +1209,13 @@ $('fishGoal').addEventListener('change',()=>{saveUiState();loadZones({immediate:
 $('baseRadius').addEventListener('change',()=>{saveUiState();updateBaseRadiusCircle();if(basePoint&&Number($('baseRadius').value)>0)focusBaseRadius();loadZones({immediate:true});});
 $('setBase').addEventListener('click',()=>{if(basePoint)clearBasePoint();else setBasePoint(map.getCenter(),{label:'Valgt base'});});
 $('mapStyle').addEventListener('change',()=>{applyMapStyle();saveUiState();});
-$('threeDTopView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:0,bearing:0,duration:450});});
+$('threeDTopView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:0,bearing:0,duration:450});else native3DCamera('top');});
 $('bathyTopView')?.addEventListener('click',()=>bathyCamera('top'));
 $('bathyPitchView')?.addEventListener('click',()=>bathyCamera('pitch'));
 $('bathyResetView')?.addEventListener('click',()=>bathyResetView());
 $('bathyRefresh')?.addEventListener('click',()=>refreshBathy3D());
 $('bathyPanel')?.addEventListener('toggle',()=>{$('bathyPanel').open?enableBathy3D():disableBathy3D();});
-$('threeDPitchView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:62,bearing:-18,duration:450});});
+$('threeDPitchView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:62,bearing:-18,duration:450});else native3DCamera('pitch');});
 $('sourceSpotToggle').addEventListener('click',()=>{showSourceSpots=!showSourceSpots;$('sourceSpotToggle').setAttribute('aria-pressed',String(showSourceSpots));$('sourceSpotToggle').classList.toggle('layer-active',showSourceSpots);$('sourceSpotToggle').textContent=showSourceSpots?'Kirkøy-steder':'Vis Kirkøy-steder';renderReferenceLayers();});
 $('restrictionToggle').addEventListener('click',()=>{showRestrictions=!showRestrictions;$('restrictionToggle').setAttribute('aria-pressed',String(showRestrictions));$('restrictionToggle').classList.toggle('restriction-active',showRestrictions);$('restrictionToggle').textContent=showRestrictions?'Fredningsgrenser':'Vis fredningsgrenser';renderReferenceLayers();});
 $('nveDepthToggle').addEventListener('click',()=>{const enable=!map.hasLayer(nveDepthLayer);if(enable)nveDepthLayer.addTo(map);else map.removeLayer(nveDepthLayer);$('nveDepthToggle').setAttribute('aria-pressed',String(enable));$('nveDepthToggle').classList.toggle('depth-active',enable);$('nveDepthToggle').textContent=enable?'Skjul NVE-dybde':'NVE dybdekart';});
@@ -1145,14 +1227,14 @@ window.addEventListener('popstate',()=>{ if(lureViewer.open){lureViewerHistoryAc
 document.addEventListener('click', event => { const image=event.target.closest?.('.zoomable-lure'); if (!image) return; event.preventDefault(); event.stopPropagation(); openLureViewer(image.currentSrc || image.src, image.alt); }, true);
 document.addEventListener('click', event => { const button=event.target.closest?.('.popup-details'); if(!button) return; event.preventDefault(); const zoneId=button.dataset.zone; map.closePopup(); selectZone(zoneId,{scroll:true}); });
 document.addEventListener('keydown', event => { const image=event.target.closest?.('.zoomable-lure'); if (image && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openLureViewer(image.currentSrc || image.src, image.alt); } });
-map.on('locationfound', event => { if (locationMarker) locationMarker.remove(); locationMarker=L.circleMarker(event.latlng,{radius:7,color:'#fff',weight:2,fillColor:'#38d477',fillOpacity:1}).addTo(map).bindPopup('Din posisjon').openPopup(); setBasePoint(event.latlng,{label:'Base: din posisjon',focus:false}); if(is3DMode()&&threeDMap){threeDProgrammaticMove=true;threeDMap.easeTo({center:[event.latlng.lng,event.latlng.lat],zoom:Math.max(14,threeDMap.getZoom()),pitch:62,duration:500});} sync3DReferenceAndLive(); $('setBase').textContent='✓ Base = GPS · fjern'; setState('ready','Posisjon funnet. Bruker den som base og oppdaterer soner …'); });
+map.on('locationfound', event => { if (locationMarker) locationMarker.remove(); locationMarker=L.circleMarker(event.latlng,{radius:7,color:'#fff',weight:2,fillColor:'#38d477',fillOpacity:1}).addTo(map).bindPopup('Din posisjon').openPopup(); setBasePoint(event.latlng,{label:'Base: din posisjon',focus:false}); if(is3DMode()&&threeDMap){threeDProgrammaticMove=true;threeDMap.easeTo({center:[event.latlng.lng,event.latlng.lat],zoom:Math.max(14,threeDMap.getZoom()),pitch:62,duration:500});} else if(is3DMode()) scheduleNative3DRefresh(120); sync3DReferenceAndLive(); $('setBase').textContent='✓ Base = GPS · fjern'; setState('ready','Posisjon funnet. Bruker den som base og oppdaterer soner …'); });
 map.on('locationerror', () => setState('error','Kunne ikke hente posisjonen. Tillat posisjon eller flytt kartet manuelt.'));
 window.addEventListener('online', () => loadZones({immediate:true}));
 window.addEventListener('offline', () => {const cached=readCachedAnalysis();setState(cached?'ready':'error',cached?'Du er offline. Siste lagrede analyse er tilgjengelig.':'Du er offline. Kartskallet virker; lagret analyse vises når den finnes.');});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&liveActive) acquireLiveWakeLock();});
 window.addEventListener('pagehide',()=>{if(liveWatchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(liveWatchId); releaseLiveWakeLock();});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/owned-lure-names.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=36.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=37.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;

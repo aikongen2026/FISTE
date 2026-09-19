@@ -1,0 +1,19 @@
+FISTE GUIDEN REV37 – 3D TOPO FIX
+
+Hva som er fikset:
+- 3D topo/terreng har nå en innebygd Canvas-basert fallback som ikke er avhengig av at MapLibre lastes fra CDN.
+- Når MapLibre feiler, bytter appen automatisk til lokal 3D-visning i stedet for å vise feilmelding og falle tilbake til 2D.
+- 3D-visningen viser terreng + sjøbunn fra Kartverket-grid, de 10 beste sonene, markør for sentrum/live-posisjon og støtter rotasjon/zoom.
+- 3D oppdateres ved filterendringer, sonevalg, GPS-oppdatering og kartflytting.
+- Service worker/cache er bumpet til REV37 for å unngå at gammel 3D-kode blir hengende i nettleseren.
+
+Lokal røyk-test utført:
+1. node --check public/app.js  -> OK
+2. node --check server.js      -> OK
+3. Lokal server startet og /api/health svarte:
+   {"ok":true,"version":"v13-rev37","revision":"REV 37",...}
+4. index.html inneholder oppdatert 3D-valg, map3d-container og 3D HUD.
+
+Merk:
+- Selve Kartverket/WMS/eksterne kartfliser kan ikke fullverdig ende-til-ende testes i dette offline-miljøet.
+- Fallbacken er laget nettopp for å fungere når den eksterne 3D-biblioteklasting feiler på enheten.

@@ -72,10 +72,15 @@
 @media(max-width:700px){.analysis-score-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-columns{grid-template-columns:1fr}.structure-summary{grid-template-columns:1fr}.analysis-factor-list>div{grid-template-columns:minmax(85px,1fr) minmax(60px,1.1fr) 28px}}
 
 /* REV34 – lazy 3D terrain view. The normal Leaflet map remains the analysis engine. */
-#map3d{position:absolute;inset:0;z-index:430;background:#b9cfc4}
+#map3d{position:absolute;inset:0;z-index:430;background:#b9cfc4;overflow:hidden}
 #map3d[hidden]{display:none!important}
+#map3d canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+#map3d canvas:active{cursor:grabbing}
 .map-wrap.three-d-active #map{visibility:hidden}
 .map-wrap.three-d-active #map3d{display:block}
+.terrain3d-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:1rem;text-align:center;color:#d5e9df;font-size:.78rem;pointer-events:none;background:linear-gradient(180deg,rgba(8,31,25,.28),rgba(6,23,19,.42))}
+.terrain3d-empty[hidden]{display:none!important}
+.terrain3d-attribution{position:absolute;left:.7rem;bottom:.6rem;z-index:1;padding:.3rem .48rem;border:1px solid rgba(77,118,101,.72);border-radius:.58rem;background:rgba(7,27,22,.75);backdrop-filter:blur(6px);font-size:.62rem;color:#d2e6db}
 .three-d-hud{position:absolute;z-index:680;top:1rem;left:1rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;padding:.5rem .6rem;border:1px solid rgba(56,212,119,.5);border-radius:.75rem;background:rgba(6,23,19,.92);backdrop-filter:blur(8px);box-shadow:0 8px 28px rgba(0,0,0,.28)}
 .three-d-hud[hidden]{display:none!important}.three-d-hud b{font-size:.68rem;letter-spacing:.09em;color:#9bf0bf}.three-d-hud span{font-size:.64rem;color:#c7ddd2}.three-d-hud button{padding:.42rem .58rem;font-size:.64rem;min-height:32px}
 .map-wrap.three-d-active .legend{z-index:690}.map-wrap.three-d-active .map-notice{z-index:690}.map-wrap.three-d-active .live-hud{z-index:700}
