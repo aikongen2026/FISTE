@@ -1469,6 +1469,93 @@ async function bathymetryRaster({west,south,east,north,zoom=13}) {
   });
 }
 
+
+// REV36: Primary 3D seabed source with a reduced mobile grid for faster phone rendering. Kartverket's open height/depth API returns signed
+// terrain/depth samples and avoids the fragile browser-side GeoTIFF/WCS pipeline used in REV34.
+function lonLatToUtm33(lon,lat) {
+  const a=6378137,f=1/298.257222101,k0=.9996,e2=f*(2-f),ep2=e2/(1-e2);
+  const phi=lat*Math.PI/180,lambda=lon*Math.PI/180,lambda0=15*Math.PI/180;
+  const sin=Math.sin(phi),cos=Math.cos(phi),tan=Math.tan(phi),N=a/Math.sqrt(1-e2*sin*sin);
+  const T=tan*tan,C=ep2*cos*cos,A=cos*(lambda-lambda0);
+  const M=a*((1-e2/4-3*e2**2/64-5*e2**3/256)*phi-(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*phi)+(15*e2**2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+  const easting=500000+k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120);
+  const northing=k0*(M+N*tan*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
+  return [easting,northing];
+}
+function bathymetryGridPlan({west,south,east,north,zoom=13,quality='standard'}) {
+  const spanLon=east-west,spanLat=north-south;
+  if(spanLon<=0||spanLat<=0||spanLon>0.18||spanLat>0.18) throw new Error('Zoom nærmere for 3D-bunn (maks ca. 15–20 km utsnitt).');
+  const midLat=(south+north)/2,widthM=Math.max(1,spanLon*111320*Math.cos(midLat*Math.PI/180)),heightM=Math.max(1,spanLat*110540);
+  const mobile=quality==='mobile',longest=Math.max(widthM,heightM),zoomBoost=clamp((Number(zoom)||13)-11,0,5);
+  const minLongest=mobile?28:34,maxLongest=mobile?38:46;
+  let longestCells=Math.round(clamp(minLongest+zoomBoost*(mobile?1.8:2.4),minLongest,maxLongest));
+  let width=Math.max(mobile?18:22,Math.round(longestCells*widthM/longest));
+  let height=Math.max(mobile?18:22,Math.round(longestCells*heightM/longest));
+  const maxPoints=mobile?900:1600;
+  if(width*height>maxPoints){const scale=Math.sqrt(maxPoints/(width*height));width=Math.max(16,Math.floor(width*scale));height=Math.max(16,Math.floor(height*scale));}
+  const spacingM=Math.round(Math.max(widthM/Math.max(1,width-1),heightM/Math.max(1,height-1)));
+  return {width,height,widthM,heightM,spacingM,totalPoints:width*height,quality:mobile?'mobile':'standard'};
+}
+function classifyKartverketHeight(point) {
+  const rawValue=point?.z;
+  if(rawValue===null||rawValue===undefined||rawValue==='') return {elevation:null,depth:null,isSea:false,isLand:false};
+  const raw=Number(rawValue);
+  if(!Number.isFinite(raw)||Math.abs(raw)>12000) return {elevation:null,depth:null,isSea:false,isLand:false};
+  const terrain=String(point?.terreng||point?.terrengtype||'').toLowerCase();
+  const seaHint=/hav|sjø|sjo|saltvann|sea/.test(terrain);
+  if(raw<-.02||seaHint&&raw<=.05) return {elevation:raw<0?raw:-Math.abs(raw),depth:Math.max(0,-raw),isSea:true,isLand:false};
+  return {elevation:Math.max(0,raw),depth:null,isSea:false,isLand:true};
+}
+async function kartverketPointBatch(points) {
+  const projected=points.map(({lon,lat})=>{const [e,n]=lonLatToUtm33(lon,lat);return [Number(e.toFixed(2)),Number(n.toFixed(2))];});
+  const params=new URLSearchParams({koordsys:'25833',punkter:JSON.stringify(projected),geojson:'false'});
+  let lastError=null;
+  for(let attempt=0;attempt<3;attempt++){
+    try{
+      const json=await fetchJson(`https://ws.geonorge.no/hoydedata/v1/punkt?${params}`,{'User-Agent':MET_USER_AGENT,'Accept':'application/json'},12000+attempt*3000);
+      const result=Array.isArray(json?.punkter)?json.punkter:[];
+      if(result.length!==points.length) throw new Error(`Kartverket returnerte ${result.length} av ${points.length} punkter`);
+      return result;
+    }catch(error){lastError=error;if(attempt<2) await new Promise(resolve=>setTimeout(resolve,250*(attempt+1)));}
+  }
+  throw lastError||new Error('Kartverket høydedata svarte ikke');
+}
+async function kartverketBathymetryGrid({west,south,east,north,zoom=13,quality='standard'}) {
+  const plan=bathymetryGridPlan({west,south,east,north,zoom,quality});
+  const key=`bathy-grid-kv:${plan.quality}:${west.toFixed(4)},${south.toFixed(4)},${east.toFixed(4)},${north.toFixed(4)},${plan.width}x${plan.height}`;
+  return cached(key,6*60*60*1000,async()=>{
+    const cells=[];
+    for(let row=0;row<plan.height;row++){
+      const lat=north-(north-south)*row/Math.max(1,plan.height-1);
+      for(let col=0;col<plan.width;col++){
+        const lon=west+(east-west)*col/Math.max(1,plan.width-1);
+        cells.push({row,col,lat,lon});
+      }
+    }
+    const batches=[];for(let i=0;i<cells.length;i+=50)batches.push(cells.slice(i,i+50));
+    const responses=new Array(batches.length);let next=0;
+    const workers=Array.from({length:Math.min(5,batches.length)},async()=>{
+      while(true){const index=next++;if(index>=batches.length)return;responses[index]=await kartverketPointBatch(batches[index]);}
+    });
+    await Promise.all(workers);
+    const elevations=Array.from({length:plan.height},()=>Array(plan.width).fill(null));
+    const depths=Array.from({length:plan.height},()=>Array(plan.width).fill(null));
+    const sources=new Map();let maxDepth=0,maxLand=0,validSea=0,validLand=0,valid=0;
+    batches.forEach((batch,batchIndex)=>batch.forEach((cell,i)=>{
+      const point=responses[batchIndex]?.[i]||null,classified=classifyKartverketHeight(point);
+      elevations[cell.row][cell.col]=classified.elevation;depths[cell.row][cell.col]=classified.depth;
+      if(classified.elevation!==null)valid++;
+      if(classified.isSea){validSea++;maxDepth=Math.max(maxDepth,classified.depth||0);}
+      if(classified.isLand){validLand++;maxLand=Math.max(maxLand,classified.elevation||0);}
+      const source=String(point?.datakilde||point?.dataKilde||'').trim();if(source)sources.set(source,(sources.get(source)||0)+1);
+    }));
+    if(valid<Math.max(80,plan.totalPoints*.55)) throw new Error('For lite Kartverket-data i dette utsnittet. Zoom nærmere og prøv igjen.');
+    if(validSea<Math.max(12,plan.totalPoints*.015)) throw new Error('Utsnittet inneholder for lite registrert sjødybde. Flytt kartet mot sjøen eller zoom nærmere.');
+    const dominantSource=[...sources.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'Kartverket høydedata';
+    return {west,south,east,north,width:plan.width,height:plan.height,quality:plan.quality,elevations,depths,maxDepth,maxLand,validSea,validLand,source:'Kartverket Høyde- og dybdedata',dataSource:dominantSource,sourceResolution:null,samplingApproxM:plan.spacingM,generatedAt:new Date().toISOString(),navigationWarning:'Dybdene er kun for planlegging og må ikke brukes til navigasjon.'};
+  });
+}
+
 function send(res, code, data, type='application/json; charset=utf-8', extraHeaders={}) {
   res.writeHead(code, {'Content-Type':type,'Access-Control-Allow-Origin':'*','Cache-Control':type.startsWith('application/json')?'no-store':'public, max-age=3600', ...extraHeaders});
   const body=type.startsWith('application/json')&&!Buffer.isBuffer(data)&&typeof data!=='string'?JSON.stringify(data):data;
@@ -1476,7 +1563,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v13-rev34',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v13-rev36',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata',nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
@@ -1495,6 +1582,11 @@ async function handleApi(req,res,url) {
     if(url.pathname==='/api/ramps') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'12');}catch(error){return send(res,400,{error:error.message});}
       return send(res,200,await boatRamps(input));
+    }
+    if(url.pathname==='/api/bathymetry-grid') {
+      let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
+      const quality=url.searchParams.get('quality')==='mobile'?'mobile':'standard';
+      try{return send(res,200,await kartverketBathymetryGrid({...input,quality}),'application/json; charset=utf-8',{'Cache-Control':'public, max-age=21600'});}catch(error){return send(res,502,{error:error.message});}
     }
     if(url.pathname==='/api/bathymetry-raster') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
@@ -1553,4 +1645,4 @@ function createServer() {
 }
 function startServer(port=PORT) { const server=createServer(); return server.listen(port,()=>{ let ip='localhost'; for(const list of Object.values(os.networkInterfaces())) for(const item of list||[]) if(item.family==='IPv4'&&!item.internal) ip=item.address; console.log(`Fiste guiden kjører på http://${ip}:${port}`); }); }
 if(require.main===module) startServer();
-module.exports={bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};
+module.exports={kartverketBathymetryGrid,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};

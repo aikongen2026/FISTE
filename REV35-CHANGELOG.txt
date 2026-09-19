@@ -1,0 +1,11 @@
+FISTE GUIDEN REV35 – 3D BUNN KARTVERKET
+
+- Byttet primær 3D-bunnkilde fra EMODnet WCS/GeoTIFF til Kartverkets åpne høyde- og dybdedata-API.
+- Ny server-side /api/bathymetry-grid: batcher inntil 50 punkter per kall og bygger signert høyde-/dybderutenett.
+- Fjerner browser-avhengighet til GeoTIFF-modulen som kunne gi "3D bunn kunne ikke lastes".
+- Plotly har nå to CDN-kilder med timeout/fallback.
+- 2D-kartet skjules eksplisitt mens 3D-bunn er aktiv, også dersom gammel CSS ligger i cache.
+- Korrekt meterproporsjon og skille mellom land (>=0) og sjø (<0) beholdes.
+- Statusfelt viser Kartverket-kilde og faktisk visualiseringsrutenett.
+- Dybdene merkes tydelig som planleggingsdata, ikke navigasjonsdata.
+- Tettere adaptivt 3D-rutenett (opptil ca. 2200 samplepunkter) for jevnere kyst og bunnform.

@@ -1,0 +1,21 @@
+FISTE GUIDEN REV36 – MOBILE 3D + BUNNPANEL
+
+1. 3D BUNN ER FLYTTET UNDER KARTET
+- Ikke lenger overlay over hovedkartet.
+- Åpnes/lukkes som nedtrekksmeny.
+- Kartet kan brukes samtidig.
+
+2. MOBILSIKKER 3D BUNN
+- Plotly/CDN-rendering er fjernet fra bunnvisningen.
+- Ny lokal Canvas-renderer med dra, pinch-zoom og nullstilling.
+- Mobil bruker redusert rutenett for mindre datamengde og raskere respons.
+
+3. 3D TOPO PÅ TELEFON
+- WebGL kontrolleres før oppstart.
+- MapLibre lastes med unpkg og jsDelivr som fallback.
+- DEM bruker Terrarium-format.
+- Ved feil går appen tydelig tilbake til detaljert topo.
+
+4. KOMPATIBILITET
+- Gammel lagret 3D-bunnkartmodus migreres automatisk.
+- REV36 service worker/cache hindrer at telefonen sitter fast på REV35.

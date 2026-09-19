@@ -1,4 +1,19 @@
-## REV34 – 3D-bunn kartfiks
+# Fiste guiden REV36 – mobilfikset 3D
+
+REV36 retter mobilvisningen av 3D og flytter **3D bunnkart** ut av kartflaten. Bunnkartet ligger nå som en nedtrekksseksjon rett under hovedkartet. Det normale kartet forblir synlig, og 3D-bunnen rendres lokalt i Canvas uten Plotly-avhengighet.
+
+## Viktigste endringer i REV36
+- 3D bunnkart ligger under kartet som en `<details>`-nedtrekksmeny.
+- Mobilvennlig Canvas-rendering: dra for rotasjon, to fingre for zoom, egen nullstill-knapp.
+- Mindre bunnrutenett på mobil for raskere og mer stabil lasting.
+- 3D topo har WebGL-sjekk og to CDN-fallbacks for MapLibre.
+- Terrengmodellen bruker Terrarium DEM og vanlig Kartverket topo/dybde som kartlag.
+- Gammel lagret `bathy3d`-kartmodus migreres automatisk til detaljert topo + nytt bunnpanel.
+- Service-worker/cache og deploykontroller er oppdatert til REV36.
+
+---
+
+## REV35 – 3D-bunn kartfiks
 - Retter hovedfeilen i REV33: høyder over havet blir ikke lenger gjort om til falske dybder med absoluttverdi.
 - GeoTIFF-ens faktiske geografiske avgrensning brukes, slik at 3D-modellen ligger på samme sted som 2D-kartet.
 - Lengdegrad/breddegrad omregnes til lokale meter før 3D-rendering, slik at kystlinje og bunn ikke strekkes feil.
@@ -6,7 +21,7 @@
 - Hotspots og referansepunkt plasseres i samme koordinatsystem som bunnmodellen.
 - Status viser faktisk kilderaster (~115 m for EMODnet) i stedet for å kalle frontend-resampling for datagrunnlag.
 
-## Nytt i REV34 – 3D bunn
+## Nytt i REV35 – 3D bunn
 - Nytt kartvalg **3D bunn / dybder** for sjø.
 - Henter EMODnet Bathymetry-raster først når 3D-bunn åpnes, så vanlig appstart forblir rask.
 - Interaktiv roterbar bunnmodell med dybdekurver, dybdeskala og Fistes 10 beste punkter som flagg/etiketter over modellen.
@@ -14,11 +29,11 @@
 - Dybden er modellert bathymetri og er ikke ekkolodd eller navigasjonsgrunnlag.
 - Ferskvann bruker fortsatt 3D terreng og NVE-dybdekart der NVE har publisert data.
 
-# Fiste guiden REV34 – smart, kompakt analyse
+# Fiste guiden REV35 – smart, kompakt analyse
 
-REV34 bygger direkte på REV31 og beholder den raske Mistra-inspirerte arbeidsflyten: kart først, valgt sone øverst, 10 beste steder, Live GPS og faktiske slukbilder fra brukerens egen slukboks.
+REV35 bygger direkte på REV31 og beholder den raske Mistra-inspirerte arbeidsflyten: kart først, valgt sone øverst, 10 beste steder, Live GPS og faktiske slukbilder fra brukerens egen slukboks.
 
-## Nytt i REV34
+## Nytt i REV35
 
 - Nytt kartvalg **3D topo / terreng**. MapLibre lastes først når 3D velges, slik at vanlig 2D-kart fortsatt starter like raskt.
 - 3D-visningen bruker terreng-Dem og Kartverket-topografi, med skrå/roterbar kameravisning.
@@ -72,7 +87,7 @@ Resten ligger lukket som standard:
 
 EMODnet-profilen er modellert og har grov oppløsning. Den skal brukes til fiskestruktur, ikke navigasjon. Kartverket sitt dybdekart/sjøkart er fortsatt tilgjengelig som kartlag der tjenesten dekker området.
 
-Marine naturtypekart har ufullstendig geografisk dekning. REV34 rapporterer derfor egen confidence/datadekning og bruker ikke manglende registrering som et negativt bevis.
+Marine naturtypekart har ufullstendig geografisk dekning. REV35 rapporterer derfor egen confidence/datadekning og bruker ikke manglende registrering som et negativt bevis.
 
 ## Datakilder brukt i analysen
 
@@ -91,10 +106,14 @@ Den enkleste måten er fortsatt:
 1. Pakk ut ZIP-en.
 2. Dobbeltklikk `1-OPPDATER-OG-APNE-FISTE.bat`.
 3. Scriptet synkroniserer til `aikongen2026/FISTE`.
-4. Render Auto-Deploy bygger REV34.
-5. Scriptet venter på `/api/health` og åpner appen når REV34 er live.
+4. Render Auto-Deploy bygger REV35.
+5. Scriptet venter på `/api/health` og åpner appen når REV35 er live.
 
 Første gang kan Git/GitHub be om innlogging.
 
 ## One-click oppdatering - FIX
 `1-OPPDATER-OG-APNE-FISTE.bat` installerer nå Git for Windows automatisk ved behov. Den prøver først Windows Package Manager (winget), og bruker offisiell Git for Windows-installasjon som reserve. Etter installasjon fortsetter samme kjøring til GitHub og Render.
+
+
+## REV35 – 3D bunn
+3D-bunnen hentes som et JSON-rutenett fra Kartverkets åpne høyde- og dybdedata-API. Nettleseren trenger ikke lenger å tolke GeoTIFF fra EMODnet. Dette gjør 3D-visningen mer robust og bruker samme offisielle norske høyde-/dybdekilde for sjø og land. Dybdene er kun til planlegging, ikke navigasjon.

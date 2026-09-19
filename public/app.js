@@ -161,7 +161,7 @@ function stopLiveMode({message=true}={}){
 }
 let latestZones=[];
 let selectedZoneId=null;
-// REV34: optional lazy-loaded MapLibre 3D terrain view. Leaflet remains the analysis engine;
+// REV36: optional lazy-loaded MapLibre 3D terrain view with dual-CDN mobile fallback. Leaflet remains the analysis engine;
 // the two maps are synchronized so 3D never changes the scoring logic or Live GPS behavior.
 let threeDMap=null;
 let threeDReady=false;
@@ -175,21 +175,23 @@ function is3DMode(){return threeDActive&&$('mapStyle')?.value==='3d';}
 function ensureMapLibre(){
   if(window.maplibregl) return Promise.resolve(window.maplibregl);
   if(threeDLoadPromise) return threeDLoadPromise;
-  threeDLoadPromise=new Promise((resolve,reject)=>{
-    if(!document.querySelector('link[data-maplibre]')){
-      const link=document.createElement('link');link.rel='stylesheet';link.dataset.maplibre='1';link.href=`https://unpkg.com/maplibre-gl@${THREE_D_LIB_VERSION}/dist/maplibre-gl.css`;document.head.appendChild(link);
-    }
-    const existing=document.querySelector('script[data-maplibre]');
-    if(existing){existing.addEventListener('load',()=>resolve(window.maplibregl),{once:true});existing.addEventListener('error',()=>reject(new Error('MapLibre kunne ikke lastes')), {once:true});return;}
-    const script=document.createElement('script');script.src=`https://unpkg.com/maplibre-gl@${THREE_D_LIB_VERSION}/dist/maplibre-gl.js`;script.async=true;script.dataset.maplibre='1';script.onload=()=>window.maplibregl?resolve(window.maplibregl):reject(new Error('MapLibre mangler etter lasting'));script.onerror=()=>reject(new Error('MapLibre kunne ikke lastes fra CDN'));document.head.appendChild(script);
-  });
+  threeDLoadPromise=(async()=>{
+    const probe=document.createElement('canvas');
+    if(!probe.getContext('webgl2')&&!probe.getContext('webgl')) throw new Error('Nettleseren har ikke WebGL aktivert for 3D-kart.');
+    const cssUrls=[`https://unpkg.com/maplibre-gl@${THREE_D_LIB_VERSION}/dist/maplibre-gl.css`,`https://cdn.jsdelivr.net/npm/maplibre-gl@${THREE_D_LIB_VERSION}/dist/maplibre-gl.css`];
+    cssUrls.forEach((href,index)=>{if(!document.querySelector(`link[data-maplibre-css="${index}"]`)){const link=document.createElement('link');link.rel='stylesheet';link.dataset.maplibreCss=String(index);link.href=href;document.head.appendChild(link);}});
+    const load=src=>new Promise((resolve,reject)=>{const tag=document.createElement('script');tag.src=src;tag.async=true;tag.dataset.maplibre='1';const timer=setTimeout(()=>{tag.remove();reject(new Error('timeout'));},9000);tag.onload=()=>{clearTimeout(timer);window.maplibregl?resolve(window.maplibregl):reject(new Error('MapLibre mangler etter lasting'));};tag.onerror=()=>{clearTimeout(timer);tag.remove();reject(new Error('lastingsfeil'));};document.head.appendChild(tag);});
+    const sources=[`https://unpkg.com/maplibre-gl@${THREE_D_LIB_VERSION}/dist/maplibre-gl.js`,`https://cdn.jsdelivr.net/npm/maplibre-gl@${THREE_D_LIB_VERSION}/dist/maplibre-gl.js`];
+    let lastError=null;for(const src of sources){try{return await load(src);}catch(error){lastError=error;}}
+    throw new Error(`MapLibre kunne ikke lastes på denne enheten${lastError?.message?`: ${lastError.message}`:''}`);
+  })().catch(error=>{threeDLoadPromise=null;throw error;});
   return threeDLoadPromise;
 }
 function threeDStyleSpec(){
   const freshwater=freshwaterFishTypes.has($('fishType')?.value);
   return {version:8,glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',sources:{
     topo:{type:'raster',tiles:['https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png'],tileSize:256,maxzoom:19,attribution:'© Kartverket (CC BY 4.0)'},
-    terrain:{type:'raster-dem',url:'https://tiles.mapterhorn.com/tilejson.json',tileSize:256},
+    terrain:{type:'raster-dem',tiles:['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],tileSize:256,minzoom:0,maxzoom:15,encoding:'terrarium',attribution:'© AWS Terrain Tiles'},
     depthwms:{type:'raster',tiles:['https://wms.geonorge.no/skwms1/wms.dybdedata2?service=WMS&request=GetMap&version=1.1.1&layers=Dybdedata2&styles=&format=image/png&transparent=true&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256'],tileSize:256,maxzoom:18,attribution:'© Kartverket · dybdedata'}
   },layers:[
     {id:'topo-raster',type:'raster',source:'topo',paint:{'raster-opacity':1}},
@@ -294,30 +296,19 @@ function disable3DMap(){
   threeDActive=false;document.querySelector('.map-wrap')?.classList.remove('three-d-active');if($('map3d'))$('map3d').hidden=true;if($('threeDHud'))$('threeDHud').hidden=true;const notice=document.querySelector('.map-notice');if(notice)notice.textContent='Klikk i kartet = nytt referansepunkt. De 10 beste sonene oppdateres automatisk.';setTimeout(()=>map.invalidateSize({pan:false}),0);
 }
 
-// REV34: corrected 3D bathymetry. Signed elevation is preserved (sea < 0, land >= 0),
-// the GeoTIFF's own geographic bounds are used, and lon/lat is converted to local metres so the
-// rendered coastline/bottom has the same physical proportions as the 2D map.
+// REV36: mobile-first 3D bathymetry lives in a collapsible panel BELOW the normal map.
+// The renderer uses the browser's native 2D canvas instead of a third-party 3D CDN,
+// so Android/Samsung browsers do not depend on Plotly/WebGL just to show the seabed.
 let bathyActive=false;
 let bathyLoadToken=0;
 let bathyPlotReady=false;
 let bathyLastGrid=null;
-let bathyGeoTiffPromise=null;
-let bathyPlotlyPromise=null;
-function isBathy3DMode(){return bathyActive&&$('mapStyle')?.value==='bathy3d';}
-function loadScriptOnce(src,key){
-  return new Promise((resolve,reject)=>{
-    if(window[key]) return resolve(window[key]);
-    const existing=document.querySelector(`script[data-lib="${key}"]`);
-    if(existing){existing.addEventListener('load',()=>resolve(window[key]),{once:true});existing.addEventListener('error',()=>reject(new Error(`${key} kunne ikke lastes`)),{once:true});return;}
-    const s=document.createElement('script');s.src=src;s.async=true;s.dataset.lib=key;s.onload=()=>resolve(window[key]);s.onerror=()=>reject(new Error(`${key} kunne ikke lastes`));document.head.appendChild(s);
-  });
-}
-function ensurePlotly(){return bathyPlotlyPromise||(bathyPlotlyPromise=loadScriptOnce('https://cdn.plot.ly/plotly-2.35.2.min.js','Plotly'));}
-function ensureGeoTiff(){
-  if(bathyGeoTiffPromise) return bathyGeoTiffPromise;
-  bathyGeoTiffPromise=import('https://cdn.jsdelivr.net/npm/geotiff@2.1.3/+esm');
-  return bathyGeoTiffPromise;
-}
+let bathyScene=null;
+let bathyRefreshTimer=null;
+let bathyResizeObserver=null;
+let bathyProjectedZones=[];
+const bathyView={yaw:-0.55,pitch:0.88,zoom:1,pointers:new Map(),moved:false,lastPinch:0};
+function isBathy3DMode(){return bathyActive&&Boolean($('bathyPanel')?.open);}
 function bathyBounds(){
   const b=map.getBounds();let west=b.getWest(),east=b.getEast(),south=b.getSouth(),north=b.getNorth();
   const c=map.getCenter(),maxSpan=.16;
@@ -325,25 +316,10 @@ function bathyBounds(){
   if(north-south>maxSpan){south=c.lat-maxSpan/2;north=c.lat+maxSpan/2;}
   return {west,south,east,north,centerLat:c.lat,centerLon:c.lng};
 }
-function bathyCamera(kind='pitch'){
-  if(!window.Plotly||!bathyPlotReady)return;
-  const camera=kind==='top'?{eye:{x:0,y:0,z:2.35},up:{x:0,y:1,z:0}}:{eye:{x:1.55,y:-1.85,z:1.12},up:{x:0,y:0,z:1}};
-  window.Plotly.relayout('bathy3d',{'scene.camera':camera});
-}
-function bathyCellFromElevation(raw,noData){
-  if(!Number.isFinite(raw)||Math.abs(raw)>=12000||(Number.isFinite(noData)&&Math.abs(raw-noData)<=1e-6)) return {elevation:null,depth:null,isSea:false,isLand:false};
-  // EMODnet DTM is elevation relative to sea level: negative below water, positive on land.
-  if(raw<-.05) return {elevation:raw,depth:-raw,isSea:true,isLand:false};
-  return {elevation:Math.max(0,raw),depth:null,isSea:false,isLand:true};
-}
 function bathyLocalFrame(grid){
   const centerLat=(grid.south+grid.north)/2,centerLon=(grid.west+grid.east)/2;
   const metresPerLon=111320*Math.cos(centerLat*Math.PI/180),metresPerLat=110540;
-  return {
-    centerLat,centerLon,metresPerLon,metresPerLat,
-    xForLon:lon=>(lon-centerLon)*metresPerLon,
-    yForLat:lat=>(lat-centerLat)*metresPerLat
-  };
+  return {centerLat,centerLon,metresPerLon,metresPerLat,xForLon:lon=>(lon-centerLon)*metresPerLon,yForLat:lat=>(lat-centerLat)*metresPerLat};
 }
 function bathyGridValueAt(grid,lon,lat){
   if(lon<grid.west||lon>grid.east||lat<grid.south||lat>grid.north)return null;
@@ -353,101 +329,126 @@ function bathyGridValueAt(grid,lon,lat){
 }
 async function fetchBathymetryGrid(){
   const requested=bathyBounds(),zoom=Math.max(10,Math.min(18,Math.round(map.getZoom())));
-  const url=`/api/bathymetry-raster?bbox=${encodeURIComponent([requested.west,requested.south,requested.east,requested.north].join(','))}&zoom=${zoom}`;
-  const [GeoTIFF,response]=await Promise.all([ensureGeoTiff(),fetch(url)]);
+  const mobile=window.matchMedia?.('(max-width: 850px)').matches||navigator.maxTouchPoints>0;
+  const quality=mobile?'mobile':'standard';
+  const url=`/api/bathymetry-grid?bbox=${encodeURIComponent([requested.west,requested.south,requested.east,requested.north].join(','))}&zoom=${zoom}&quality=${quality}`;
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),22000);
+  let response;
+  try{response=await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal,cache:'no-store'});}catch(error){if(error?.name==='AbortError')throw new Error('Kartverket brukte for lang tid. Zoom litt nærmere og trykk Oppdater bunn.');throw error;}finally{clearTimeout(timer);}
   if(!response.ok){let message='Kunne ikke hente 3D-bunn';try{const j=await response.json();message=j.error||message;}catch{}throw new Error(message);}
-  const sourceResolution=Number(response.headers.get('X-Fiste-Source-Resolution-M'))||115;
-  const sampling=Number(response.headers.get('X-Fiste-Sampling-M'))||null;
-  const source=response.headers.get('X-Fiste-Bathymetry-Source')||'EMODnet Bathymetry DTM';
-  const arrayBuffer=await response.arrayBuffer();
-  const tiff=await GeoTIFF.fromArrayBuffer(arrayBuffer),image=await tiff.getImage();
-  const width=image.getWidth(),height=image.getHeight(),rasters=await image.readRasters(),data=rasters[0];
-  const noData=Number(image.getGDALNoData());
-  let west=requested.west,south=requested.south,east=requested.east,north=requested.north;
-  try{
-    const bb=image.getBoundingBox?.();
-    if(Array.isArray(bb)&&bb.length===4&&bb.every(Number.isFinite)){
-      west=Math.min(bb[0],bb[2]);east=Math.max(bb[0],bb[2]);south=Math.min(bb[1],bb[3]);north=Math.max(bb[1],bb[3]);
-    }
-  }catch{}
-  const elevations=[],depths=[];let maxDepth=0,maxLand=0,validSea=0,validLand=0;
-  for(let y=0;y<height;y++){
-    const elevationRow=[],depthRow=[];
-    for(let x=0;x<width;x++){
-      const cell=bathyCellFromElevation(Number(data[y*width+x]),noData);
-      elevationRow.push(cell.elevation);depthRow.push(cell.depth);
-      if(cell.isSea){maxDepth=Math.max(maxDepth,cell.depth);validSea++;}
-      if(cell.isLand){maxLand=Math.max(maxLand,cell.elevation);validLand++;}
-    }
-    elevations.push(elevationRow);depths.push(depthRow);
-  }
-  if(validSea<Math.max(20,width*height*.025))throw new Error('For lite sjødybdedata i dette utsnittet. Flytt kartet mot sjøen eller zoom nærmere.');
-  return {west,south,east,north,width,height,elevations,depths,maxDepth,maxLand,validSea,validLand,sourceResolution,sampling,source};
+  const grid=await response.json();
+  if(!grid||!Array.isArray(grid.elevations)||!Array.isArray(grid.depths)||!Number.isFinite(grid.width)||!Number.isFinite(grid.height))throw new Error('3D-bunnen kom tilbake i ugyldig format.');
+  if(grid.elevations.length!==grid.height||grid.depths.length!==grid.height)throw new Error('3D-bunnen er ufullstendig.');
+  return {...grid,sourceResolution:Number(grid.sourceResolution)||null,sampling:Number(grid.samplingApproxM)||null};
 }
-function buildBathyPlot(grid){
-  const frame=bathyLocalFrame(grid);
+function bathyClamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function bathyMix(a,b,t){t=bathyClamp(t,0,1);return Math.round(a+(b-a)*t);}
+function bathySeaColor(depth,cap,shade=1){
+  const t=bathyClamp((depth||0)/Math.max(1,cap),0,1),m=t<.45?t/.45:(t-.45)/.55;
+  const a=t<.45?[157,232,239]:[44,159,202],b=t<.45?[44,159,202]:[6,47,93];
+  return `rgb(${bathyClamp(Math.round(bathyMix(a[0],b[0],m)*shade),0,255)},${bathyClamp(Math.round(bathyMix(a[1],b[1],m)*shade),0,255)},${bathyClamp(Math.round(bathyMix(a[2],b[2],m)*shade),0,255)})`;
+}
+function bathyLandColor(height,cap,shade=1){
+  const t=bathyClamp((height||0)/Math.max(1,cap),0,1),a=[49,78,63],b=[16,37,31];
+  return `rgb(${bathyClamp(Math.round(bathyMix(a[0],b[0],t)*shade),0,255)},${bathyClamp(Math.round(bathyMix(a[1],b[1],t)*shade),0,255)},${bathyClamp(Math.round(bathyMix(a[2],b[2],t)*shade),0,255)})`;
+}
+function buildBathyScene(grid){
+  const frame=bathyLocalFrame(grid),vertices=[];
   const lonForCol=i=>grid.west+(grid.east-grid.west)*i/Math.max(1,grid.width-1);
   const latForRow=i=>grid.north-(grid.north-grid.south)*i/Math.max(1,grid.height-1);
-  const x=Array.from({length:grid.width},(_,i)=>frame.xForLon(lonForCol(i)));
-  const y=Array.from({length:grid.height},(_,i)=>frame.yForLat(latForRow(i)));
-  const seabed=[],seaColor=[],land=[],landColor=[],water=[];
-  const depthCap=Math.max(10,Math.min(180,Math.ceil(grid.maxDepth/10)*10));
+  const depthCap=Math.max(10,Math.min(180,Math.ceil(Math.max(1,grid.maxDepth||0)/10)*10));
   const landCap=Math.max(12,Math.min(140,Math.ceil(Math.min(grid.maxLand||0,140)/10)*10||20));
   for(let r=0;r<grid.height;r++){
-    const sr=[],scr=[],lr=[],lcr=[],wr=[];
+    const row=[];
     for(let c=0;c<grid.width;c++){
-      const elevation=grid.elevations[r][c],depth=grid.depths[r][c],sea=Number.isFinite(depth);
-      sr.push(sea?elevation:null);scr.push(sea?Math.min(depth,depthCap):null);
-      lr.push(!sea&&Number.isFinite(elevation)?Math.min(elevation,landCap):null);lcr.push(!sea&&Number.isFinite(elevation)?Math.min(elevation,landCap):null);
-      wr.push(sea?0:null);
+      const elevation=grid.elevations[r]?.[c],depth=grid.depths[r]?.[c];
+      row.push(Number.isFinite(elevation)?{x:frame.xForLon(lonForCol(c)),y:frame.yForLat(latForRow(r)),z:elevation,depth:Number.isFinite(depth)?depth:null,sea:Number.isFinite(depth),row:r,col:c}:null);
     }
-    seabed.push(sr);seaColor.push(scr);land.push(lr);landColor.push(lcr);water.push(wr);
+    vertices.push(row);
   }
-  const seaScale=[[0,'#a9eef2'],[.12,'#7cdae8'],[.32,'#42b4d4'],[.58,'#1c79b0'],[.8,'#0b4f86'],[1,'#062f5d']];
-  const landScale=[[0,'#29463a'],[.35,'#203b31'],[.7,'#172f28'],[1,'#10251f']];
-  const bottom={type:'surface',x,y,z:seabed,surfacecolor:seaColor,cmin:0,cmax:depthCap,colorscale:seaScale,showscale:false,connectgaps:false,hovertemplate:'Dybde: %{customdata:.1f} m<extra></extra>',customdata:grid.depths,lighting:{ambient:.56,diffuse:.9,roughness:.78,specular:.16,fresnel:.08},lightposition:{x:-1600,y:-1200,z:1700},contours:{z:{show:true,usecolormap:false,color:'rgba(210,248,255,.44)',width:1,project:{z:true}}}};
-  const landSurface={type:'surface',x,y,z:land,surfacecolor:landColor,cmin:0,cmax:landCap,colorscale:landScale,showscale:false,connectgaps:false,hovertemplate:'Terreng: %{z:.0f} moh.<extra></extra>',lighting:{ambient:.48,diffuse:.94,roughness:.92,specular:.06},lightposition:{x:-1600,y:-1200,z:1700}};
-  const waterSurface={type:'surface',x,y,z:water,showscale:false,opacity:.22,connectgaps:false,hoverinfo:'skip',colorscale:[[0,'#7adce8'],[1,'#7adce8']]};
-  const zones=latestZones.filter(v=>v?.marker&&v.marker.lon>=grid.west&&v.marker.lon<=grid.east&&v.marker.lat>=grid.south&&v.marker.lat<=grid.north).slice(0,10);
-  const zoneTrace={type:'scatter3d',mode:'markers+text',x:zones.map(v=>frame.xForLon(v.marker.lon)),y:zones.map(v=>frame.yForLat(v.marker.lat)),z:zones.map(v=>Math.max(.8,(bathyGridValueAt(grid,v.marker.lon,v.marker.lat)||0)+1.2)),text:zones.map((v,i)=>`🚩 ${i+1} · ${Math.round(v.score)}`),textposition:'top center',textfont:{color:'#fff',size:12},marker:{size:7,color:zones.map(v=>threeDFeatureColor(v)),line:{color:'#fff',width:1.5}},customdata:zones.map(v=>v.id),hovertext:zones.map((v,i)=>`#${i+1} ${v.name||v.fishLabel||'Fiskeplass'} · ${Math.round(v.score)}/100`),hoverinfo:'text'};
-  const center=map.getCenter();
-  const centerInBounds=center.lng>=grid.west&&center.lng<=grid.east&&center.lat>=grid.south&&center.lat<=grid.north;
-  const referenceTrace={type:'scatter3d',mode:'markers',x:centerInBounds?[frame.xForLon(center.lng)]:[],y:centerInBounds?[frame.yForLat(center.lat)]:[],z:centerInBounds?[Math.max(1,(bathyGridValueAt(grid,center.lng,center.lat)||0)+1.8)]:[],marker:{size:8,color:'#ef4444',symbol:'circle',line:{color:'#fff',width:2}},hovertext:['Kartets referansepunkt'],hoverinfo:'text'};
-  const widthM=Math.max(1,Math.abs(x[x.length-1]-x[0])),heightM=Math.max(1,Math.abs(y[0]-y[y.length-1]));
-  const maxXY=Math.max(widthM,heightM),verticalSpan=Math.max(depthCap+landCap,20);
-  const requestedExaggeration=Math.max(1.2,Math.min(4.5,(maxXY/verticalSpan)*.12));
-  const zRatio=Math.max(.18,Math.min(.70,(verticalSpan*requestedExaggeration)/maxXY));
-  const verticalExaggeration=zRatio*maxXY/verticalSpan;
-  const layout={paper_bgcolor:'#10231e',plot_bgcolor:'#10231e',margin:{l:0,r:0,t:0,b:0},showlegend:false,uirevision:'fiste-bathy-rev34',scene:{bgcolor:'#10231e',xaxis:{visible:false},yaxis:{visible:false},zaxis:{title:'Høyde / dybde (m)',color:'#d7eee4',gridcolor:'rgba(255,255,255,.10)',zerolinecolor:'rgba(255,255,255,.35)',range:[-depthCap*1.08,landCap*1.08]},aspectmode:'manual',aspectratio:{x:widthM/maxXY,y:heightM/maxXY,z:zRatio},camera:{eye:{x:1.55,y:-1.85,z:1.12},up:{x:0,y:0,z:1}}},hoverlabel:{bgcolor:'#071b16',bordercolor:'#38d477',font:{color:'#fff'}}};
+  const widthM=Math.abs(frame.xForLon(grid.east)-frame.xForLon(grid.west)),heightM=Math.abs(frame.yForLat(grid.north)-frame.yForLat(grid.south));
+  const maxXY=Math.max(1,widthM,heightM),verticalSpan=Math.max(20,depthCap+landCap);
+  const verticalExaggeration=bathyClamp((maxXY/verticalSpan)*.105,1.45,4.2);
+  const triangles=[];
+  const addTri=(a,b,c)=>{const vals=[a,b,c].filter(Boolean);if(vals.length!==3)return;const seaCount=vals.filter(v=>v.sea).length;const avgDepth=vals.reduce((n,v)=>n+(v.depth||0),0)/3;const avgZ=vals.reduce((n,v)=>n+v.z,0)/3;triangles.push({v:vals,sea:seaCount>=2,depth:avgDepth,z:avgZ});};
+  for(let r=0;r<grid.height-1;r++)for(let c=0;c<grid.width-1;c++){const a=vertices[r][c],b=vertices[r][c+1],d=vertices[r+1][c],e=vertices[r+1][c+1];addTri(a,b,e);addTri(a,e,d);}
   $('bathyDepthMax').textContent=`${depthCap} m+`;
-  return {data:[bottom,landSurface,waterSurface,zoneTrace,referenceTrace],layout,verticalExaggeration};
+  return {grid,frame,vertices,triangles,depthCap,landCap,widthM,heightM,maxXY,verticalExaggeration};
+}
+function bathyProject(scene,v,w,h){
+  const yaw=bathyView.yaw,pitch=bathyView.pitch,cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  const nx=v.x/scene.maxXY,ny=v.y/scene.maxXY,nz=(v.z*scene.verticalExaggeration)/scene.maxXY;
+  const rx=nx*cy-ny*sy,ry=nx*sy+ny*cy;
+  const py=ry*cp+nz*sp,depth=ry*sp-nz*cp;
+  const scale=Math.min(w,h)*.76*bathyView.zoom;
+  return {x:w*.5+rx*scale,y:h*.56-py*scale,depth};
+}
+function bathyEnsureCanvasSize(canvas){
+  const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+  const width=Math.max(1,Math.round(rect.width*dpr)),height=Math.max(1,Math.round(rect.height*dpr));
+  if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+  const ctx=canvas.getContext('2d',{alpha:false});ctx.setTransform(dpr,0,0,dpr,0,0);return {ctx,w:rect.width,h:rect.height,dpr};
+}
+function renderBathyCanvas(){
+  const canvas=$('bathyCanvas');if(!canvas||!bathyScene||!$('bathyPanel')?.open)return;
+  const {ctx,w,h}=bathyEnsureCanvasSize(canvas),scene=bathyScene;if(w<20||h<20)return;
+  const bg=ctx.createLinearGradient(0,0,0,h);bg.addColorStop(0,'#12332b');bg.addColorStop(1,'#061713');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  const polys=scene.triangles.map(t=>{const p=t.v.map(v=>bathyProject(scene,v,w,h));return {t,p,d:(p[0].depth+p[1].depth+p[2].depth)/3};}).sort((a,b)=>a.d-b.d);
+  for(const item of polys){const {t,p}=item;const shade=.86+bathyClamp((item.d+1)*.09,0,.22);ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);ctx.lineTo(p[1].x,p[1].y);ctx.lineTo(p[2].x,p[2].y);ctx.closePath();ctx.fillStyle=t.sea?bathySeaColor(t.depth,scene.depthCap,shade):bathyLandColor(Math.max(0,t.z),scene.landCap,shade);ctx.fill();ctx.strokeStyle=t.sea?'rgba(210,248,255,.13)':'rgba(156,201,179,.10)';ctx.lineWidth=.55;ctx.stroke();}
+  // Sea-level coastline accent where sign changes between adjacent samples.
+  ctx.strokeStyle='rgba(183,242,245,.72)';ctx.lineWidth=1.15;ctx.beginPath();
+  for(let r=0;r<scene.grid.height;r++)for(let c=0;c<scene.grid.width-1;c++){const a=scene.vertices[r][c],b=scene.vertices[r][c+1];if(a&&b&&a.sea!==b.sea){const pa=bathyProject(scene,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:0},w,h);ctx.moveTo(pa.x-1,pa.y);ctx.lineTo(pa.x+1,pa.y);}}
+  ctx.stroke();
+  bathyProjectedZones=[];
+  const zones=latestZones.filter(v=>v?.marker&&v.marker.lon>=scene.grid.west&&v.marker.lon<=scene.grid.east&&v.marker.lat>=scene.grid.south&&v.marker.lat<=scene.grid.north).slice(0,10);
+  zones.forEach((zone,index)=>{const z=(bathyGridValueAt(scene.grid,zone.marker.lon,zone.marker.lat)??0)+2;const p=bathyProject(scene,{x:scene.frame.xForLon(zone.marker.lon),y:scene.frame.yForLat(zone.marker.lat),z},w,h);bathyProjectedZones.push({x:p.x,y:p.y,id:zone.id});ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fillStyle=threeDFeatureColor(zone);ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();ctx.font='700 11px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=3;ctx.fillText(`${index+1} · ${Math.round(zone.score||0)}`,p.x,p.y-10);ctx.shadowBlur=0;});
+  const center=map.getCenter();if(center.lng>=scene.grid.west&&center.lng<=scene.grid.east&&center.lat>=scene.grid.south&&center.lat<=scene.grid.north){const z=(bathyGridValueAt(scene.grid,center.lng,center.lat)??0)+3;const p=bathyProject(scene,{x:scene.frame.xForLon(center.lng),y:scene.frame.yForLat(center.lat),z},w,h);ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle='#ef4444';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+  ctx.font='600 11px system-ui,sans-serif';ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='rgba(222,244,234,.88)';ctx.fillText('Kartverket · interaktiv 3D-bunn',12,h-14);
+}
+function bathyCamera(kind='pitch'){
+  if(kind==='top'){bathyView.yaw=0;bathyView.pitch=0;bathyView.zoom=.96;}
+  else{bathyView.yaw=-.55;bathyView.pitch=.88;bathyView.zoom=1;}
+  renderBathyCanvas();
+}
+function bathyResetView(){bathyView.yaw=-.55;bathyView.pitch=.88;bathyView.zoom=1;renderBathyCanvas();}
+function bindBathyCanvas(){
+  const canvas=$('bathyCanvas');if(!canvas||canvas.dataset.bound==='1')return;canvas.dataset.bound='1';
+  const point=e=>({x:e.clientX,y:e.clientY});
+  canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture?.(e.pointerId);bathyView.pointers.set(e.pointerId,point(e));bathyView.moved=false;if(bathyView.pointers.size===2){const q=[...bathyView.pointers.values()];bathyView.lastPinch=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);}});
+  canvas.addEventListener('pointermove',e=>{const prev=bathyView.pointers.get(e.pointerId);if(!prev)return;const now=point(e),dx=now.x-prev.x,dy=now.y-prev.y;bathyView.pointers.set(e.pointerId,now);if(Math.abs(dx)+Math.abs(dy)>2)bathyView.moved=true;if(bathyView.pointers.size===1){bathyView.yaw+=dx*.009;bathyView.pitch=bathyClamp(bathyView.pitch-dy*.006,0,1.28);renderBathyCanvas();}else if(bathyView.pointers.size>=2){const q=[...bathyView.pointers.values()].slice(0,2),dist=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);if(bathyView.lastPinch>0)bathyView.zoom=bathyClamp(bathyView.zoom*(dist/bathyView.lastPinch),.58,2.7);bathyView.lastPinch=dist;renderBathyCanvas();}});
+  const end=e=>{const pos=point(e);bathyView.pointers.delete(e.pointerId);if(bathyView.pointers.size<2)bathyView.lastPinch=0;if(!bathyView.moved){let best=null;for(const z of bathyProjectedZones){const d=Math.hypot(z.x-(pos.x-canvas.getBoundingClientRect().left),z.y-(pos.y-canvas.getBoundingClientRect().top));if(d<28&&(!best||d<best.d))best={...z,d};}if(best)selectZone(best.id,{scroll:true});}};
+  canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
+  canvas.addEventListener('wheel',e=>{e.preventDefault();bathyView.zoom=bathyClamp(bathyView.zoom*(e.deltaY>0?.92:1.08),.58,2.7);renderBathyCanvas();},{passive:false});
+  canvas.addEventListener('dblclick',e=>{e.preventDefault();bathyResetView();});
+  if('ResizeObserver'in window){bathyResizeObserver=new ResizeObserver(()=>renderBathyCanvas());bathyResizeObserver.observe(canvas);}
 }
 async function refreshBathy3D(){
-  if(!bathyActive)return;const token=++bathyLoadToken,status=$('bathyStatus');if(status)status.textContent='Henter riktig bunngeometri …';
+  if(!bathyActive||!$('bathyPanel')?.open)return;const token=++bathyLoadToken,status=$('bathyStatus'),summary=$('bathySummaryStatus'),empty=$('bathyEmpty');
+  if(status)status.textContent='Henter bunn for kartutsnittet …';if(summary)summary.textContent='Laster …';if(empty){empty.hidden=false;empty.textContent='Henter Kartverkets høyde- og dybdedata …';}
   try{
-    const [Plotly,grid]=await Promise.all([ensurePlotly(),fetchBathymetryGrid()]);if(token!==bathyLoadToken||!bathyActive)return;
-    bathyLastGrid=grid;const plot=buildBathyPlot(grid);const el=$('bathy3d');await Plotly.react(el,plot.data,plot.layout,{displaylogo:false,responsive:true,scrollZoom:true,modeBarButtonsToRemove:['toImage','sendDataToCloud','lasso3d','select2d']});
-    if(el&&!el._fisteClickBound&&typeof el.on==='function'){el.on('plotly_click',event=>{const id=event?.points?.[0]?.customdata;if(id)selectZone(id,{scroll:true});});el._fisteClickBound=true;}
-    bathyPlotReady=true;
+    const grid=await fetchBathymetryGrid();if(token!==bathyLoadToken||!bathyActive)return;
+    bathyLastGrid=grid;bathyScene=buildBathyScene(grid);bathyPlotReady=true;bindBathyCanvas();
+    requestAnimationFrame(()=>{renderBathyCanvas();if(empty)empty.hidden=true;});
     const pointCount=latestZones.filter(v=>v?.marker&&v.marker.lon>=grid.west&&v.marker.lon<=grid.east&&v.marker.lat>=grid.south&&v.marker.lat<=grid.north).slice(0,10).length;
-    if(status)status.textContent=`Korrigert bunn · kilde ca. ${grid.sourceResolution} m · ${pointCount} punkt`;
-    const notice=document.querySelector('.map-notice');if(notice)notice.textContent=`3D bunn: sjø/land er skilt korrekt, kartet bruker samme geografiske utsnitt som 2D-kartet og X/Y vises i meter. Vertikal overdrivelse ca. ${plot.verticalExaggeration.toFixed(1)}×.`;
-  }catch(error){if(token!==bathyLoadToken)return;if(status)status.textContent='3D bunn kunne ikke lastes';const w=$('warnings');if(w)w.textContent=`3D bunn: ${error.message} Vanlige 2D- og 3D-topokart fungerer fortsatt.`;}
+    if(status)status.textContent=`Kartverket 3D · rutenett ca. ${grid.sampling||'–'} m · ${pointCount} fiskepunkt`;
+    if(summary)summary.textContent=`Klar · ca. ${grid.sampling||'–'} m rutenett`;
+  }catch(error){if(token!==bathyLoadToken)return;bathyPlotReady=false;bathyScene=null;if(status)status.textContent='3D bunn kunne ikke lastes';if(summary)summary.textContent='Kunne ikke laste';if(empty){empty.hidden=false;empty.textContent=`${error.message}`;}const w=$('warnings');if(w)w.textContent=`3D bunn: ${error.message}`;}
 }
 async function enableBathy3D(){
-  const freshwater=freshwaterFishTypes.has($('fishType')?.value);
-  if(freshwater){$('mapStyle').value='3d';enable3DMap();const w=$('warnings');if(w)w.textContent='3D bunn er foreløpig for sjø. På ferskvann brukes 3D terreng; NVE-dybdekart vises der NVE har publisert data.';saveUiState();return;}
-  bathyActive=true;disable3DMap();document.querySelector('.map-wrap')?.classList.add('bathy-d-active');$('bathy3d').hidden=false;$('bathyHud').hidden=false;await refreshBathy3D();saveUiState();
+  bathyActive=true;bindBathyCanvas();
+  const freshwater=freshwaterFishTypes.has($('fishType')?.value),status=$('bathyStatus'),summary=$('bathySummaryStatus'),empty=$('bathyEmpty');
+  if(freshwater){bathyPlotReady=false;bathyScene=null;if(status)status.textContent='3D bunn er tilgjengelig for sjøområder';if(summary)summary.textContent='Sjøområder';if(empty){empty.hidden=false;empty.textContent='Velg en sjøart for Kartverkets 3D-bunn. For ferskvann brukes 3D terreng og NVE-dybdekart der data finnes.';}return;}
+  await refreshBathy3D();
 }
-function disableBathy3D(){
-  bathyActive=false;bathyLoadToken++;document.querySelector('.map-wrap')?.classList.remove('bathy-d-active');if($('bathy3d'))$('bathy3d').hidden=true;if($('bathyHud'))$('bathyHud').hidden=true;setTimeout(()=>map.invalidateSize({pan:false}),0);
-}
-function syncBathyZones(){if(isBathy3DMode()&&bathyPlotReady&&bathyLastGrid&&window.Plotly){const plot=buildBathyPlot(bathyLastGrid);window.Plotly.react('bathy3d',plot.data,plot.layout,{displaylogo:false,responsive:true,scrollZoom:true,modeBarButtonsToRemove:['toImage','sendDataToCloud','lasso3d','select2d']});}}
+function disableBathy3D(){bathyActive=false;bathyLoadToken++;clearTimeout(bathyRefreshTimer);const summary=$('bathySummaryStatus');if(summary)summary.textContent=bathyPlotReady?'Klar – trykk for å åpne':'Trykk for å åpne';}
+function scheduleBathyRefresh(delay=650){if(!isBathy3DMode())return;clearTimeout(bathyRefreshTimer);bathyRefreshTimer=setTimeout(()=>refreshBathy3D(),delay);}
+function syncBathyZones(){if(isBathy3DMode()&&bathyPlotReady&&bathyScene)renderBathyCanvas();}
+
 
 const labels = { vind:'Vind', skydekke:'Skydekke', kyst:'Kyst', vannkant:'Vannkant', eksponering:'Eksponering', temperatur:'Temperatur', lufttemperatur:'Lufttemperatur', tidspunkt:'Tidspunkt', dybde:'Dybde', storfisk:'Stor fisk', lufttrykk:'Lufttrykk', sjoetemperatur:'Sjøtemp', boelger:'Bølger', havstroem:'Havstrøm', tidevann:'Tidevann', maane:'Måne', personlig:'Mine fangster', habitat:'Habitat', forhold:'Nå' };
 const freshwaterFishTypes = new Set(['orret','abbor','gjedde']);
 const catchStorageKey='fiste-guiden-catch-log-v1';
-const analysisCacheKey='fiste-guiden-last-analysis-v34';
+const analysisCacheKey='fiste-guiden-last-analysis-v36';
 const fishLabels={all:'Alle sjøarter',sjoorret:'Sjøørret',makrell:'Makrell',sei:'Sei',orret:'Ørret (ferskvann)',abbor:'Abbor',gjedde:'Gjedde'};
 const speciesColors={sjoorret:'#ef4444',makrell:'#3b82f6',sei:'#22c55e'};
 let latestWeather=null;
@@ -804,13 +805,10 @@ function applyMapStyle() {
   const freshwater=freshwaterFishTypes.has($('fishType').value);
   for(const layer of [standardLayer,topoLayer,topoRasterLayer,terrainLayer,satelliteLayer,hybridLabelsLayer,seaChartLayer,detailedDepthLayer]) if(map.hasLayer(layer)) map.removeLayer(layer);
   if(style==='3d'){
-    disableBathy3D();topoRasterLayer.addTo(map); // warm 2D fallback while the lazy 3D renderer starts
+    topoRasterLayer.addTo(map); // warm 2D fallback while the lazy 3D renderer starts
     enable3DMap();saveUiState();return;
   }
-  if(style==='bathy3d'){
-    disable3DMap();standardLayer.addTo(map);enableBathy3D();saveUiState();return;
-  }
-  disable3DMap();disableBathy3D();
+  disable3DMap();
   if(style==='fishing'&&!freshwater){standardLayer.addTo(map);detailedDepthLayer.addTo(map);}
   else if(style==='chart'&&!freshwater){standardLayer.addTo(map);seaChartLayer.addTo(map);}
   else if(style==='topo') topoLayer.addTo(map);
@@ -971,7 +969,7 @@ function exportCatchGpx() {
   if(!entries.length){$('catchStatus').textContent='Ingen loggposter med kartposisjon å eksportere.';return;}
   const xmlEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const waypoints=entries.map(entry=>`<wpt lat="${entry.mapCenter.lat}" lon="${entry.mapCenter.lon}"><time>${xmlEscape(entry.time)}</time><name>${xmlEscape(entry.place||fishLabels[entry.fish]||'Fisketur')}</name><desc>${xmlEscape(`${entry.result==='fangst'?'Fangst':'Ingen fangst'} · ${fishLabels[entry.fish]||entry.fish}${entry.lure?' · '+entry.lure:''}`)}</desc><type>${entry.result==='fangst'?'catch':'session'}</type></wpt>`).join('');
-  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV34" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
+  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV36" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
   $('catchStatus').textContent=`Eksporterte ${entries.length} posisjoner som GPX.`;
 }
 function exportCatchJson() { const entries=readCatchEntries();downloadTextFile(`fiste-guiden-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2),'application/json');$('catchStatus').textContent=`Backup med ${entries.length} loggposter er eksportert.`; }
@@ -1120,7 +1118,7 @@ async function loadZones({ immediate=false }={}) {
 // ResizeObserver/invalidateSize can emit moveend without user interaction.
 // Listening to dragend instead prevents a render → resize → reload feedback loop.
 map.on('click',event=>{setBasePoint(event.latlng,{label:'Kartklikk',focus:false});setState('ready','Kartklikk satt som referansepunkt. Oppdaterer 10 beste soner …');});
-map.on('dragend zoomend', () => {if(threeDSyncing)return;saveUiState();renderConditionVectors();if(showBoatRamps)loadBoatRamps();loadZones();});
+map.on('dragend zoomend', () => {if(threeDSyncing)return;saveUiState();renderConditionVectors();if(showBoatRamps)loadBoatRamps();loadZones();scheduleBathyRefresh(750);});
 $('locate').addEventListener('click', () => { setState('locating','Finner posisjonen din …'); map.locate({ setView:true, maxZoom:14, enableHighAccuracy:true }); });
 $('live').addEventListener('click',startLiveMode);
 $('retry').addEventListener('click', () => loadZones({immediate:true}));
@@ -1132,7 +1130,9 @@ $('mapStyle').addEventListener('change',()=>{applyMapStyle();saveUiState();});
 $('threeDTopView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:0,bearing:0,duration:450});});
 $('bathyTopView')?.addEventListener('click',()=>bathyCamera('top'));
 $('bathyPitchView')?.addEventListener('click',()=>bathyCamera('pitch'));
+$('bathyResetView')?.addEventListener('click',()=>bathyResetView());
 $('bathyRefresh')?.addEventListener('click',()=>refreshBathy3D());
+$('bathyPanel')?.addEventListener('toggle',()=>{$('bathyPanel').open?enableBathy3D():disableBathy3D();});
 $('threeDPitchView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:62,bearing:-18,duration:450});});
 $('sourceSpotToggle').addEventListener('click',()=>{showSourceSpots=!showSourceSpots;$('sourceSpotToggle').setAttribute('aria-pressed',String(showSourceSpots));$('sourceSpotToggle').classList.toggle('layer-active',showSourceSpots);$('sourceSpotToggle').textContent=showSourceSpots?'Kirkøy-steder':'Vis Kirkøy-steder';renderReferenceLayers();});
 $('restrictionToggle').addEventListener('click',()=>{showRestrictions=!showRestrictions;$('restrictionToggle').setAttribute('aria-pressed',String(showRestrictions));$('restrictionToggle').classList.toggle('restriction-active',showRestrictions);$('restrictionToggle').textContent=showRestrictions?'Fredningsgrenser':'Vis fredningsgrenser';renderReferenceLayers();});
@@ -1152,13 +1152,15 @@ window.addEventListener('offline', () => {const cached=readCachedAnalysis();setS
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&liveActive) acquireLiveWakeLock();});
 window.addEventListener('pagehide',()=>{if(liveWatchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(liveWatchId); releaseLiveWakeLock();});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/owned-lure-names.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=34.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=36.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;
 if(['0','250','500','1000','2000'].includes(String(savedUiState.baseRadius))) $('baseRadius').value=String(savedUiState.baseRadius);
+const legacyBathyMapStyle=savedUiState.mapStyle==='bathy3d';
 if(savedUiState.mapStyle==='marine-depth') $('mapStyle').value='fishing';
-else if(['standard','topo','toporaster','terrain','satellite','hybrid','fishing','chart','3d','bathy3d'].includes(savedUiState.mapStyle)) $('mapStyle').value=savedUiState.mapStyle;
+else if(legacyBathyMapStyle) $('mapStyle').value='topo';
+else if(['standard','topo','toporaster','terrain','satellite','hybrid','fishing','chart','3d'].includes(savedUiState.mapStyle)) $('mapStyle').value=savedUiState.mapStyle;
 if(basePoint){baseMarker=L.circleMarker([basePoint.lat,basePoint.lon],{radius:7,color:'#fff',weight:2,fillColor:'#f2c94c',fillOpacity:.95}).addTo(map).bindTooltip('Lagret referansepunkt',{direction:'top'});$('setBase').textContent='✓ Base satt · fjern';$('setBase').classList.add('base-active');$('setBase').setAttribute('aria-pressed','true');updateBaseRadiusCircle();}
 initCatchLog();
 $('exportGpx')?.addEventListener('click',exportCatchGpx);
@@ -1166,5 +1168,6 @@ $('exportJson')?.addEventListener('click',exportCatchJson);
 setLiveButton();
 renderLiveHud();
 updateWaterModeUI();
+if(legacyBathyMapStyle&&$('bathyPanel')){$('bathyPanel').open=true;enableBathy3D();}
 loadReferenceLayers();
 loadZones({immediate:true});
