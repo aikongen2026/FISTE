@@ -1029,7 +1029,7 @@ async function fetchNominatimWater({west,south,east,north}) {
 async function fetchFreshwaterAreas({west,south,east,north}) {
   const key=`freshwater:${west.toFixed(3)},${south.toFixed(3)},${east.toFixed(3)},${north.toFixed(3)}`;
   return cached(key,30*60*1000,async()=>{
-    const query=`[out:json][timeout:18];(way["natural"="water"](${south},${west},${north},${east});relation["natural"="water"](${south},${west},${north},${east});way["waterway"="riverbank"](${south},${west},${north},${east});relation["waterway"="riverbank"](${south},${west},${north},${east}););out geom;`;
+    const query=`[out:json][timeout:18];(way["natural"="water"](${south},${west},${north},${east});relation["natural"="water"](${south},${west},${north},${east});way["water"~"lake|reservoir|pond|river|stream|basin"](${south},${west},${north},${east});relation["water"~"lake|reservoir|pond|river|stream|basin"](${south},${west},${north},${east});way["waterway"="riverbank"](${south},${west},${north},${east});relation["waterway"="riverbank"](${south},${west},${north},${east}););out geom;`;
     const endpoints=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
     let lastError=null;
     for(const endpoint of endpoints) {
@@ -1349,12 +1349,21 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
   let freshwaterAreas=[];
   let freshwaterLookup='OSM geometri';
   if(freshwater) {
-    try { freshwaterAreas=await fetchFreshwaterAreas({west,south,east,north}); }
-    catch(error) {
+    try {
+      freshwaterAreas=await fetchFreshwaterAreas({west,south,east,north});
+      // Overpass can answer successfully with zero polygon features for a visible
+      // freshwater body (especially complex multipolygons / river-like water).
+      // Treat an empty result as a lookup miss, not as proof that no water exists.
+      if(!freshwaterAreas.length){
+        const fallback=await fetchNominatimWater({west,south,east,north});
+        freshwaterAreas=fallback?[fallback]:[];
+        if(fallback) freshwaterLookup='OSM punktkontroll + kartvann';
+      }
+    } catch(error) {
       try {
         const fallback=await fetchNominatimWater({west,south,east,north});
         freshwaterAreas=fallback?[fallback]:[];
-        freshwaterLookup='OSM punktkontroll';
+        freshwaterLookup='OSM punktkontroll + kartvann';
       } catch(fallbackError) { freshwaterMaskError=fallbackError.message||error.message||String(fallbackError); }
     }
   }
@@ -1368,13 +1377,20 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
       const freshwaterArea=freshwater?freshwaterAtPoint(point.lat,point.lon,freshwaterAreas):null;
       if(freshwater&&!freshwaterArea){rejected++;continue;}
       if(freshwaterArea?.restricted){restrictedWaters++;rejected++;continue;}
-      const coast=freshwater?freshwaterCoastInfo(point.lat,point.lon,freshwaterArea):await nearCoastInfo(point.lat,point.lon,width,height,zoom); if(!coast){rejected++;continue;}
+      const fallbackFreshwater=Boolean(freshwaterArea?.lookup==='nominatim');
+      // A Nominatim fallback is only a coarse bounding box. Never trust the box as
+      // water geometry: verify the actual map pixel and derive the shoreline from
+      // the rendered OSM water mask so recommendations cannot spill onto land.
+      const coast=freshwater
+        ? (fallbackFreshwater ? await nearCoastInfo(point.lat,point.lon,width,height,zoom) : freshwaterCoastInfo(point.lat,point.lon,freshwaterArea))
+        : await nearCoastInfo(point.lat,point.lon,width,height,zoom);
+      if(!coast){rejected++;continue;}
       const polygon=freshwater?[]:makeRibbon(point.lat,point.lon,coast.tangent,width*0.045,width*0.0055);
-      const waterConfirmed=freshwater||await polygonMostlyWater(polygon,zoom);
+      const waterConfirmed=freshwater ? (fallbackFreshwater ? await isWater(point.lat,point.lon,zoom) : true) : await polygonMostlyWater(polygon,zoom);
       if(!waterConfirmed){rejected++;continue;}
       const exposure=windExposure(currentWeather?.windDirection,coast.coastNormal); const hour=norwegianHour(); const scoring=computeScore({...environment,coastQuality:coast.quality,exposure,hour,fishType});
       zones.push({id:`zone-${zones.length+1}-${Math.round(point.lat*10000)}-${Math.round(point.lon*10000)}`,score:scoring.score,name:scoring.score>=82?'Svært høy':scoring.score>=68?'Høy':'Moderat',breakdown:scoring.breakdown,polygon,marker:{lat:point.lat,lon:point.lon},distanceM:base?Math.round(distanceMeters(base.lat,base.lon,point.lat,point.lon)):null,castBearing:Math.round(((coast.tangent*180/Math.PI)+360)%360),goal,_point:point,_coast:coast,_exposure:exposure,_hour:hour,_freshwaterName:freshwaterArea?.name||null});
-    } catch(error) { maskError=error.message; rejected++; if(tested>12&&!zones.length) break; }
+    } catch(error) { maskError=error.message; rejected++; if(!freshwater&&tested>12&&!zones.length) break; }
   }
   // Preselect on cheap geometry/weather score before doing depth and habitat lookups.
   zones.sort((a,b)=>b.score-a.score);
@@ -1446,7 +1462,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v11-rev30',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v12-rev32',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});

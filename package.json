@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "11.8.0",
-  "appRevision": 30,
-  "description": "Fiste guiden REV30 – kompakt HSI-inspirert kartanalyse med habitat/Nå/total-score, datakvalitet, strukturprofil, skjulte marine habitatdata, fredningsfilter, Live GPS og sluk fra egen boks.",
+  "version": "12.0.0",
+  "appRevision": 32,
+  "description": "Fiste guiden REV32 – REV30 HSI-oppsett med robust ferskvannsdeteksjon, HSI-score, Live GPS, egne slukbilder og valgfri 3D topo/terrengvisning med MapLibre.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",

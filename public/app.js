@@ -107,7 +107,9 @@ function updateLiveMapPosition(position){
   }
   updateBaseRadiusCircle();
   renderLiveHud();
-  if(!liveLastFix) map.setView(latlng,Math.max(15,map.getZoom()),{animate:true});
+  sync3DReferenceAndLive();
+  if(is3DMode()&&threeDMap){threeDProgrammaticMove=true;threeDMap.easeTo({center:[longitude,latitude],zoom:Math.max(15,threeDMap.getZoom()),pitch:62,duration:liveLastFix?320:500});threeDSyncing=true;map.setView(latlng,Math.max(15,map.getZoom()),{animate:false});setTimeout(()=>{threeDSyncing=false;},0);}
+  else if(!liveLastFix) map.setView(latlng,Math.max(15,map.getZoom()),{animate:true});
   else map.panTo(latlng,{animate:true,duration:.35,noMoveStart:true});
   const now=Date.now();
   const movedSinceAnalysis=liveLastAnalysisPoint?liveDistanceMeters(liveLastAnalysisPoint,{lat:latitude,lon:longitude}):Infinity;
@@ -151,6 +153,7 @@ function stopLiveMode({message=true}={}){
   if(liveAccuracyCircle){liveAccuracyCircle.remove();liveAccuracyCircle=null;}
   if(liveLocationMarker){liveLocationMarker.remove();liveLocationMarker=null;}
   updateBaseRadiusCircle();
+  sync3DReferenceAndLive();
   setLiveButton();
   renderLiveHud();
   releaseLiveWakeLock();
@@ -158,6 +161,139 @@ function stopLiveMode({message=true}={}){
 }
 let latestZones=[];
 let selectedZoneId=null;
+// REV32: optional lazy-loaded MapLibre 3D terrain view. Leaflet remains the analysis engine;
+// the two maps are synchronized so 3D never changes the scoring logic or Live GPS behavior.
+let threeDMap=null;
+let threeDReady=false;
+let threeDLoadPromise=null;
+let threeDActive=false;
+let threeDSyncing=false;
+let threeDProgrammaticMove=false;
+let threeDErrorCount=0;
+const THREE_D_LIB_VERSION='6.10.0';
+function is3DMode(){return threeDActive&&$('mapStyle')?.value==='3d';}
+function ensureMapLibre(){
+  if(window.maplibregl) return Promise.resolve(window.maplibregl);
+  if(threeDLoadPromise) return threeDLoadPromise;
+  threeDLoadPromise=new Promise((resolve,reject)=>{
+    if(!document.querySelector('link[data-maplibre]')){
+      const link=document.createElement('link');link.rel='stylesheet';link.dataset.maplibre='1';link.href=`https://unpkg.com/maplibre-gl@${THREE_D_LIB_VERSION}/dist/maplibre-gl.css`;document.head.appendChild(link);
+    }
+    const existing=document.querySelector('script[data-maplibre]');
+    if(existing){existing.addEventListener('load',()=>resolve(window.maplibregl),{once:true});existing.addEventListener('error',()=>reject(new Error('MapLibre kunne ikke lastes')), {once:true});return;}
+    const script=document.createElement('script');script.src=`https://unpkg.com/maplibre-gl@${THREE_D_LIB_VERSION}/dist/maplibre-gl.js`;script.async=true;script.dataset.maplibre='1';script.onload=()=>window.maplibregl?resolve(window.maplibregl):reject(new Error('MapLibre mangler etter lasting'));script.onerror=()=>reject(new Error('MapLibre kunne ikke lastes fra CDN'));document.head.appendChild(script);
+  });
+  return threeDLoadPromise;
+}
+function threeDStyleSpec(){
+  const freshwater=freshwaterFishTypes.has($('fishType')?.value);
+  return {version:8,glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',sources:{
+    topo:{type:'raster',tiles:['https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png'],tileSize:256,maxzoom:19,attribution:'© Kartverket (CC BY 4.0)'},
+    terrain:{type:'raster-dem',url:'https://tiles.mapterhorn.com/tilejson.json',tileSize:256},
+    depthwms:{type:'raster',tiles:['https://wms.geonorge.no/skwms1/wms.dybdedata2?service=WMS&request=GetMap&version=1.1.1&layers=Dybdedata2&styles=&format=image/png&transparent=true&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256'],tileSize:256,maxzoom:18,attribution:'© Kartverket · dybdedata'}
+  },layers:[
+    {id:'topo-raster',type:'raster',source:'topo',paint:{'raster-opacity':1}},
+    {id:'terrain-hillshade',type:'hillshade',source:'terrain',paint:{'hillshade-exaggeration':0.42,'hillshade-shadow-color':'#27352f','hillshade-highlight-color':'#f7fbf6','hillshade-accent-color':'#556b60'}},
+    {id:'depth-overlay',type:'raster',source:'depthwms',layout:{visibility:freshwater?'none':'visible'},paint:{'raster-opacity':0.78}}
+  ]};
+}
+function emptyFeatureCollection(){return {type:'FeatureCollection',features:[]};}
+function ensure3DDataLayers(){
+  if(!threeDMap||!(threeDMap.isStyleLoaded?.()||threeDReady)) return;
+  const addSource=(id)=>{if(!threeDMap.getSource(id))threeDMap.addSource(id,{type:'geojson',data:emptyFeatureCollection()});};
+  addSource('fiste-zones');addSource('fiste-casts');addSource('fiste-reference');addSource('fiste-live-track');addSource('fiste-restrictions');addSource('fiste-source-spots');
+  if(!threeDMap.getLayer('fiste-restrictions')) threeDMap.addLayer({id:'fiste-restrictions',type:'line',source:'fiste-restrictions',paint:{'line-color':'#ff3b30','line-width':6,'line-opacity':0.9,'line-dasharray':[2,1.4]}});
+  if(!threeDMap.getLayer('fiste-source-spots')) threeDMap.addLayer({id:'fiste-source-spots',type:'circle',source:'fiste-source-spots',paint:{'circle-radius':8,'circle-color':['get','color'],'circle-opacity':0.45,'circle-stroke-color':['get','color'],'circle-stroke-width':2}});
+  if(!threeDMap.getLayer('fiste-casts')) threeDMap.addLayer({id:'fiste-casts',type:'line',source:'fiste-casts',paint:{'line-color':'#ff9f1c','line-width':4,'line-opacity':0.9}});
+  if(!threeDMap.getLayer('fiste-live-track')) threeDMap.addLayer({id:'fiste-live-track',type:'line',source:'fiste-live-track',paint:{'line-color':'#38d477','line-width':4,'line-opacity':0.95}});
+  if(!threeDMap.getLayer('fiste-zone-halo')) threeDMap.addLayer({id:'fiste-zone-halo',type:'circle',source:'fiste-zones',paint:{'circle-radius':['case',['==',['get','selected'],1],18,14],'circle-color':['get','color'],'circle-opacity':0.20,'circle-stroke-color':['case',['==',['get','selected'],1],'#ffffff','#0b241d'],'circle-stroke-width':['case',['==',['get','selected'],1],4,2]}});
+  if(!threeDMap.getLayer('fiste-zone-points')) threeDMap.addLayer({id:'fiste-zone-points',type:'circle',source:'fiste-zones',paint:{'circle-radius':7,'circle-color':['get','color'],'circle-stroke-color':'#10251f','circle-stroke-width':2}});
+  if(!threeDMap.getLayer('fiste-zone-labels')) threeDMap.addLayer({id:'fiste-zone-labels',type:'symbol',source:'fiste-zones',layout:{'text-field':['get','label'],'text-size':12,'text-font':['Open Sans Bold'],'text-offset':[0,1.55],'text-anchor':'top','text-allow-overlap':true},paint:{'text-color':'#ffffff','text-halo-color':'#071b16','text-halo-width':2}});
+  if(!threeDMap.getLayer('fiste-reference')) threeDMap.addLayer({id:'fiste-reference',type:'circle',source:'fiste-reference',paint:{'circle-radius':['case',['==',['get','kind'],'live'],9,7],'circle-color':['case',['==',['get','kind'],'live'],'#38d477','#f2c94c'],'circle-stroke-color':'#ffffff','circle-stroke-width':2}});
+}
+function threeDFeatureColor(zone){const fish=zone.fishType||$('fishType')?.value;return $('fishType')?.value==='all'?(speciesColors[fish]||scoreColor(zone.score)):scoreColor(zone.score);}
+function sync3DZones(){
+  if(!threeDMap||!threeDReady) return;
+  ensure3DDataLayers();
+  const zoneSource=threeDMap.getSource('fiste-zones'),castSource=threeDMap.getSource('fiste-casts');
+  if(!zoneSource||!castSource)return;
+  const features=latestZones.map((zone,index)=>({type:'Feature',geometry:{type:'Point',coordinates:[zone.marker.lon,zone.marker.lat]},properties:{id:zone.id,rank:index+1,score:Math.round(zone.score||0),selected:zone.id===selectedZoneId?1:0,color:threeDFeatureColor(zone),label:`${index+1}${Number.isFinite(zone.depth?.meters)?' · '+zone.depth.meters.toFixed(1)+' m':''}`}}));
+  zoneSource.setData({type:'FeatureCollection',features});
+  const castFeatures=latestZones.slice(0,3).filter(zone=>Number.isFinite(zone.castBearing)).map((zone,index)=>{const length=index===0?90:60,rad=zone.castBearing*Math.PI/180,dLat=(Math.sin(rad)*length)/110540,dLon=(Math.cos(rad)*length)/(111320*Math.max(.2,Math.cos(zone.marker.lat*Math.PI/180)));return {type:'Feature',geometry:{type:'LineString',coordinates:[[zone.marker.lon,zone.marker.lat],[zone.marker.lon+dLon,zone.marker.lat+dLat]]},properties:{id:zone.id}};});
+  castSource.setData({type:'FeatureCollection',features:castFeatures});
+}
+function sync3DReferenceAndLive(){
+  if(!threeDMap||!threeDReady) return;
+  ensure3DDataLayers();
+  const ref=threeDMap.getSource('fiste-reference'),track=threeDMap.getSource('fiste-live-track');
+  const point=liveActive&&livePosition?{lon:livePosition.lon,lat:livePosition.lat,kind:'live'}:basePoint?{lon:basePoint.lon,lat:basePoint.lat,kind:'base'}:null;
+  ref?.setData({type:'FeatureCollection',features:point?[{type:'Feature',geometry:{type:'Point',coordinates:[point.lon,point.lat]},properties:{kind:point.kind}}]:[]});
+  track?.setData({type:'FeatureCollection',features:liveTrackPoints.length>1?[{type:'Feature',geometry:{type:'LineString',coordinates:liveTrackPoints.map(p=>[p.lng,p.lat])},properties:{}}]:[]});
+}
+function sync3DReferenceLayers(){
+  if(!threeDMap||!threeDReady)return;
+  ensure3DDataLayers();
+  const freshwater=freshwaterFishTypes.has($('fishType')?.value);
+  const restrictionFeatures=[];
+  if(showRestrictions&&!freshwater&&restrictionData){
+    for(const zone of restrictionData.zones.filter(item=>item.renderBoundary&&Array.isArray(item.outerBoundary)&&item.outerBoundary.length>=2)){
+      restrictionFeatures.push({type:'Feature',geometry:{type:'LineString',coordinates:zone.outerBoundary.map(point=>[point.lon,point.lat])},properties:{name:zone.name||'Fredningsgrense'}});
+    }
+  }
+  threeDMap.getSource('fiste-restrictions')?.setData({type:'FeatureCollection',features:restrictionFeatures});
+  const spotFeatures=[];
+  if(showSourceSpots&&$('fishType')?.value==='sjoorret'&&sourceSpotData){
+    for(const spot of sourceSpotData.spots||[]) spotFeatures.push({type:'Feature',geometry:{type:'Point',coordinates:[spot.lon,spot.lat]},properties:{name:spot.name||'',color:spot.status==='restricted'?'#ff5d55':'#f2c94c'}});
+  }
+  threeDMap.getSource('fiste-source-spots')?.setData({type:'FeatureCollection',features:spotFeatures});
+}
+function sync3DWaterMode(){
+  if(!threeDMap||!threeDReady||!threeDMap.getLayer('depth-overlay'))return;
+  const freshwater=freshwaterFishTypes.has($('fishType')?.value);
+  try{threeDMap.setLayoutProperty('depth-overlay','visibility',freshwater?'none':'visible');}catch{}
+}
+function focusMapOnZone(zone,zoom=15){
+  if(!zone?.marker)return;
+  if(is3DMode()&&threeDMap){threeDProgrammaticMove=true;threeDMap.easeTo({center:[zone.marker.lon,zone.marker.lat],zoom:Math.max(threeDMap.getZoom(),zoom),pitch:62,bearing:threeDMap.getBearing(),duration:550});}
+  else map.setView([zone.marker.lat,zone.marker.lon],Math.max(map.getZoom(),zoom),{animate:true});
+}
+function syncLeafletFrom3D({reload=true}={}){
+  if(!threeDMap||!threeDActive)return;
+  const c=threeDMap.getCenter(),z=Math.max(3,Math.min(19,threeDMap.getZoom()));
+  threeDSyncing=true;map.setView([c.lat,c.lng],z,{animate:false});setTimeout(()=>{threeDSyncing=false;},0);
+  saveUiState();if(reload)loadZones();
+}
+async function enable3DMap(){
+  threeDActive=true;
+  const wrap=document.querySelector('.map-wrap'),container=$('map3d'),hud=$('threeDHud');
+  wrap?.classList.add('three-d-active');if(container)container.hidden=false;if(hud)hud.hidden=false;
+  const notice=document.querySelector('.map-notice');if(notice)notice.textContent='Laster 3D topo … 10 beste punkter, GPS-spor og dybdeetiketter vises også i 3D.';
+  try{
+    const lib=await ensureMapLibre();
+    if(!threeDActive||$('mapStyle')?.value!=='3d')return;
+    if(!threeDMap){
+      const c=map.getCenter();
+      threeDMap=new lib.Map({container:'map3d',style:threeDStyleSpec(),center:[c.lng,c.lat],zoom:map.getZoom(),pitch:62,bearing:-18,maxPitch:78,renderWorldCopies:false,attributionControl:true});
+      threeDMap.addControl(new lib.NavigationControl({visualizePitch:true}),'top-right');
+      threeDMap.on('load',()=>{threeDReady=true;try{threeDMap.setTerrain({source:'terrain',exaggeration:1.35});}catch{}ensure3DDataLayers();sync3DZones();sync3DReferenceAndLive();sync3DReferenceLayers();sync3DWaterMode();
+        const zoneLayers=['fiste-zone-halo','fiste-zone-points','fiste-zone-labels'];
+        threeDMap.on('click',event=>{const layers=zoneLayers.filter(id=>threeDMap.getLayer(id));const hit=layers.length?threeDMap.queryRenderedFeatures(event.point,{layers})[0]:null;if(hit?.properties?.id){selectZone(hit.properties.id,{scroll:true});return;}setBasePoint(L.latLng(event.lngLat.lat,event.lngLat.lng),{label:'Kartklikk 3D',focus:false});setState('ready','3D-kartklikk satt som referansepunkt. Oppdaterer 10 beste soner …');});
+        zoneLayers.forEach(id=>{threeDMap.on('mouseenter',id,()=>{threeDMap.getCanvas().style.cursor='pointer';});threeDMap.on('mouseleave',id,()=>{threeDMap.getCanvas().style.cursor='';});});
+        const n=document.querySelector('.map-notice');if(n)n.textContent='3D topo: roter kartet for å lese terreng og kanter. Dybdekoter vises i sjø; de er ikke en 3D-ekkoloddmodell.';
+      });
+      threeDMap.on('moveend',()=>{const reload=!threeDProgrammaticMove;threeDProgrammaticMove=false;syncLeafletFrom3D({reload});});
+      threeDMap.on('error',event=>{threeDErrorCount++;if(threeDErrorCount===2){const w=$('warnings');if(w)w.textContent='3D-terreng eller et kartlag svarte ikke. 2D-kartene fungerer fortsatt; prøv 3D igjen litt senere.';}});
+    }else{
+      const c=map.getCenter();threeDProgrammaticMove=true;threeDMap.jumpTo({center:[c.lng,c.lat],zoom:map.getZoom(),pitch:62});threeDMap.resize();sync3DZones();sync3DReferenceAndLive();sync3DReferenceLayers();sync3DWaterMode();
+    }
+  }catch(error){
+    threeDActive=false;wrap?.classList.remove('three-d-active');if(container)container.hidden=true;if(hud)hud.hidden=true;$('mapStyle').value='topo';topoLayer.addTo(map);const w=$('warnings');if(w)w.textContent=`3D-kart kunne ikke startes: ${error.message}. Detaljert topo vises i stedet.`;saveUiState();
+  }
+}
+function disable3DMap(){
+  threeDActive=false;document.querySelector('.map-wrap')?.classList.remove('three-d-active');if($('map3d'))$('map3d').hidden=true;if($('threeDHud'))$('threeDHud').hidden=true;const notice=document.querySelector('.map-notice');if(notice)notice.textContent='Klikk i kartet = nytt referansepunkt. De 10 beste sonene oppdateres automatisk.';setTimeout(()=>map.invalidateSize({pan:false}),0);
+}
+
 const labels = { vind:'Vind', skydekke:'Skydekke', kyst:'Kyst', vannkant:'Vannkant', eksponering:'Eksponering', temperatur:'Temperatur', lufttemperatur:'Lufttemperatur', tidspunkt:'Tidspunkt', dybde:'Dybde', storfisk:'Stor fisk', lufttrykk:'Lufttrykk', sjoetemperatur:'Sjøtemp', boelger:'Bølger', havstroem:'Havstrøm', tidevann:'Tidevann', maane:'Måne', personlig:'Mine fangster', habitat:'Habitat', forhold:'Nå' };
 const freshwaterFishTypes = new Set(['orret','abbor','gjedde']);
 const catchStorageKey='fiste-guiden-catch-log-v1';
@@ -219,6 +355,7 @@ function clearBasePoint(){
   $('setBase').classList.remove('base-active');
   $('setBase').setAttribute('aria-pressed','false');
   navigationLayer.clearLayers();
+  sync3DReferenceAndLive();
   saveUiState();
   setState('ready','Base fjernet · avstandsfilter er slått av.');
   loadZones({immediate:true});
@@ -232,6 +369,7 @@ function setBasePoint(latlng,{label='Base',focus=true}={}){
   $('setBase').setAttribute('aria-pressed','true');
   saveUiState();
   updateBaseRadiusCircle();
+  sync3DReferenceAndLive();
   if(focus) focusBaseRadius();
   loadZones({immediate:true});
 }
@@ -261,7 +399,7 @@ function renderBestNow(zones=[]){
   const zoneFish=zone.fishType||$('fishType').value;
   const zoneFishLabel=zone.fishLabel||fishLabels[zoneFish]||'';
   holder.innerHTML=`<div class="best-now-grid"><div class="best-now-score"><strong>${zone.score}</strong><span>/100</span></div><div><span class="best-now-kicker">${big&&!allMode?'🏆 STOR FISK':'🎯 BEST MATCH'} · ${escapeHtml(zoneFishLabel)}</span><h3>${escapeHtml(zone.waterName||zone.name)}</h3><p>${escapeHtml(zone.reason||'')}</p></div></div><div class="best-now-facts"><article><span>${liveActive?'Avstand fra deg':'Avstand fra base'}</span><b>${formatDistance(zone.distanceM)}</b></article><article><span>Bruk nå</span><b>${escapeHtml(lure.type||'Anbefalt agn')} · ${escapeHtml(lure.weight||'')}</b></article><article><span>Farge</span><b>${escapeHtml(lure.color||'')}</b></article>${zone.personalAdjustment?`<article><span>Mine fangstdata</span><b>+${zone.personalAdjustment} poeng</b></article>`:''}</div><div class="best-now-actions"><button type="button" id="goBest">VIS PÅ KART</button><span>Orange linje = praktisk kastretning langs vannkanten.</span></div>`;
-  $('goBest')?.addEventListener('click',()=>{ map.setView([zone.marker.lat,zone.marker.lon],Math.max(map.getZoom(),16)); selectZone(zone.id,{scroll:true}); });
+  $('goBest')?.addEventListener('click',()=>{ focusMapOnZone(zone,16); selectZone(zone.id,{scroll:true}); });
 }
 
 function scoreColor(score) { return score >= 82 ? '#38d477' : score >= 68 ? '#b8df45' : '#f2c94c'; }
@@ -515,6 +653,11 @@ function applyMapStyle() {
   const style=$('mapStyle').value;
   const freshwater=freshwaterFishTypes.has($('fishType').value);
   for(const layer of [standardLayer,topoLayer,topoRasterLayer,terrainLayer,satelliteLayer,hybridLabelsLayer,seaChartLayer,detailedDepthLayer]) if(map.hasLayer(layer)) map.removeLayer(layer);
+  if(style==='3d'){
+    topoRasterLayer.addTo(map); // warm 2D fallback while the lazy 3D renderer starts
+    enable3DMap();saveUiState();return;
+  }
+  disable3DMap();
   if(style==='fishing'&&!freshwater){standardLayer.addTo(map);detailedDepthLayer.addTo(map);}
   else if(style==='chart'&&!freshwater){standardLayer.addTo(map);seaChartLayer.addTo(map);}
   else if(style==='topo') topoLayer.addTo(map);
@@ -561,6 +704,7 @@ function updateWaterModeUI() {
   updateMapLegend();
   applyMapStyle();
   renderReferenceLayers();
+  sync3DWaterMode();
   return freshwater;
 }
 
@@ -592,6 +736,7 @@ function renderReferenceLayers() {
         .bindPopup(restrictionPopup(zone,restrictionData.regulation),{maxWidth:360,className:'source-leaflet-popup'}).addTo(restrictionLayer);
     }
   }
+  sync3DReferenceLayers();
 }
 
 async function loadReferenceLayers() {
@@ -673,7 +818,7 @@ function exportCatchGpx() {
   if(!entries.length){$('catchStatus').textContent='Ingen loggposter med kartposisjon å eksportere.';return;}
   const xmlEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const waypoints=entries.map(entry=>`<wpt lat="${entry.mapCenter.lat}" lon="${entry.mapCenter.lon}"><time>${xmlEscape(entry.time)}</time><name>${xmlEscape(entry.place||fishLabels[entry.fish]||'Fisketur')}</name><desc>${xmlEscape(`${entry.result==='fangst'?'Fangst':'Ingen fangst'} · ${fishLabels[entry.fish]||entry.fish}${entry.lure?' · '+entry.lure:''}`)}</desc><type>${entry.result==='fangst'?'catch':'session'}</type></wpt>`).join('');
-  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV30" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
+  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV32" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
   $('catchStatus').textContent=`Eksporterte ${entries.length} posisjoner som GPX.`;
 }
 function exportCatchJson() { const entries=readCatchEntries();downloadTextFile(`fiste-guiden-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2),'application/json');$('catchStatus').textContent=`Backup med ${entries.length} loggposter er eksportert.`; }
@@ -756,7 +901,7 @@ function renderSelectedZone(zone){
   const distance=Number.isFinite(zone.distanceM)?formatDistance(zone.distanceM):'Ingen avstandsgrense';
   const summary=zone.analysis?.summary||zone.reason||'';
   holder.innerHTML=`<div class="selected-title-row"><div><span class="card-label">#${number} · ${escapeHtml(fishLabel)}</span><h2>${escapeHtml(zone.waterName||zone.name||'Anbefalt sone')}</h2></div><strong class="score-badge">${Math.round(zone.score||0)}/100</strong></div>${analysisScoreStripHtml(zone)}<div class="selected-chips"><span>${escapeHtml(zone.name||'')}</span><span>${escapeHtml(distance)}</span></div><p class="selected-reason">${escapeHtml(summary)}</p><div class="lean-lure"><img class="zoomable-lure" src="${escapeHtml(lure.image||'')}" alt="${escapeHtml(lure.name||lure.type||'Anbefalt sluk')}" tabindex="0"><div><span>FØRSTEVALG FRA DIN SLUKBOKS</span><b>${escapeHtml(lure.name||lure.type||'Anbefalt agn')}</b><small>${escapeHtml([lure.color,lure.weight].filter(Boolean).join(' · '))}</small><p>${escapeHtml(lure.reason||'')}</p></div></div>${leanAlternativeLures(lure.alternatives)}<div class="quick-advice"><b>Fisk slik</b><p>${escapeHtml(presentation.method||presentation.band||'Fisk av sonen systematisk og varier tempo og dybde.')}</p>${fly.recommended?`<small>Opphengerflue: ${escapeHtml(fly.pattern||'Ja')}${fly.color?' · '+escapeHtml(fly.color):''}</small>`:''}</div>${analysisDetailsHtml(zone)}<button class="secondary selected-map-button" type="button" id="selectedGo">Vis valgt sone på kartet</button>`;
-  $('selectedGo')?.addEventListener('click',()=>map.setView([zone.marker.lat,zone.marker.lon],Math.max(map.getZoom(),15),{animate:true}));
+  $('selectedGo')?.addEventListener('click',()=>focusMapOnZone(zone,15));
   const depthDetails=holder.querySelector('.depth-detail');
   depthDetails?.addEventListener('toggle',()=>{if(depthDetails.open)loadDepthProfileForZone(zone,depthDetails.querySelector('[data-depth-profile]'));});
 }
@@ -769,15 +914,16 @@ function selectZone(zoneId,{scroll=false}={}) {
   if(selected&&!$('catchPlace').value) $('catchPlace').value=selected?.waterName||selected?.name||'';
   if(selected&&!$('catchLure').value) $('catchLure').value=lureText(selected);
   if(selected?.fishType&&$('fishType').value==='all') $('catchFish').value=selected.fishType;
+  sync3DZones();
   if(scroll){const target=$('selectedZoneCard');if(window.innerWidth<1000)target?.scrollIntoView({behavior:'smooth',block:'start'});else $('results')?.scrollTo({top:0,behavior:'smooth'});}
 }
 function renderZones(zones) {
   zones=applyPersonalRanking(zones).slice(0,10);latestZones=zones;zoneLayer.clearLayers();drawNavigation(zones);$('zoneCount').textContent=`${zones.length} soner`;
-  if(!zones.length){renderSelectedZone(null);const radius=Number($('baseRadius').value)||0;$('zones').innerHTML=currentAnalysisBase()&&radius?`<div class="empty"><b>Ingen sone innen ${escapeHtml(formatDistance(radius))}</b><span>Klikk et nytt referansepunkt eller øk avstanden.</span></div>`:'<div class="empty"><b>Ingen sikre soner i utsnittet</b><span>Flytt kartet litt eller zoom nærmere vann.</span></div>';return;}
+  if(!zones.length){renderSelectedZone(null);sync3DZones();const radius=Number($('baseRadius').value)||0;$('zones').innerHTML=currentAnalysisBase()&&radius?`<div class="empty"><b>Ingen sone innen ${escapeHtml(formatDistance(radius))}</b><span>Klikk et nytt referansepunkt eller øk avstanden.</span></div>`:'<div class="empty"><b>Ingen sikre soner i utsnittet</b><span>Flytt kartet litt eller zoom nærmere vann.</span></div>';return;}
   const allMode=$('fishType').value==='all';
   $('zones').innerHTML=zones.map((zone,index)=>{const fish=zone.fishType||$('fishType').value,fishBadge=allMode?`<span class="species-badge species-badge-${fish}">${escapeHtml(zone.fishLabel||fishLabels[fish]||fish)}</span>`:'';return `<button type="button" class="zone-row lean-zone-row" data-zone="${zone.id}"><span class="zone-rank">${index+1}</span><span class="lean-zone-copy"><b>${escapeHtml(zone.waterName||`Sone ${index+1}`)}</b><small>${escapeHtml(zone.name||'')}</small>${fishBadge}</span><span class="lean-zone-lure">${zone.lure?.image?`<img src="${escapeHtml(zone.lure.image)}" alt="" loading="lazy">`:''}<small>${escapeHtml(zone.lure?.name||zone.lure?.type||'')}</small></span><strong>${Math.round(zone.score||0)}</strong></button>`;}).join('');
-  zones.forEach((zone,index)=>{const fish=zone.fishType||$('fishType').value,mapColor=allMode?(speciesColors[fish]||scoreColor(zone.score)):scoreColor(zone.score);const marker=L.circleMarker([zone.marker.lat,zone.marker.lon],{radius:7,color:'#10251f',weight:2,fillColor:mapColor,fillOpacity:1,opacity:1}).bindTooltip(String(index+1),{permanent:true,direction:'center',className:`zone-number ${allMode?`zone-number-${fish}`:''}`});const layer=Array.isArray(zone.polygon)&&zone.polygon.length>=3?L.polygon(zone.polygon,{color:mapColor,weight:2,fillColor:mapColor,fillOpacity:.24,opacity:.96}):L.circleMarker([zone.marker.lat,zone.marker.lon],{radius:15,color:mapColor,weight:2,fillColor:mapColor,fillOpacity:.10,opacity:.96});layer._zoneId=zone.id;marker._zoneId=zone.id;layer.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectZone(zone.id,{scroll:true});});marker.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectZone(zone.id,{scroll:true});});layer.addTo(zoneLayer);marker.addTo(zoneLayer);document.querySelector(`[data-zone="${zone.id}"]`)?.addEventListener('click',()=>{selectZone(zone.id,{scroll:true});map.setView([zone.marker.lat,zone.marker.lon],Math.max(map.getZoom(),15),{animate:true});});});
-  if(!zones.some(z=>z.id===selectedZoneId))selectedZoneId=zones[0].id;selectZone(selectedZoneId);
+  zones.forEach((zone,index)=>{const fish=zone.fishType||$('fishType').value,mapColor=allMode?(speciesColors[fish]||scoreColor(zone.score)):scoreColor(zone.score);const marker=L.circleMarker([zone.marker.lat,zone.marker.lon],{radius:7,color:'#10251f',weight:2,fillColor:mapColor,fillOpacity:1,opacity:1}).bindTooltip(String(index+1),{permanent:true,direction:'center',className:`zone-number ${allMode?`zone-number-${fish}`:''}`});const layer=Array.isArray(zone.polygon)&&zone.polygon.length>=3?L.polygon(zone.polygon,{color:mapColor,weight:2,fillColor:mapColor,fillOpacity:.24,opacity:.96}):L.circleMarker([zone.marker.lat,zone.marker.lon],{radius:15,color:mapColor,weight:2,fillColor:mapColor,fillOpacity:.10,opacity:.96});layer._zoneId=zone.id;marker._zoneId=zone.id;layer.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectZone(zone.id,{scroll:true});});marker.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectZone(zone.id,{scroll:true});});layer.addTo(zoneLayer);marker.addTo(zoneLayer);document.querySelector(`[data-zone="${zone.id}"]`)?.addEventListener('click',()=>{selectZone(zone.id,{scroll:true});focusMapOnZone(zone,15);});});
+  if(!zones.some(z=>z.id===selectedZoneId))selectedZoneId=zones[0].id;selectZone(selectedZoneId);sync3DZones();sync3DReferenceAndLive();
 }
 async function loadZones({ immediate=false }={}) {
   if(!Object.hasOwn(fishLabels,$('fishType').value)) {
@@ -821,7 +967,7 @@ async function loadZones({ immediate=false }={}) {
 // ResizeObserver/invalidateSize can emit moveend without user interaction.
 // Listening to dragend instead prevents a render → resize → reload feedback loop.
 map.on('click',event=>{setBasePoint(event.latlng,{label:'Kartklikk',focus:false});setState('ready','Kartklikk satt som referansepunkt. Oppdaterer 10 beste soner …');});
-map.on('dragend zoomend', () => {saveUiState();renderConditionVectors();if(showBoatRamps)loadBoatRamps();loadZones();});
+map.on('dragend zoomend', () => {if(threeDSyncing)return;saveUiState();renderConditionVectors();if(showBoatRamps)loadBoatRamps();loadZones();});
 $('locate').addEventListener('click', () => { setState('locating','Finner posisjonen din …'); map.locate({ setView:true, maxZoom:14, enableHighAccuracy:true }); });
 $('live').addEventListener('click',startLiveMode);
 $('retry').addEventListener('click', () => loadZones({immediate:true}));
@@ -830,6 +976,8 @@ $('fishGoal').addEventListener('change',()=>{saveUiState();loadZones({immediate:
 $('baseRadius').addEventListener('change',()=>{saveUiState();updateBaseRadiusCircle();if(basePoint&&Number($('baseRadius').value)>0)focusBaseRadius();loadZones({immediate:true});});
 $('setBase').addEventListener('click',()=>{if(basePoint)clearBasePoint();else setBasePoint(map.getCenter(),{label:'Valgt base'});});
 $('mapStyle').addEventListener('change',()=>{applyMapStyle();saveUiState();});
+$('threeDTopView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:0,bearing:0,duration:450});});
+$('threeDPitchView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:62,bearing:-18,duration:450});});
 $('sourceSpotToggle').addEventListener('click',()=>{showSourceSpots=!showSourceSpots;$('sourceSpotToggle').setAttribute('aria-pressed',String(showSourceSpots));$('sourceSpotToggle').classList.toggle('layer-active',showSourceSpots);$('sourceSpotToggle').textContent=showSourceSpots?'Kirkøy-steder':'Vis Kirkøy-steder';renderReferenceLayers();});
 $('restrictionToggle').addEventListener('click',()=>{showRestrictions=!showRestrictions;$('restrictionToggle').setAttribute('aria-pressed',String(showRestrictions));$('restrictionToggle').classList.toggle('restriction-active',showRestrictions);$('restrictionToggle').textContent=showRestrictions?'Fredningsgrenser':'Vis fredningsgrenser';renderReferenceLayers();});
 $('nveDepthToggle').addEventListener('click',()=>{const enable=!map.hasLayer(nveDepthLayer);if(enable)nveDepthLayer.addTo(map);else map.removeLayer(nveDepthLayer);$('nveDepthToggle').setAttribute('aria-pressed',String(enable));$('nveDepthToggle').classList.toggle('depth-active',enable);$('nveDepthToggle').textContent=enable?'Skjul NVE-dybde':'NVE dybdekart';});
@@ -841,20 +989,20 @@ window.addEventListener('popstate',()=>{ if(lureViewer.open){lureViewerHistoryAc
 document.addEventListener('click', event => { const image=event.target.closest?.('.zoomable-lure'); if (!image) return; event.preventDefault(); event.stopPropagation(); openLureViewer(image.currentSrc || image.src, image.alt); }, true);
 document.addEventListener('click', event => { const button=event.target.closest?.('.popup-details'); if(!button) return; event.preventDefault(); const zoneId=button.dataset.zone; map.closePopup(); selectZone(zoneId,{scroll:true}); });
 document.addEventListener('keydown', event => { const image=event.target.closest?.('.zoomable-lure'); if (image && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openLureViewer(image.currentSrc || image.src, image.alt); } });
-map.on('locationfound', event => { if (locationMarker) locationMarker.remove(); locationMarker=L.circleMarker(event.latlng,{radius:7,color:'#fff',weight:2,fillColor:'#38d477',fillOpacity:1}).addTo(map).bindPopup('Din posisjon').openPopup(); setBasePoint(event.latlng,{label:'Base: din posisjon',focus:false}); $('setBase').textContent='✓ Base = GPS · fjern'; setState('ready','Posisjon funnet. Bruker den som base og oppdaterer soner …'); });
+map.on('locationfound', event => { if (locationMarker) locationMarker.remove(); locationMarker=L.circleMarker(event.latlng,{radius:7,color:'#fff',weight:2,fillColor:'#38d477',fillOpacity:1}).addTo(map).bindPopup('Din posisjon').openPopup(); setBasePoint(event.latlng,{label:'Base: din posisjon',focus:false}); if(is3DMode()&&threeDMap){threeDProgrammaticMove=true;threeDMap.easeTo({center:[event.latlng.lng,event.latlng.lat],zoom:Math.max(14,threeDMap.getZoom()),pitch:62,duration:500});} sync3DReferenceAndLive(); $('setBase').textContent='✓ Base = GPS · fjern'; setState('ready','Posisjon funnet. Bruker den som base og oppdaterer soner …'); });
 map.on('locationerror', () => setState('error','Kunne ikke hente posisjonen. Tillat posisjon eller flytt kartet manuelt.'));
 window.addEventListener('online', () => loadZones({immediate:true}));
 window.addEventListener('offline', () => {const cached=readCachedAnalysis();setState(cached?'ready':'error',cached?'Du er offline. Siste lagrede analyse er tilgjengelig.':'Du er offline. Kartskallet virker; lagret analyse vises når den finnes.');});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&liveActive) acquireLiveWakeLock();});
 window.addEventListener('pagehide',()=>{if(liveWatchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(liveWatchId); releaseLiveWakeLock();});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/owned-lure-names.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=30.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=32.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;
 if(['0','250','500','1000','2000'].includes(String(savedUiState.baseRadius))) $('baseRadius').value=String(savedUiState.baseRadius);
 if(savedUiState.mapStyle==='marine-depth') $('mapStyle').value='fishing';
-else if(['standard','topo','toporaster','terrain','satellite','hybrid','fishing','chart'].includes(savedUiState.mapStyle)) $('mapStyle').value=savedUiState.mapStyle;
+else if(['standard','topo','toporaster','terrain','satellite','hybrid','fishing','chart','3d'].includes(savedUiState.mapStyle)) $('mapStyle').value=savedUiState.mapStyle;
 if(basePoint){baseMarker=L.circleMarker([basePoint.lat,basePoint.lon],{radius:7,color:'#fff',weight:2,fillColor:'#f2c94c',fillOpacity:.95}).addTo(map).bindTooltip('Lagret referansepunkt',{direction:'top'});$('setBase').textContent='✓ Base satt · fjern';$('setBase').classList.add('base-active');$('setBase').setAttribute('aria-pressed','true');updateBaseRadiusCircle();}
 initCatchLog();
 $('exportGpx')?.addEventListener('click',exportCatchGpx);

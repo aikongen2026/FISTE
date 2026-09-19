@@ -1,8 +1,16 @@
-# Fiste guiden REV30 – smart, kompakt analyse
+# Fiste guiden REV32 – smart, kompakt analyse
 
-REV30 bygger direkte på REV29 og beholder den raske Mistra-inspirerte arbeidsflyten: kart først, valgt sone øverst, 10 beste steder, Live GPS og faktiske slukbilder fra brukerens egen slukboks.
+REV32 bygger direkte på REV31 og beholder den raske Mistra-inspirerte arbeidsflyten: kart først, valgt sone øverst, 10 beste steder, Live GPS og faktiske slukbilder fra brukerens egen slukboks.
 
-## Nytt i REV30
+## Nytt i REV32
+
+- Nytt kartvalg **3D topo / terreng**. MapLibre lastes først når 3D velges, slik at vanlig 2D-kart fortsatt starter like raskt.
+- 3D-visningen bruker terreng-Dem og Kartverket-topografi, med skrå/roterbar kameravisning.
+- De 10 anbefalte sonene, valgt punkt, kastretning, referansepunkt og Live GPS-spor synkroniseres til 3D-kartet.
+- I saltvann legges Kartverkets dybdedata som et halvtransparent kartlag over 3D-visningen. Dette er dybdekoter/kartdata, ikke en ekte lokal 3D-ekkoloddmodell.
+- Kjent regional fredningsgrense og historisk sjøørretlag synkroniseres også til 3D-visningen.
+- Knappene **2D ovenfra** og **3D skrå** gjør det raskt å veksle kameravinkel uten å forlate 3D-kartet.
+- Normal Leaflet-analyse kjører fortsatt under panseret; 3D er en visning og endrer ikke scoremotoren.
 
 - Deler analysen i **Habitat**, **Akkurat nå**, **Total** og **Datagrunnlag %**.
 - Habitat og vær/sjøforhold blandes ikke lenger sammen til én utydelig score.
@@ -48,7 +56,7 @@ Resten ligger lukket som standard:
 
 EMODnet-profilen er modellert og har grov oppløsning. Den skal brukes til fiskestruktur, ikke navigasjon. Kartverket sitt dybdekart/sjøkart er fortsatt tilgjengelig som kartlag der tjenesten dekker området.
 
-Marine naturtypekart har ufullstendig geografisk dekning. REV30 rapporterer derfor egen confidence/datadekning og bruker ikke manglende registrering som et negativt bevis.
+Marine naturtypekart har ufullstendig geografisk dekning. REV32 rapporterer derfor egen confidence/datadekning og bruker ikke manglende registrering som et negativt bevis.
 
 ## Datakilder brukt i analysen
 
@@ -67,7 +75,10 @@ Den enkleste måten er fortsatt:
 1. Pakk ut ZIP-en.
 2. Dobbeltklikk `1-OPPDATER-OG-APNE-FISTE.bat`.
 3. Scriptet synkroniserer til `aikongen2026/FISTE`.
-4. Render Auto-Deploy bygger REV30.
-5. Scriptet venter på `/api/health` og åpner appen når REV30 er live.
+4. Render Auto-Deploy bygger REV32.
+5. Scriptet venter på `/api/health` og åpner appen når REV32 er live.
 
 Første gang kan Git/GitHub be om innlogging.
+
+## One-click oppdatering - FIX
+`1-OPPDATER-OG-APNE-FISTE.bat` installerer nå Git for Windows automatisk ved behov. Den prøver først Windows Package Manager (winget), og bruker offisiell Git for Windows-installasjon som reserve. Etter installasjon fortsetter samme kjøring til GitHub og Render.
