@@ -1,0 +1,14 @@
+FISTE GUIDEN REV39 – AUTOMATISK NVE / FERSKVANN / 3D
+
+- Fjernet kartvalgene Turkart, Terrengskygge, Standardkart og Hybrid.
+- Kartmenyen er nå fokusert på Fiskekart – dybder, Detaljert topo, 3D bunn/terreng, Satellitt og Kartverket sjøkart.
+- Ved valg av ferskvannsart skjules Kartverket sjøkart og Fiskekart kobles automatisk til NVE.
+- Fiskekart i ferskvann henter NVE DybdeKurve (lag 2) og DybdePunkt (lag 1) via serverens REST-endepunkt.
+- Hvis NVE ikke har oppmålte dybder, vises tydelig beskjed og appen tegner ikke falske dybder.
+- NVE-dybde brukes automatisk i rangeringen for ørret, abbor og gjedde der data finnes.
+- Ferskvannsstruktur beregnes fra NVE-rutenettet rundt hvert punkt og inngår i habitatscoren.
+- Datadekning i ferskvann inkluderer nå faktisk NVE-dybde og struktur, ikke bare vær + vannkant.
+- Ferskvanns-3D bruker den innebygde NVE-baserte renderer direkte, ikke ekstern MapLibre-terrain.
+- 3D-rutenettet er tettere på mobil og glattes to ganger for mindre blokkete bunn.
+- BiteGuide og brukerens egne slukbilder er beholdt.
+- Service worker/cache oppdatert til REV39.

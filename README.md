@@ -1,40 +1,43 @@
-# Fiste guiden REV38 – mobil, BiteGuide og bedre 3D
+# Fiste guiden REV39 – mobil, automatisk NVE og BiteGuide
 
-REV38 bygger videre på REV37 som stabil base, men er ryddet for telefonbruk slik at kartet får mest mulig plass.
+REV39 bygger videre på den stabile mobilutgaven og holder kartet i fokus.
 
-## Mobiloppsett
-- Filtre og kartvalg ligger i én nedtrekksmeny på telefon.
-- Kartet er hovedflaten og er ca. 64–67 % av skjermhøyden på mobil.
-- 10 beste punkter er lukket som standard.
-- Vær, kartlag/regler og fangstlogg ligger samlet under **Mer**.
-- Valgt punkt viser bare kort sammendrag først. Detaljer åpnes ved behov.
-- Karttrykk på nummererte punkter velger punktet uten å hoppe nedover siden.
+## Kartmenyen er ryddet
+Bare disse kartvalgene står igjen:
+- **Fiskekart – dybder** – standardvalget. Sjø bruker Kartverkets dybdedata; ferskvann kobler automatisk inn NVE-dybder der de finnes.
+- **Detaljert topo**
+- **3D bunn / terreng** – i ferskvann brukes NVE-bunn direkte når oppmålte data finnes.
+- **Satellitt**
+- **Kartverket sjøkart** – skjules automatisk for ferskvannsarter.
 
-## BiteGuide per punkt
-Når et anbefalt punkt velges får det en egen nedtrekksmeny med:
-- BiteScore 0–100
-- BiteTime for de neste timene
-- beste tidspunkt i prognosevinduet
-- anbefalt sluktype
-- anbefalt farge
-- anbefalt størrelse/vekt
-- anbefalt innsveiving/presentasjon
+Turkart, Terrengskygge, Standardkart og Hybrid er fjernet.
 
-BiteGuide bruker Fiste sine egne vær-/habitatdata og den eksisterende slukmotoren. Den kopierer ikke data fra Fishbrain. BiteScore er en veiledende forholdsscore, ikke fangstsannsynlighet.
+## Automatisk ferskvann
+Når Ørret, Abbor eller Gjedde velges:
+- appen går til Fiskekart som arbeidskart når arten skiftes,
+- NVE Innsjødatabase brukes automatisk,
+- DybdeKurve og DybdePunkt tegnes direkte fra NVE REST,
+- dybde og undervannsstruktur brukes i artsrangeringen når data finnes,
+- kartet sier tydelig fra hvis vannet ikke har oppmålte NVE-dybder.
 
-## Dine slukbilder er beholdt
-`public/data/user-lures.json` og de eksisterende lure-bildemappene er beholdt. Førstevalg og alternativer vises fortsatt med bilder fra brukerens slukboks.
+Appen lager ikke falske dybdekoter for vann uten oppmåling.
 
-## Bedre 3D-bunn
-- Høyere, men fortsatt mobilvennlig rutenett.
-- Lett glatting av overflaten for mindre blokkete 3D.
-- Dybdekonturer tegnes over 3D-overflaten for bedre lesbarhet.
-- Sjø bruker Kartverkets høyde-/dybdedata.
-- Ferskvann forsøker NVE Innsjødatabase/Dybdekart og bygger 3D fra faktiske dybdekurver og dybdepunkter der data finnes.
-- Hvis NVE ikke har oppmålte dybdedata for vannet, lager appen ikke falske dybder.
+## Artskobling
+NVE-dybde inngår i den eksisterende habitatmodellen:
+- Ørret favoriserer passende mellomdybde og tydelige dybdekanter.
+- Abbor favoriserer grunn/mellomdyp struktur.
+- Gjedde favoriserer grunnere kanter.
+Vær, vannkant og tidspunkt brukes fortsatt sammen med dybden.
 
-## Kilder
-Kartverket, MET Norway, NVE, OpenStreetMap og eksisterende marine kilder fra REV37. Eksterne dybdedata er veiledende og skal ikke brukes til navigasjon.
+## BiteGuide og slukbilder
+Brukerens eksisterende slukbilder og slukboks er beholdt. Hvert valgt punkt har BiteGuide med BiteScore, BiteTime, sluktype, farge, størrelse/vekt og presentasjon.
+
+## 3D-bunn
+- tettere mobilrutenett,
+- to glattepass for mindre blokkete flate,
+- dybdekonturer over 3D-flaten,
+- NVE-bunn i ferskvann der måledata finnes,
+- Kartverket i sjø.
 
 ## Start / deploy
-Bruk samme én-klikk deploy som tidligere via `1-OPPDATER-OG-APNE-FISTE.bat`.
+Kjør `1-OPPDATER-OG-APNE-FISTE.bat` som før.

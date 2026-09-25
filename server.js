@@ -409,8 +409,10 @@ function buildAnalysisConfidence({weather=null,marine=null,depth=null,structure=
   const components=[];const add=(key,label,score,weight,note)=>components.push({key,label,score:clamp(Math.round(score),0,100),weight,note});
   const weatherFields=['wind','windDirection','cloud','temp'];const wc=weatherFields.filter(k=>Number.isFinite(weather?.[k])).length;
   if(waterType==='freshwater'){
-    add('weather','MET-vær',wc/weatherFields.length*100,55,`${wc}/${weatherFields.length} værfelt`);
-    add('coast','Vannkantgeometri',100,45,'OSM vannflate / vannkant');
+    add('weather','MET-vær',wc/weatherFields.length*100,35,`${wc}/${weatherFields.length} værfelt`);
+    add('coast','Vannkantgeometri',100,25,'OSM vannflate / vannkant');
+    add('depth','NVE-dybde',Number.isFinite(depth?.meters)?100:0,25,Number.isFinite(depth?.meters)?`${depth.source||'NVE Dybdekart'} · interpolert fra oppmålte kurver/punkter`:'ingen oppmålt NVE-dybde i utsnittet');
+    add('structure','Undervannsstruktur',structure?.available?100:0,15,structure?.available?structure.label:'ikke beregnet uten dybdedata');
   }else{
     add('weather','MET-vær',wc/weatherFields.length*100,20,`${wc}/${weatherFields.length} værfelt`);
     const marineFields=['seaTemp','waveHeight','currentVelocity','tideTrend3h'];const mc=marineFields.filter(k=>Number.isFinite(marine?.[k])).length;
@@ -1367,6 +1369,10 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
       } catch(fallbackError) { freshwaterMaskError=fallbackError.message||error.message||String(fallbackError); }
     }
   }
+  let freshwaterBathy=null,freshwaterDepthError=null;
+  if(freshwater){
+    try{freshwaterBathy=await nveFreshwaterBathymetryGrid({west,south,east,north,zoom,quality:'mobile'});}catch(error){freshwaterDepthError=error.message||String(error);}
+  }
   const candidates=freshwater?freshwaterCandidateGrid(freshwaterAreas,{west,south,east,north}):candidateGrid(west,south,east,north,fishType);
   const preselectLimit=Math.min(36,Math.max(zoneLimit*2,20));
   for (const point of freshwaterMaskError ? [] : candidates) {
@@ -1397,8 +1403,12 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
   if(zones.length>zoneLimit) zones.splice(zoneLimit);
   const habitatContext=await habitatContextPromise;
   await Promise.all(zones.map(async zone => {
-    let depth=null,offshoreDepth=null;
-    if (!freshwater) {
+    let depth=null,offshoreDepth=null,structure=null;
+    if (freshwater) {
+      const freshInfo=freshwaterBathy?freshwaterStructureFromGrid(freshwaterBathy,zone._point.lat,zone._point.lon):null;
+      if(Number.isFinite(freshInfo?.depth))depth={meters:freshInfo.depth,category:freshInfo.depth<=2?'shallow':freshInfo.depth<=8?'mid':'deep',source:'NVE Dybdekart',resolutionM:freshwaterBathy.samplingApproxM||null,estimated:true,survey:freshwaterBathy.survey||null};
+      structure=freshInfo?.structure||{available:false,label:'Ingen oppmålt NVE-dybde ved punktet',score:null,slopeMPer100:null,depthDelta:null,offshoreDepth:null,offshoreDistanceM:null};
+    } else {
       try { depth=await depthAtPoint(zone._point.lat,zone._point.lon); } catch(error) { depthError=error.message; }
       if(Number.isFinite(depth?.meters)&&Number.isFinite(zone._coast?.coastNormal)){
         try{
@@ -1406,10 +1416,10 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
           offshoreDepth=await depthAtPoint(offshorePoint.lat,offshorePoint.lon);
         }catch(error){ depthError=depthError||error.message; }
       }
+      structure=classifyQuickStructure(depth?.meters,offshoreDepth?.meters,280);
     }
-    const shallowRisk=freshwater ? false : depth ? depth.meters<=5 || zone._coast.quality>=0.95 : zone._coast.quality>=0.75;
-    zone.depth=depth || { meters:null, category:'unknown', source:null, resolutionM:null, estimated:false };
-    const structure=freshwater?{available:false,label:'Innlandsstruktur ikke beregnet',score:null,slopeMPer100:null,depthDelta:null,offshoreDepth:null,offshoreDistanceM:null}:classifyQuickStructure(depth?.meters,offshoreDepth?.meters,280);
+    const shallowRisk=freshwater ? (Number.isFinite(depth?.meters)?depth.meters<=2.2:false) : depth ? depth.meters<=5 || zone._coast.quality>=0.95 : zone._coast.quality>=0.75;
+    zone.depth=depth || { meters:null, category:'unknown', source:freshwater?'NVE Dybdekart':null, resolutionM:null, estimated:false };
     const habitat=freshwater?{serviceAvailable:false,serviceCoveragePercent:0,signals:[],noneRegistered:false,source:'Marine habitatdata brukes ikke i ferskvann'}:marineHabitatAtPoint(zone._point.lat,zone._point.lon,habitatContext);
     const liveAnalysis=computeLiveScore({...environment,coastQuality:zone._coast.quality,exposure:zone._exposure,hour:zone._hour,depthMeters:depth?.meters,fishType});
     const habitatAnalysis=computeHabitatScore({fishType,coastQuality:zone._coast.quality,depth,structure,habitat,goal});
@@ -1427,16 +1437,17 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
     zone.lure=recommendLure({...currentWeather,coastQuality:zone._coast.quality,exposure:zone._exposure,hour:zone._hour,lat:zone._point.lat,lon:zone._point.lon,depthMeters:depth?.meters,shallowRisk,fishType,goal});
     zone.biteGuide=buildZoneBiteGuide({zone,currentWeather,fishType});
     const waterName=zone._freshwaterName?` i ${zone._freshwaterName}`:'';
-    const fishReason=fishType==='makrell'?'Makrell: kystnært, åpnere vann der stimer kan trekke forbi.':fishType==='sei'?(Number.isFinite(depth?.meters)&&depth.meters>=8?'Sei: dybde og kyststruktur gjør sonen aktuell.':Number.isFinite(depth?.meters)?'Sei: grunt kystområde; søk mot renner og dypere vann.':'Sei: dybden er ikke bekreftet; se etter renner og bratte kanter i sjøkartet.'):fishType==='orret'?`Ferskvannsørret${waterName}: odder, innløp og vindpåvirket bredde er aktuelle startsteder.`:fishType==='abbor'?`Abbor${waterName}: avfisk vannkant og synlig struktur.`:fishType==='gjedde'?`Gjedde${waterName}: avfisk grunne kanter og vegetasjon.`:'Sjøørret: kombinerer kyststruktur, dybde og forhold akkurat nå.';
+    const depthPhrase=Number.isFinite(depth?.meters)?` NVE-dybde ved punktet er ca. ${depth.meters.toFixed(1).replace('.',',')} m${structure?.available?` og området har ${structure.label.toLowerCase()}`:''}.`:'';
+    const fishReason=fishType==='makrell'?'Makrell: kystnært, åpnere vann der stimer kan trekke forbi.':fishType==='sei'?(Number.isFinite(depth?.meters)&&depth.meters>=8?'Sei: dybde og kyststruktur gjør sonen aktuell.':Number.isFinite(depth?.meters)?'Sei: grunt kystområde; søk mot renner og dypere vann.':'Sei: dybden er ikke bekreftet; se etter renner og bratte kanter i sjøkartet.'):fishType==='orret'?`Ferskvannsørret${waterName}: modellen prioriterer vannkant, lys/vind og – når NVE-data finnes – ørretens passende dybde og dybdekanter.${depthPhrase}`:fishType==='abbor'?`Abbor${waterName}: modellen prioriterer vannkant og – når NVE-data finnes – ca. 1–8 m og tydelig struktur.${depthPhrase}`:fishType==='gjedde'?`Gjedde${waterName}: modellen prioriterer grunne kanter og – når NVE-data finnes – ca. 0–5 m nær struktur.${depthPhrase}`:'Sjøørret: kombinerer kyststruktur, dybde og forhold akkurat nå.';
     zone.reason=`${fishReason} ${zone.analysis.summary}.`;
     if(goal==='big') zone.reason=`Stor-fisk-modus prioriterer tydelig struktur og kantsoner. ${zone.reason}`;
     if(zone._freshwaterName) zone.waterName=zone._freshwaterName;
     delete zone._point; delete zone._coast; delete zone._exposure; delete zone._hour; delete zone._freshwaterName;
   }));
   zones.sort((a,b)=>b.score-a.score||b.analysis.confidence-a.analysis.confidence);
-  const warning=[maskError?'Vannmasken svarte ikke; prøv igjen om litt.':null,freshwaterMaskError?'OSM-kontrollen for ferskvann svarte ikke; ingen ferskvannssoner vises før kontrollen virker.':null,restrictedWaters?`${restrictedWaters} kandidat(er) i kjent helårsforbud ble hardfiltrert bort.`:null,depthError?'Dybde/struktur er midlertidig ufullstendig for noen soner.':null,habitatError?'Marine habitatdata svarte ikke; analysen fortsetter uten dette laget.':null].filter(Boolean).join(' ')||null;
-  const source=freshwater?`${freshwaterLookup} og vannkant + MET Norway`:`OSM vannmaske + EMODnet dybde/struktur + MET Norway${marineConditions?' + Open-Meteo Marine':''}${habitatContext?.available?' + Miljødirektoratet/Fiskeridirektoratet habitat':''}`;
-  return {zones,stats:{tested,rejected,goal,base,radiusM,strictLandmask:true,waterType,waterMaskAvailable:!maskError&&!freshwaterMaskError,freshwaterAreas:freshwater?freshwaterAreas.length:null,freshwaterLookup:freshwater?freshwaterLookup:null,restrictedWaters,hardRestrictionFilter:true,habitatCoveragePercent:freshwater?null:(habitatContext?.coveragePercent||0),depthAvailable:zones.filter(z=>Number.isFinite(z.depth?.meters)).length,depthResolutionM:freshwater?null:125,warning,generatedAt:new Date().toISOString(),source}};
+  const warning=[maskError?'Vannmasken svarte ikke; prøv igjen om litt.':null,freshwaterMaskError?'OSM-kontrollen for ferskvann svarte ikke; ingen ferskvannssoner vises før kontrollen virker.':null,freshwater&&freshwaterDepthError?`NVE-dybde: ${freshwaterDepthError}`:null,restrictedWaters?`${restrictedWaters} kandidat(er) i kjent helårsforbud ble hardfiltrert bort.`:null,depthError?'Dybde/struktur er midlertidig ufullstendig for noen soner.':null,habitatError?'Marine habitatdata svarte ikke; analysen fortsetter uten dette laget.':null].filter(Boolean).join(' ')||null;
+  const source=freshwater?`${freshwaterLookup} + MET Norway${freshwaterBathy?' + NVE Dybdekart (automatisk)':''}`:`OSM vannmaske + EMODnet dybde/struktur + MET Norway${marineConditions?' + Open-Meteo Marine':''}${habitatContext?.available?' + Miljødirektoratet/Fiskeridirektoratet habitat':''}`;
+  return {zones,stats:{tested,rejected,goal,base,radiusM,strictLandmask:true,waterType,waterMaskAvailable:!maskError&&!freshwaterMaskError,freshwaterAreas:freshwater?freshwaterAreas.length:null,freshwaterLookup:freshwater?freshwaterLookup:null,freshwaterDepthSource:freshwaterBathy?'NVE Dybdekart':null,freshwaterLake:freshwaterBathy?.lakeName||null,restrictedWaters,hardRestrictionFilter:true,habitatCoveragePercent:freshwater?null:(habitatContext?.coveragePercent||0),depthAvailable:zones.filter(z=>Number.isFinite(z.depth?.meters)).length,depthResolutionM:freshwater?(freshwaterBathy?.samplingApproxM||null):125,warning,generatedAt:new Date().toISOString(),source}};
 }
 
 async function boatRamps({west,south,east,north}) {
@@ -1488,12 +1499,12 @@ function bathymetryGridPlan({west,south,east,north,zoom=13,quality='standard'}) 
   if(spanLon<=0||spanLat<=0||spanLon>0.18||spanLat>0.18) throw new Error('Zoom nærmere for 3D-bunn (maks ca. 15–20 km utsnitt).');
   const midLat=(south+north)/2,widthM=Math.max(1,spanLon*111320*Math.cos(midLat*Math.PI/180)),heightM=Math.max(1,spanLat*110540);
   const mobile=quality==='mobile',longest=Math.max(widthM,heightM),zoomBoost=clamp((Number(zoom)||13)-11,0,5);
-  // REV38: modestly denser grid for smoother FjordSpot-like 3D without making phones wait forever.
-  const minLongest=mobile?32:38,maxLongest=mobile?42:50;
+  // REV39: denser mobile grid for smoother FjordSpot-like 3D without making phones wait forever.
+  const minLongest=mobile?36:40,maxLongest=mobile?48:54;
   let longestCells=Math.round(clamp(minLongest+zoomBoost*(mobile?1.7:2.2),minLongest,maxLongest));
   let width=Math.max(mobile?20:24,Math.round(longestCells*widthM/longest));
   let height=Math.max(mobile?20:24,Math.round(longestCells*heightM/longest));
-  const maxPoints=mobile?1150:2000;
+  const maxPoints=mobile?1500:2400;
   if(width*height>maxPoints){const scale=Math.sqrt(maxPoints/(width*height));width=Math.max(16,Math.floor(width*scale));height=Math.max(16,Math.floor(height*scale));}
   const spacingM=Math.round(Math.max(widthM/Math.max(1,width-1),heightM/Math.max(1,height-1)));
   return {width,height,widthM,heightM,spacingM,totalPoints:width*height,quality:mobile?'mobile':'standard'};
@@ -1639,6 +1650,47 @@ async function nveFreshwaterBathymetryGrid({west,south,east,north,zoom=13,qualit
     return {west,south,east,north,width:plan.width,height:plan.height,quality:plan.quality,elevations,depths,maxDepth,maxLand:0,validSea,validLand:0,source:'NVE Dybdekart',dataSource:method||'NVE Dybdekart',sourceResolution:null,samplingApproxM:plan.spacingM,generatedAt:new Date().toISOString(),waterType:'freshwater',lakeId, lakeName:nveLakeName(props), survey:{maxDepth:Number.isFinite(documentedMax)?documentedMax:null,method:method||null},navigationWarning:'NVE-dybder og interpolert 3D-flate er kun for fiskeplanlegging, ikke navigasjon.'};
   });
 }
+
+function sampleBathymetryGridDepth(grid,lat,lon){
+  if(!grid||!Array.isArray(grid.depths)||lon<grid.west||lon>grid.east||lat<grid.south||lat>grid.north)return null;
+  const x=(lon-grid.west)/Math.max(Number.EPSILON,grid.east-grid.west)*Math.max(1,grid.width-1);
+  const y=(grid.north-lat)/Math.max(Number.EPSILON,grid.north-grid.south)*Math.max(1,grid.height-1);
+  const c0=Math.floor(x),c1=Math.min(grid.width-1,c0+1),r0=Math.floor(y),r1=Math.min(grid.height-1,r0+1),tx=x-c0,ty=y-r0;
+  const vals=[[r0,c0,(1-tx)*(1-ty)],[r0,c1,tx*(1-ty)],[r1,c0,(1-tx)*ty],[r1,c1,tx*ty]];
+  let sum=0,weight=0;for(const [r,c,w] of vals){const d=grid.depths?.[r]?.[c];if(Number.isFinite(d)){sum+=d*w;weight+=w;}}
+  if(weight>0)return Number((sum/weight).toFixed(2));
+  const rr=Math.max(0,Math.min(grid.height-1,Math.round(y))),cc=Math.max(0,Math.min(grid.width-1,Math.round(x))),d=grid.depths?.[rr]?.[cc];return Number.isFinite(d)?Number(d.toFixed(2)):null;
+}
+function freshwaterStructureFromGrid(grid,lat,lon){
+  const center=sampleBathymetryGridDepth(grid,lat,lon);if(!Number.isFinite(center))return {depth:null,structure:{available:false,label:'NVE-dybde finnes ikke ved punktet',score:null,slopeMPer100:null,depthDelta:null,offshoreDepth:null,offshoreDistanceM:null}};
+  let best=null;
+  for(const distanceM of [60,120,180])for(let bearing=0;bearing<360;bearing+=45){const p=destinationPoint(lat,lon,bearing,distanceM),d=sampleBathymetryGridDepth(grid,p.lat,p.lon);if(!Number.isFinite(d))continue;const delta=Math.abs(d-center);if(!best||delta>best.delta)best={depth:d,delta,distanceM,bearing};}
+  const structure=best?classifyQuickStructure(center,best.depth,best.distanceM):{available:false,label:'Dybde registrert, men struktur kunne ikke beregnes',score:null,slopeMPer100:null,depthDelta:null,offshoreDepth:null,offshoreDistanceM:null};
+  if(structure.available)structure.direction=best.bearing;
+  return {depth:center,structure};
+}
+async function freshwaterDepthOverlay({west,south,east,north,zoom=13}){
+  const centerLon=(west+east)/2,centerLat=(south+north)/2;
+  const key=`nve-overlay:${west.toFixed(3)},${south.toFixed(3)},${east.toFixed(3)},${north.toFixed(3)}@${Math.round(zoom)}`;
+  return cached(key,2*60*60*1000,async()=>{
+    const lakes=await nveLakeQuery(5,{west,south,east,north,outFields:'*',resultRecordCount:120});
+    const lake=pickNveLake(lakes?.features||[],centerLon,centerLat);
+    if(!lake)return {available:false,lakeName:null,lakeId:null,curveCount:0,pointCount:0,maxDepth:null,surveyMethod:null,curves:{type:'FeatureCollection',features:[]},points:{type:'FeatureCollection',features:[]},lake:{type:'FeatureCollection',features:[]},source:'NVE Innsjødatabase2'};
+    const props=nveFeatureProperties(lake),lakeId=nveLakeId(props),lakeName=nveLakeName(props);
+    if(!Number.isFinite(lakeId))return {available:false,lakeName,lakeId:null,curveCount:0,pointCount:0,maxDepth:null,surveyMethod:null,curves:{type:'FeatureCollection',features:[]},points:{type:'FeatureCollection',features:[]},lake:{type:'FeatureCollection',features:[lake]},source:'NVE Innsjødatabase2'};
+    const where=`vatnlnr=${Math.trunc(lakeId)}`;
+    const [curves,points,meta]=await Promise.all([
+      nveLakeQuery(2,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000}),
+      nveLakeQuery(1,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000}),
+      nveLakeQuery(4,{west,south,east,north,where,outFields:'*',returnGeometry:false,resultRecordCount:20})
+    ]);
+    const cf=(curves?.features||[]).map(f=>({...f,properties:{...nveFeatureProperties(f),fisteKind:'curve'}}));
+    const pf=(points?.features||[]).map(f=>({...f,properties:{...nveFeatureProperties(f),fisteKind:'point'}}));
+    const mp=nveFeatureProperties(meta?.features?.[0]||{}),maxDepth=Number(mp.maksdyp_m??mp.maksdyp),surveyMethod=String(mp.digitaltprodukt??mp.oppmaalingsmetode??mp.malemetode??'').trim()||null;
+    return {available:cf.length>0||pf.length>0,lakeName,lakeId,curveCount:cf.length,pointCount:pf.length,maxDepth:Number.isFinite(maxDepth)?maxDepth:null,surveyMethod,curves:{type:'FeatureCollection',features:cf},points:{type:'FeatureCollection',features:pf},lake:{type:'FeatureCollection',features:[lake]},source:'NVE Innsjødatabase2 · DybdeKurve/DybdePunkt',generatedAt:new Date().toISOString()};
+  });
+}
+
 function buildZoneBiteGuide({zone,currentWeather,fishType}){
   const habitat=clamp(Number(zone?.analysis?.habitat)||50,0,100),hourly=Array.isArray(currentWeather?.hourly)?currentWeather.hourly:[];
   const timeline=hourly.slice(0,12).map(item=>{const live=fishingHourScore(item,fishType);const score=clamp(Math.round(habitat*.58+live.score*.42),0,100);return {time:item.time,score,label:score>=82?'Svært bra':score>=68?'Bra':score>=52?'Brukbart':'Svakt'};});
@@ -1690,7 +1742,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v14-rev38',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,biteGuide:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v15-rev39',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,freshwaterDepthOverlay:true,freshwaterSpeciesDepthRanking:true,biteGuide:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
@@ -1709,6 +1761,10 @@ async function handleApi(req,res,url) {
     if(url.pathname==='/api/ramps') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'12');}catch(error){return send(res,400,{error:error.message});}
       return send(res,200,await boatRamps(input));
+    }
+    if(url.pathname==='/api/freshwater-depth-overlay') {
+      let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
+      try{return send(res,200,await freshwaterDepthOverlay(input),'application/json; charset=utf-8',{'Cache-Control':'public, max-age=7200'});}catch(error){return send(res,502,{error:error.message});}
     }
     if(url.pathname==='/api/bathymetry-grid') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
@@ -1773,4 +1829,4 @@ function createServer() {
 }
 function startServer(port=PORT) { const server=createServer(); return server.listen(port,()=>{ let ip='localhost'; for(const list of Object.values(os.networkInterfaces())) for(const item of list||[]) if(item.family==='IPv4'&&!item.internal) ip=item.address; console.log(`Fiste guiden kjører på http://${ip}:${port}`); }); }
 if(require.main===module) startServer();
-module.exports={kartverketBathymetryGrid,nveFreshwaterBathymetryGrid,geoJsonContainsPoint,inverseDistanceDepth,buildZoneBiteGuide,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};
+module.exports={kartverketBathymetryGrid,nveFreshwaterBathymetryGrid,freshwaterDepthOverlay,sampleBathymetryGridDepth,freshwaterStructureFromGrid,geoJsonContainsPoint,inverseDistanceDepth,buildZoneBiteGuide,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};
