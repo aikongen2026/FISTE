@@ -1425,6 +1425,7 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
     zone.breakdown={habitat:Math.round((habitatAnalysis.score-50)/5),forhold:Math.round((liveAnalysis.score-50)/5)};
     zone.name=zone.score>=82?'Svært høy':zone.score>=68?'Høy':'Moderat';
     zone.lure=recommendLure({...currentWeather,coastQuality:zone._coast.quality,exposure:zone._exposure,hour:zone._hour,lat:zone._point.lat,lon:zone._point.lon,depthMeters:depth?.meters,shallowRisk,fishType,goal});
+    zone.biteGuide=buildZoneBiteGuide({zone,currentWeather,fishType});
     const waterName=zone._freshwaterName?` i ${zone._freshwaterName}`:'';
     const fishReason=fishType==='makrell'?'Makrell: kystnært, åpnere vann der stimer kan trekke forbi.':fishType==='sei'?(Number.isFinite(depth?.meters)&&depth.meters>=8?'Sei: dybde og kyststruktur gjør sonen aktuell.':Number.isFinite(depth?.meters)?'Sei: grunt kystområde; søk mot renner og dypere vann.':'Sei: dybden er ikke bekreftet; se etter renner og bratte kanter i sjøkartet.'):fishType==='orret'?`Ferskvannsørret${waterName}: odder, innløp og vindpåvirket bredde er aktuelle startsteder.`:fishType==='abbor'?`Abbor${waterName}: avfisk vannkant og synlig struktur.`:fishType==='gjedde'?`Gjedde${waterName}: avfisk grunne kanter og vegetasjon.`:'Sjøørret: kombinerer kyststruktur, dybde og forhold akkurat nå.';
     zone.reason=`${fishReason} ${zone.analysis.summary}.`;
@@ -1487,11 +1488,12 @@ function bathymetryGridPlan({west,south,east,north,zoom=13,quality='standard'}) 
   if(spanLon<=0||spanLat<=0||spanLon>0.18||spanLat>0.18) throw new Error('Zoom nærmere for 3D-bunn (maks ca. 15–20 km utsnitt).');
   const midLat=(south+north)/2,widthM=Math.max(1,spanLon*111320*Math.cos(midLat*Math.PI/180)),heightM=Math.max(1,spanLat*110540);
   const mobile=quality==='mobile',longest=Math.max(widthM,heightM),zoomBoost=clamp((Number(zoom)||13)-11,0,5);
-  const minLongest=mobile?28:34,maxLongest=mobile?38:46;
-  let longestCells=Math.round(clamp(minLongest+zoomBoost*(mobile?1.8:2.4),minLongest,maxLongest));
-  let width=Math.max(mobile?18:22,Math.round(longestCells*widthM/longest));
-  let height=Math.max(mobile?18:22,Math.round(longestCells*heightM/longest));
-  const maxPoints=mobile?900:1600;
+  // REV38: modestly denser grid for smoother FjordSpot-like 3D without making phones wait forever.
+  const minLongest=mobile?32:38,maxLongest=mobile?42:50;
+  let longestCells=Math.round(clamp(minLongest+zoomBoost*(mobile?1.7:2.2),minLongest,maxLongest));
+  let width=Math.max(mobile?20:24,Math.round(longestCells*widthM/longest));
+  let height=Math.max(mobile?20:24,Math.round(longestCells*heightM/longest));
+  const maxPoints=mobile?1150:2000;
   if(width*height>maxPoints){const scale=Math.sqrt(maxPoints/(width*height));width=Math.max(16,Math.floor(width*scale));height=Math.max(16,Math.floor(height*scale));}
   const spacingM=Math.round(Math.max(widthM/Math.max(1,width-1),heightM/Math.max(1,height-1)));
   return {width,height,widthM,heightM,spacingM,totalPoints:width*height,quality:mobile?'mobile':'standard'};
@@ -1519,6 +1521,131 @@ async function kartverketPointBatch(points) {
     }catch(error){lastError=error;if(attempt<2) await new Promise(resolve=>setTimeout(resolve,250*(attempt+1)));}
   }
   throw lastError||new Error('Kartverket høydedata svarte ikke');
+}
+
+function geoJsonPolygonRings(geometry) {
+  if(!geometry) return [];
+  if(geometry.type==='Polygon') return [geometry.coordinates||[]];
+  if(geometry.type==='MultiPolygon') return geometry.coordinates||[];
+  return [];
+}
+function geoJsonContainsPoint(geometry,lon,lat) {
+  for(const polygon of geoJsonPolygonRings(geometry)) {
+    const outer=(polygon[0]||[]).map(([x,y])=>({lon:Number(x),lat:Number(y)})).filter(p=>Number.isFinite(p.lon)&&Number.isFinite(p.lat));
+    if(outer.length<3||!pointInPolygon(lat,lon,outer)) continue;
+    let inHole=false;
+    for(const holeCoords of polygon.slice(1)) {
+      const hole=(holeCoords||[]).map(([x,y])=>({lon:Number(x),lat:Number(y)})).filter(p=>Number.isFinite(p.lon)&&Number.isFinite(p.lat));
+      if(hole.length>=3&&pointInPolygon(lat,lon,hole)){inHole=true;break;}
+    }
+    if(!inHole) return true;
+  }
+  return false;
+}
+function geoJsonGeometryCenter(geometry) {
+  const coords=[];
+  for(const polygon of geoJsonPolygonRings(geometry)) for(const ring of polygon||[]) for(const pair of ring||[]) {
+    const lon=Number(pair?.[0]),lat=Number(pair?.[1]);if(Number.isFinite(lon)&&Number.isFinite(lat)) coords.push([lon,lat]);
+  }
+  if(!coords.length) return null;
+  const sum=coords.reduce((acc,[lon,lat])=>[acc[0]+lon,acc[1]+lat],[0,0]);
+  return {lon:sum[0]/coords.length,lat:sum[1]/coords.length};
+}
+async function nveLakeQuery(layer,{west,south,east,north,where='1=1',outFields='*',returnGeometry=true,resultRecordCount=2000}={}) {
+  const params=new URLSearchParams({
+    where,
+    geometry:`${west},${south},${east},${north}`,
+    geometryType:'esriGeometryEnvelope',
+    inSR:'4326',
+    spatialRel:'esriSpatialRelIntersects',
+    outFields,
+    returnGeometry:returnGeometry?'true':'false',
+    outSR:'4326',
+    resultRecordCount:String(resultRecordCount),
+    f:'geojson'
+  });
+  return fetchJson(`https://kart.nve.no/enterprise/rest/services/Innsjodatabase2/MapServer/${layer}/query?${params}`,{'User-Agent':MET_USER_AGENT,'Accept':'application/geo+json,application/json'},16000);
+}
+function nveFeatureProperties(feature={}) { return feature.properties||feature.attributes||{}; }
+function nveLakeId(props={}) { return Number(props.vatnlnr??props.vatnLnr??props.vatn_lnr??props.VATN_LNR); }
+function nveLakeName(props={}) { return String(props.innsjonavn??props.navn??props.name??'Ukjent vann').trim()||'Ukjent vann'; }
+function pickNveLake(features=[],centerLon,centerLat) {
+  const containing=features.filter(f=>geoJsonContainsPoint(f.geometry,centerLon,centerLat));
+  if(containing.length) return containing.sort((a,b)=>{
+    const aa=Number(nveFeatureProperties(a).areal_km2||Infinity),bb=Number(nveFeatureProperties(b).areal_km2||Infinity);return aa-bb;
+  })[0];
+  let best=null,bestDistance=Infinity;
+  for(const feature of features){const c=geoJsonGeometryCenter(feature.geometry);if(!c)continue;const d=distanceMeters(centerLat,centerLon,c.lat,c.lon);if(d<bestDistance){bestDistance=d;best=feature;}}
+  return bestDistance<=2500?best:null;
+}
+function densifyGeoJsonLines(features=[],maxSamples=1800) {
+  const raw=[];
+  for(const feature of features) {
+    const depth=Number(nveFeatureProperties(feature).dybde_m);if(!Number.isFinite(depth)||depth<0)continue;
+    const g=feature.geometry||{};const lines=g.type==='LineString'?[g.coordinates]:g.type==='MultiLineString'?g.coordinates:[];
+    for(const line of lines||[]) for(const pair of line||[]) {const lon=Number(pair?.[0]),lat=Number(pair?.[1]);if(Number.isFinite(lon)&&Number.isFinite(lat))raw.push({lon,lat,depth});}
+  }
+  if(raw.length<=maxSamples)return raw;
+  const step=raw.length/maxSamples,out=[];for(let i=0;i<maxSamples;i++)out.push(raw[Math.floor(i*step)]);return out;
+}
+function nvePointSamples(features=[],maxSamples=700) {
+  const raw=[];
+  for(const feature of features){const depth=Number(nveFeatureProperties(feature).dybde_m),c=feature.geometry?.coordinates;if(!Number.isFinite(depth)||depth<0||!Array.isArray(c))continue;const lon=Number(c[0]),lat=Number(c[1]);if(Number.isFinite(lon)&&Number.isFinite(lat))raw.push({lon,lat,depth});}
+  if(raw.length<=maxSamples)return raw;
+  const step=raw.length/maxSamples,out=[];for(let i=0;i<maxSamples;i++)out.push(raw[Math.floor(i*step)]);return out;
+}
+function nveShorelineSamples(geometry,maxSamples=650){
+  const raw=[];
+  for(const polygon of geoJsonPolygonRings(geometry)){
+    const outer=polygon?.[0]||[];for(const pair of outer){const lon=Number(pair?.[0]),lat=Number(pair?.[1]);if(Number.isFinite(lon)&&Number.isFinite(lat))raw.push({lon,lat,depth:0});}
+  }
+  if(raw.length<=maxSamples)return raw;
+  const step=raw.length/maxSamples,out=[];for(let i=0;i<maxSamples;i++)out.push(raw[Math.floor(i*step)]);return out;
+}
+function inverseDistanceDepth(samples,lon,lat,centerLat,maxDepth){
+  const sx=111320*Math.cos(centerLat*Math.PI/180),sy=110540;const nearest=[];
+  for(const s of samples){const dx=(s.lon-lon)*sx,dy=(s.lat-lat)*sy,d2=dx*dx+dy*dy;if(d2<1)return clamp(s.depth,0,maxDepth);if(nearest.length<8){nearest.push({d2,depth:s.depth});nearest.sort((a,b)=>a.d2-b.d2);}else if(d2<nearest[7].d2){nearest[7]={d2,depth:s.depth};nearest.sort((a,b)=>a.d2-b.d2);}}
+  if(!nearest.length)return null;let sum=0,weight=0;for(const n of nearest){const w=1/Math.max(16,n.d2);sum+=n.depth*w;weight+=w;}return weight?clamp(sum/weight,0,maxDepth):null;
+}
+async function nveFreshwaterBathymetryGrid({west,south,east,north,zoom=13,quality='standard'}) {
+  const plan=bathymetryGridPlan({west,south,east,north,zoom,quality});
+  const centerLon=(west+east)/2,centerLat=(south+north)/2;
+  const key=`bathy-grid-nve:${plan.quality}:${west.toFixed(4)},${south.toFixed(4)},${east.toFixed(4)},${north.toFixed(4)},${plan.width}x${plan.height}`;
+  return cached(key,12*60*60*1000,async()=>{
+    const lakes=await nveLakeQuery(5,{west,south,east,north,outFields:'*',resultRecordCount:100});
+    const lake=pickNveLake(lakes?.features||[],centerLon,centerLat);if(!lake)throw new Error('Fant ikke et NVE-vann i dette utsnittet. Flytt kartet inn på innsjøen og prøv igjen.');
+    const props=nveFeatureProperties(lake),lakeId=nveLakeId(props);if(!Number.isFinite(lakeId))throw new Error('NVE-vannet mangler gyldig vann-ID.');
+    const where=`vatnlnr=${Math.trunc(lakeId)}`;
+    const [curves,points,meta]=await Promise.all([
+      nveLakeQuery(2,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000}),
+      nveLakeQuery(1,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000}),
+      nveLakeQuery(4,{west,south,east,north,where,outFields:'*',returnGeometry:false,resultRecordCount:20})
+    ]);
+    const contourSamples=densifyGeoJsonLines(curves?.features||[]),depthPointSamples=nvePointSamples(points?.features||[]),shoreSamples=nveShorelineSamples(lake.geometry);
+    const samples=[...contourSamples,...depthPointSamples,...shoreSamples];
+    if(contourSamples.length<6&&depthPointSamples.length<4)throw new Error(`NVE har ikke nok oppmålte dybdedata for ${nveLakeName(props)} til å bygge et ærlig 3D-bunnkart.`);
+    const metaProps=nveFeatureProperties(meta?.features?.[0]||{});const documentedMax=Number(metaProps.maksdyp_m??metaProps.maksdyp);
+    const observedMax=Math.max(0,...samples.map(s=>Number(s.depth)||0));const maxDepth=Math.max(1,Number.isFinite(documentedMax)?documentedMax:observedMax,observedMax);
+    const elevations=Array.from({length:plan.height},()=>Array(plan.width).fill(null)),depths=Array.from({length:plan.height},()=>Array(plan.width).fill(null));let validSea=0;
+    for(let row=0;row<plan.height;row++){
+      const lat=north-(north-south)*row/Math.max(1,plan.height-1);
+      for(let col=0;col<plan.width;col++){
+        const lon=west+(east-west)*col/Math.max(1,plan.width-1);if(!geoJsonContainsPoint(lake.geometry,lon,lat))continue;
+        const depth=inverseDistanceDepth(samples,lon,lat,centerLat,maxDepth);if(!Number.isFinite(depth))continue;depths[row][col]=depth;elevations[row][col]=-depth;validSea++;
+      }
+    }
+    if(validSea<Math.max(40,plan.totalPoints*.08))throw new Error(`For lite NVE-dybdedata i kartutsnittet for ${nveLakeName(props)}. Zoom nærmere vannet.`);
+    const method=String(metaProps.digitaltprodukt??metaProps.digitaltProdukt??metaProps.maalemetode??metaProps.malemetode??'NVE dybdekart').trim();
+    return {west,south,east,north,width:plan.width,height:plan.height,quality:plan.quality,elevations,depths,maxDepth,maxLand:0,validSea,validLand:0,source:'NVE Dybdekart',dataSource:method||'NVE Dybdekart',sourceResolution:null,samplingApproxM:plan.spacingM,generatedAt:new Date().toISOString(),waterType:'freshwater',lakeId, lakeName:nveLakeName(props), survey:{maxDepth:Number.isFinite(documentedMax)?documentedMax:null,method:method||null},navigationWarning:'NVE-dybder og interpolert 3D-flate er kun for fiskeplanlegging, ikke navigasjon.'};
+  });
+}
+function buildZoneBiteGuide({zone,currentWeather,fishType}){
+  const habitat=clamp(Number(zone?.analysis?.habitat)||50,0,100),hourly=Array.isArray(currentWeather?.hourly)?currentWeather.hourly:[];
+  const timeline=hourly.slice(0,12).map(item=>{const live=fishingHourScore(item,fishType);const score=clamp(Math.round(habitat*.58+live.score*.42),0,100);return {time:item.time,score,label:score>=82?'Svært bra':score>=68?'Bra':score>=52?'Brukbart':'Svakt'};});
+  const current=timeline[0]?.score??clamp(Math.round(Number(zone?.score)||0),0,100),best=timeline.slice().sort((a,b)=>b.score-a.score)[0]||null,lure=zone?.lure||{};
+  const type=lure.type||lure.name||'Sluk';const color=lure.color||'Tilpass lys og vannfarge';const size=lure.weight||lure.size||'Middels størrelse';
+  const presentation=lure.presentation||{};
+  return {score:current,label:current>=82?'Svært gode huggforhold':current>=68?'Gode huggforhold':current>=52?'Brukbare huggforhold':'Svake huggforhold',timeline,bestTime:best?.time||null,recommended:{type,color,size,image:lure.image||null,name:lure.name||type,method:presentation.method||presentation.band||'Varier fart og korte pauser.'},disclaimer:'BiteScore er en veiledende forholdsscore, ikke sannsynlighet eller garanti for fangst.'};
 }
 async function kartverketBathymetryGrid({west,south,east,north,zoom=13,quality='standard'}) {
   const plan=bathymetryGridPlan({west,south,east,north,zoom,quality});
@@ -1563,7 +1690,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v13-rev37',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata',nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v14-rev38',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,biteGuide:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
@@ -1586,7 +1713,8 @@ async function handleApi(req,res,url) {
     if(url.pathname==='/api/bathymetry-grid') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
       const quality=url.searchParams.get('quality')==='mobile'?'mobile':'standard';
-      try{return send(res,200,await kartverketBathymetryGrid({...input,quality}),'application/json; charset=utf-8',{'Cache-Control':'public, max-age=21600'});}catch(error){return send(res,502,{error:error.message});}
+      const water=url.searchParams.get('water')==='freshwater'?'freshwater':'saltwater';
+      try{const data=water==='freshwater'?await nveFreshwaterBathymetryGrid({...input,quality}):await kartverketBathymetryGrid({...input,quality});return send(res,200,data,'application/json; charset=utf-8',{'Cache-Control':'public, max-age=21600'});}catch(error){return send(res,502,{error:error.message});}
     }
     if(url.pathname==='/api/bathymetry-raster') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
@@ -1645,4 +1773,4 @@ function createServer() {
 }
 function startServer(port=PORT) { const server=createServer(); return server.listen(port,()=>{ let ip='localhost'; for(const list of Object.values(os.networkInterfaces())) for(const item of list||[]) if(item.family==='IPv4'&&!item.internal) ip=item.address; console.log(`Fiste guiden kjører på http://${ip}:${port}`); }); }
 if(require.main===module) startServer();
-module.exports={kartverketBathymetryGrid,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};
+module.exports={kartverketBathymetryGrid,nveFreshwaterBathymetryGrid,geoJsonContainsPoint,inverseDistanceDepth,buildZoneBiteGuide,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};

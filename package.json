@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "13.2.0",
-  "appRevision": 37,
-  "description": "Fiste guiden REV37 – robust innebygd 3D topo/terreng uten MapLibre-avhengighet, samt 3D bunn under kartet med Kartverket-data og lokal Canvas-rendering.",
+  "version": "14.0.0",
+  "appRevision": 38,
+  "description": "Fiste guiden REV38 – mobiloptimalisert kartfokus, BiteGuide, bedre 3D-bunn og NVE-dybdekart i ferskvann, med brukerens egne slukbilder.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",

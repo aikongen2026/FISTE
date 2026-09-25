@@ -1,0 +1,20 @@
+FISTE - ENKEL OPPDATERING
+========================
+
+Fra denne pakken trenger du ikke laste opp 100 filer manuelt i GitHub.
+
+1. Pakk ut ZIP-filen.
+2. Dobbeltklikk: 1-OPPDATER-OG-APNE-FISTE.bat
+3. Første gang kan GitHub be deg logge inn/godkjenne Git for Windows.
+4. Scriptet sender appen til https://github.com/aikongen2026/FISTE
+5. Render Auto-Deploy bygger appen etter GitHub-push.
+6. Når REV 36 er live, åpnes https://fiste.onrender.com automatisk.
+
+KRAV
+- Windows 10/11.
+- Git for Windows må være installert. Scriptet finner også Git som følger enkelte GitHub Desktop-installasjoner.
+- Render-tjenesten må ha Auto-Deploy = On Commit.
+
+SIKKERHET
+- Ingen GitHub-passord, token eller Render-nøkkel ligger i ZIP-filen.
+- GitHub-innlogging håndteres av Git/Git Credential Manager på PC-en.

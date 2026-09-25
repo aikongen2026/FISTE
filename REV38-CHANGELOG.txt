@@ -1,0 +1,21 @@
+FISTE GUIDEN REV38 – MOBILE / BITEGUIDE / NVE 3D
+
+NYTT
+- Mobil-først layout med kartet i fokus.
+- Filtre samlet i sammenleggbar meny.
+- 10 beste punkter og ekstra info sammenleggbar.
+- Vær, kartlag/regler og fangstlogg flyttet under "Mer".
+- BiteGuide som egen nedtrekksmeny på valgt punkt:
+  BiteScore, BiteTime, sluktype, farge, størrelse/vekt og presentasjon.
+- Brukerens egne slukbilder beholdt.
+- Ferskvanns-3D fra NVE dybdekurver/dybdepunkter der data finnes.
+- Tettere 3D-rutenett, glattet overflate og dybdekonturer for bedre 3D-lesbarhet.
+- Cache/service worker oppdatert til REV38.
+
+BEHOLDT
+- Live GPS.
+- Sjøørret/makrell/sei og ferskvannsarter.
+- Personlig slukboks og alternativer.
+- Kartverket topo/sjøkart/dybdelag.
+- Fangstlogg og GPX/JSON eksport.
+- Restriksjoner, båtramper, vær/marine forhold og eksisterende analyse.

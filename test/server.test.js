@@ -6,9 +6,9 @@ const app=require('../server');
 const pkg=require('../package.json');
 const root=path.join(__dirname,'..','public');
 
-test('REV36 exports core scoring and environment helpers',()=>{
+test('REV38 exports core scoring and environment helpers',()=>{
   for(const name of ['computeScore','environmentalScoreAdjustments','moonInfo','deriveMarineSummary','validateZoneRequest','createServer','weather','marine','hydrology','boatRamps']) assert.equal(typeof app[name],'function',name);
-  assert.equal(pkg.appRevision,36);
+  assert.equal(pkg.appRevision,38);
 });
 
 test('score is bounded and reacts to marine conditions',()=>{
@@ -51,7 +51,7 @@ test('zone request validation still protects Norwegian bounds',()=>{
   assert.throws(()=>app.validateZoneRequest('3,57,32,72','13'),/stort/i);
 });
 
-test('REV36 base radius creates a search box centered on base',()=>{
+test('REV38 base radius creates a search box centered on base',()=>{
   const b=app.searchBoundsForBase(59.2,10.9,250,12);
   assert.equal(b.zoom,16);
   assert.ok(b.west<10.9&&b.east>10.9&&b.south<59.2&&b.north>59.2);
@@ -61,34 +61,34 @@ test('REV36 base radius creates a search box centered on base',()=>{
   assert.equal(oneKm.zoom,14);assert.ok((oneKm.east-oneKm.west)>(b.east-b.west));
 });
 
-test('REV36 accepts all-sea selection without treating it as a single species',()=>{
+test('REV38 accepts all-sea selection without treating it as a single species',()=>{
   assert.equal(app.normalizeFishSelection('all'),'all');
   assert.equal(app.normalizeFishSelection('makrell'),'makrell');
   assert.throws(()=>app.normalizeFishType('all'),/Ugyldig/);
 });
 
-test('health reports REV36, marine support and NVE configuration state',async t=>{
+test('health reports REV38, marine support and NVE configuration state',async t=>{
   const server=app.createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>server.close());
   const health=await fetch(`http://127.0.0.1:${server.address().port}/api/health`).then(r=>r.json());
-  assert.equal(health.ok,true);assert.equal(health.version,'v13-rev36');assert.equal(health.revision,'REV 36');assert.equal(health.marine,true);assert.equal(typeof health.nveHydApiConfigured,'boolean');
+  assert.equal(health.ok,true);assert.equal(health.version,'v14-rev38');assert.equal(health.revision,'REV 38');assert.equal(health.marine,true);assert.equal(typeof health.nveHydApiConfigured,'boolean');
 });
 
 test('PWA shell exposes marine, NVE, catch export and owned-lure helpers',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  assert.match(html,/REV 36/);assert.match(html,/multiSpeciesCard/);assert.match(html,/Ingen – vis alle sjøarter/);assert.match(html,/marineCard/);assert.match(html,/hydrologyCard/);assert.match(html,/conditionToggle/);assert.match(html,/boatRampToggle/);assert.match(html,/exportGpx/);assert.match(html,/ownedLures/);
+  assert.match(html,/REV 38/);assert.match(html,/multiSpeciesCard/);assert.match(html,/Ingen – vis alle sjøarter/);assert.match(html,/marineCard/);assert.match(html,/hydrologyCard/);assert.match(html,/conditionToggle/);assert.match(html,/boatRampToggle/);assert.match(html,/exportGpx/);assert.match(html,/ownedLures/);
   assert.match(js,/applyPersonalRanking/);assert.match(js,/clearBasePoint/);assert.match(js,/focusBaseRadius/);assert.match(js,/speciesColors/);assert.match(js,/exportCatchGpx/);assert.match(js,/analysisCacheKey/);assert.match(js,/renderConditionVectors/);assert.match(js,/loadBoatRamps/);assert.match(js,/loadHydrologyAtCenter/);assert.match(html,/id="live"/);assert.match(html,/liveHud/);assert.match(js,/watchPosition/);assert.match(js,/currentAnalysisBase/);assert.match(js,/liveTrackLayer/);
 });
 
-test('asset versions and service worker cache are REV36',()=>{
+test('asset versions and service worker cache are REV38',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.match(html,/app\.js\?v=36\.0/);assert.match(html,/fishing-insights\.js\?v=36\.0/);assert.match(html,/style\.css\?v=36\.0/);
-  assert.match(sw,/fiste-guiden-rev36/);assert.doesNotMatch(sw,/rev22/);assert.match(sw,/\/api\//);
+  assert.match(html,/app\.js\?v=38\.0/);assert.match(html,/fishing-insights\.js\?v=38\.0/);assert.match(html,/style\.css\?v=38\.0/);
+  assert.match(sw,/fiste-guiden-rev38/);assert.doesNotMatch(sw,/rev22/);assert.match(sw,/\/api\//);
 });
 
 
-test('REV36 detailed fishing map uses Kartverket depth WMS and no EMODnet color overlay',()=>{
+test('REV38 detailed fishing map uses Kartverket depth WMS and no EMODnet color overlay',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
   assert.match(html,/Fiskekart – dybder/);
@@ -114,14 +114,14 @@ test('catch data remains local and personal ranking has a minimum sample thresho
   assert.match(js,/localStorage\.setItem\(catchStorageKey/);assert.match(js,/insight\.sessions<3/);assert.match(js,/personalAdjustment/);assert.doesNotMatch(js,/fetch\([^\n]*catchStorageKey/);
 });
 
-test('REV36 personal lure box contains many individual photographed candidates',()=>{
+test('REV38 personal lure box contains many individual photographed candidates',()=>{
   const data=JSON.parse(fs.readFileSync(path.join(root,'data','user-lures.json'),'utf8'));
   assert.ok(data.lures.length>=45);assert.equal(data.lures.filter(item=>item.species.includes('sjoorret')).length,25);assert.ok(data.lures.every(item=>item.image&&item.species&&item.waterTypes));
   const rec=app.recommendLure({fishType:'sjoorret',hour:19,cloud:65,wind:4,temp:13,exposure:.6,coastQuality:.8,depthMeters:4,lat:59.2,lon:10.9});
   assert.ok(rec.alternatives.length>=4);assert.notEqual(rec.alternatives[0].image,rec.image);
 });
 
-test('REV36 LIVE GPS implementation follows position and refreshes analysis',()=>{
+test('REV38 LIVE GPS implementation follows position and refreshes analysis',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
@@ -145,7 +145,7 @@ test('marine scoring breakdown can contain negative contributions without format
 
 
 
-test('REV36 separates habitat, live conditions and confidence',()=>{
+test('REV38 separates habitat, live conditions and confidence',()=>{
   const live=app.computeLiveScore({fishType:'sjoorret',wind:4,cloud:75,hour:7,exposure:.7,seaTemp:11,waveHeight:.4,currentVelocity:.5,tideTrend3h:.08,pressureTrend:-1});
   const habitat=app.computeHabitatScore({fishType:'sjoorret',coastQuality:.85,depth:{meters:4},structure:{available:true,label:'Tydelig dybdekant',score:90},habitat:{serviceAvailable:true,eelgrass:true,kelp:false,shellSand:true,softBottom:false,spawningArea:false,nurseryArea:true},goal:'numbers'});
   const confidence=app.buildAnalysisConfidence({weather:{wind:4,windDirection:220,cloud:75,temp:10},marine:{seaTemp:11,waveHeight:.4,currentVelocity:.5,tideTrend3h:.08},depth:{meters:4,source:'EMODnet'},structure:{available:true,label:'Tydelig dybdekant'},habitat:{serviceCoveragePercent:100},waterType:'saltwater'});
@@ -153,33 +153,33 @@ test('REV36 separates habitat, live conditions and confidence',()=>{
   assert.ok(habitat.factors.some(x=>x.key==='naturtype'));
 });
 
-test('REV36 depth structure distinguishes steep from flat profiles',()=>{
+test('REV38 depth structure distinguishes steep from flat profiles',()=>{
   const steep=app.classifyQuickStructure(2,10,280),flat=app.classifyQuickStructure(3,3.5,280);
   assert.equal(steep.available,true);assert.ok(steep.score>flat.score);assert.match(steep.label,/kant|marbakke/i);
   const profile=app.classifyDepthProfile([{distanceM:0,meters:2},{distanceM:75,meters:3},{distanceM:150,meters:6},{distanceM:300,meters:10}]);
   assert.equal(profile.available,true);assert.ok(profile.maxSlopeMPer100>0);
 });
 
-test('REV36 hard restriction status is exposed separately from fish score',()=>{
+test('REV38 hard restriction status is exposed separately from fish score',()=>{
   const clear=app.legalStatusForPoint(59.4,10.6);assert.equal(typeof clear.blocked,'boolean');assert.match(clear.status,/forbud|kjent/i);
 });
 
-test('REV36 selected card keeps advanced analysis in dropdowns',()=>{
+test('REV38 selected card keeps advanced analysis in dropdowns',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
-  assert.match(js,/analysisScoreStripHtml/);assert.match(js,/Hvorfor akkurat her/);assert.match(js,/Dybde og struktur/);assert.match(js,/Habitat i området/);assert.match(js,/Fredning og regler/);assert.match(js,/Datagrunnlag/);assert.match(js,/api\/depth-profile/);
+  assert.match(js,/biteGuideHtml/);assert.match(js,/Hvorfor akkurat her/);assert.match(js,/Dybde og struktur/);assert.match(js,/Mer analyse/);assert.match(js,/Regler/);assert.match(js,/Datagrunnlag/);assert.match(js,/api\/depth-profile/);
   assert.match(css,/analysis-score-strip/);assert.match(css,/zone-detail/);assert.match(css,/depth-profile/);
-  assert.match(html,/REV 36/);
+  assert.match(html,/REV 38/);
 });
 
-test('REV36 health advertises HSI split, habitat layers and depth profiles',async t=>{
+test('REV38 health advertises HSI split, habitat layers and depth profiles',async t=>{
   const server=app.createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>server.close());
   const health=await fetch(`http://127.0.0.1:${server.address().port}/api/health`).then(r=>r.json());
   assert.equal(health.hsiSplit,true);assert.equal(health.habitatLayers,true);assert.equal(health.depthProfiles,true);assert.equal(health.hardRestrictionFilter,true);
 });
 
-test('REV36 sea-trout gate excludes predator and freshwater-only lures from primary and alternatives',()=>{
+test('REV38 sea-trout gate excludes predator and freshwater-only lures from primary and alternatives',()=>{
   const banned=new Set(['own01-05','own07-01','own07-02','own07-03','own07-04','own07-05','own07-06','own13-01','own13-02','own13-03','own13-04','own13-05','own13-06','own13-07','own13-08','own11-01','own11-02','own11-03']);
   const catalog=JSON.parse(fs.readFileSync(path.join(root,'data','user-lures.json'),'utf8')).lures;
   const imageToId=new Map(catalog.map(x=>[x.image,x.id]));
@@ -192,7 +192,7 @@ test('REV36 sea-trout gate excludes predator and freshwater-only lures from prim
   }
 });
 
-test('REV36 red-white predator wobbler is pike-only in owned catalogue',()=>{
+test('REV38 red-white predator wobbler is pike-only in owned catalogue',()=>{
   const catalog=JSON.parse(fs.readFileSync(path.join(root,'data','user-lures.json'),'utf8')).lures;
   const lure=catalog.find(x=>x.id==='own01-05');
   assert.deepEqual(lure.species,['gjedde']);
@@ -200,7 +200,7 @@ test('REV36 red-white predator wobbler is pike-only in owned catalogue',()=>{
 });
 
 
-test('REV36 freshwater fallback handles successful empty OSM polygon results without trusting land',()=>{
+test('REV38 freshwater fallback handles successful empty OSM polygon results without trusting land',()=>{
   const source=fs.readFileSync(path.join(__dirname,'..','server.js'),'utf8');
   assert.match(source,/if\(!freshwaterAreas\.length\)/);
   assert.match(source,/fallbackFreshwater/);
@@ -209,7 +209,7 @@ test('REV36 freshwater fallback handles successful empty OSM polygon results wit
 });
 
 
-test('REV36 adds lazy 3D topo without replacing the Leaflet analysis engine',()=>{
+test('REV38 adds lazy 3D topo without replacing the Leaflet analysis engine',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
@@ -220,14 +220,14 @@ test('REV36 adds lazy 3D topo without replacing the Leaflet analysis engine',()=
   assert.match(css,/three-d-active/);assert.match(css,/#map3d/);assert.match(css,/three-d-hud/);
 });
 
-test('REV36 health advertises 3D terrain support',async t=>{
+test('REV38 health advertises 3D terrain support',async t=>{
   const server=app.createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>server.close());
   const health=await fetch(`http://127.0.0.1:${server.address().port}/api/health`).then(r=>r.json());
-  assert.equal(health.terrain3d,true);assert.equal(health.version,'v13-rev36');assert.equal(health.revision,'REV 36');
+  assert.equal(health.terrain3d,true);assert.equal(health.version,'v14-rev38');assert.equal(health.revision,'REV 38');
 });
 
 
-test('REV36 adds mobile-safe 3D bathymetry below the map without Plotly',()=>{
+test('REV38 adds mobile-safe 3D bathymetry below the map without Plotly',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
@@ -240,13 +240,13 @@ test('REV36 adds mobile-safe 3D bathymetry below the map without Plotly',()=>{
   assert.match(css,/bathy-panel/);assert.match(css,/bathy-canvas-wrap/);assert.match(css,/bathy-empty\[hidden\]/);assert.match(css,/#bathy3d\[hidden\]/);
 });
 
-test('REV36 bathymetry projection, mobile grid budget and signed elevation are sane',()=>{
+test('REV38 bathymetry projection, mobile grid budget and signed elevation are sane',()=>{
   const [e,n]=app.lonLatToUtm33(10.77,59.18);
   assert.ok(e>250000&&e<270000);assert.ok(n>6500000&&n<6650000);
   const standard=app.bathymetryGridPlan({west:10.70,south:59.13,east:10.84,north:59.23,zoom:13,quality:'standard'});
   const mobile=app.bathymetryGridPlan({west:10.70,south:59.13,east:10.84,north:59.23,zoom:13,quality:'mobile'});
-  assert.ok(standard.width>=22&&standard.height>=22);assert.ok(standard.totalPoints<=1600);assert.ok(standard.spacingM>0);
-  assert.ok(mobile.width>=18&&mobile.height>=18);assert.ok(mobile.totalPoints<=900);assert.ok(mobile.totalPoints<standard.totalPoints);assert.equal(mobile.quality,'mobile');
+  assert.ok(standard.width>=24&&standard.height>=24);assert.ok(standard.totalPoints<=2000);assert.ok(standard.spacingM>0);
+  assert.ok(mobile.width>=20&&mobile.height>=20);assert.ok(mobile.totalPoints<=1150);assert.ok(mobile.totalPoints<standard.totalPoints);assert.equal(mobile.quality,'mobile');
   const sea=app.classifyKartverketHeight({z:-4.2,terreng:'sjø'}),land=app.classifyKartverketHeight({z:12.4,terreng:'terreng'}),bad=app.classifyKartverketHeight({z:null});
   assert.equal(sea.isSea,true);assert.equal(sea.depth,4.2);assert.equal(sea.elevation,-4.2);
   assert.equal(land.isLand,true);assert.equal(land.elevation,12.4);assert.equal(land.depth,null);
@@ -255,8 +255,32 @@ test('REV36 bathymetry projection, mobile grid budget and signed elevation are s
   assert.match(js,/function bathyLocalFrame/);assert.match(js,/metresPerLon=111320\*Math\.cos/);assert.match(js,/buildBathyScene/);assert.match(js,/renderBathyCanvas/);
 });
 
-test('REV36 health advertises Kartverket 3D bathymetry',async t=>{
+test('REV38 health advertises Kartverket 3D bathymetry',async t=>{
   const server=app.createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>server.close());
   const health=await fetch(`http://127.0.0.1:${server.address().port}/api/health`).then(r=>r.json());
-  assert.equal(health.bathymetry3d,true);assert.equal(health.bathymetrySource,'kartverket-hoydedata');assert.equal(health.version,'v13-rev36');assert.equal(health.revision,'REV 36');
+  assert.equal(health.bathymetry3d,true);assert.equal(health.freshwaterBathymetry3d,true);assert.equal(health.bathymetrySource,'kartverket-hoydedata+nve-dybdekart');assert.equal(health.biteGuide,true);assert.equal(health.version,'v14-rev38');assert.equal(health.revision,'REV 38');
+});
+
+
+test('REV38 mobile shell keeps map first and folds controls away',()=>{
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
+  const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  assert.match(html,/id="filterPanel"/);assert.match(html,/class="filter-panel"/);assert.match(html,/10 beste punkter/);assert.match(html,/class="card compact-panel more-panel"/);
+  assert.match(css,/REV38 – mobile-first shell/);assert.match(css,/height:67svh/);assert.match(js,/configureMobilePanels/);assert.match(js,/updateFilterSummary/);
+});
+
+test('REV38 BiteGuide exposes score, time and owned-lure recommendation',()=>{
+  const zone={score:80,analysis:{habitat:86},lure:{name:'Testsluk',type:'Skjesluk',color:'Kobber',weight:'15 g',image:'/lures/test.jpg',presentation:{method:'Rolig med korte pauser'}}};
+  const currentWeather={hourly:[{time:'2026-09-26T06:00',wind:3,cloud:70,temp:10,pressure:1010},{time:'2026-09-26T07:00',wind:4,cloud:75,temp:10,pressure:1010}]};
+  const guide=app.buildZoneBiteGuide({zone,currentWeather,fishType:'orret'});
+  assert.ok(guide.score>=0&&guide.score<=100);assert.ok(Array.isArray(guide.timeline));assert.equal(guide.recommended.name,'Testsluk');assert.equal(guide.recommended.color,'Kobber');assert.equal(guide.recommended.size,'15 g');
+  const js=fs.readFileSync(path.join(root,'app.js'),'utf8');assert.match(js,/🎯 BiteGuide/);assert.match(js,/Størrelse\/vekt/);assert.match(js,/Sluk fra min boks/);
+});
+
+test('REV38 freshwater 3D uses NVE depth services and honest failure path',()=>{
+  const server=fs.readFileSync(path.join(__dirname,'..','server.js'),'utf8');
+  const js=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  assert.match(server,/Innsjodatabase2\/MapServer\/\$\{layer\}\/query/);assert.match(server,/nveLakeQuery\(5/);assert.match(server,/nveLakeQuery\(2/);assert.match(server,/nveLakeQuery\(1/);assert.match(server,/nveFreshwaterBathymetryGrid/);
+  assert.match(js,/water=\$\{water\}/);assert.match(js,/smoothBathymetryGrid/);assert.match(js,/bathyContourSegments/);
 });

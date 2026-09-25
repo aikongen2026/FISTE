@@ -293,7 +293,7 @@ async function enable3DMap(){
       threeDMap.addControl(new lib.NavigationControl({visualizePitch:true}),'top-right');
       threeDMap.on('load',()=>{threeDReady=true;try{threeDMap.setTerrain({source:'terrain',exaggeration:1.35});}catch{}ensure3DDataLayers();sync3DZones();syncBathyZones();sync3DReferenceAndLive();sync3DReferenceLayers();sync3DWaterMode();
         const zoneLayers=['fiste-zone-halo','fiste-zone-points','fiste-zone-labels'];
-        threeDMap.on('click',event=>{const layers=zoneLayers.filter(id=>threeDMap.getLayer(id));const hit=layers.length?threeDMap.queryRenderedFeatures(event.point,{layers})[0]:null;if(hit?.properties?.id){selectZone(hit.properties.id,{scroll:true});return;}setBasePoint(L.latLng(event.lngLat.lat,event.lngLat.lng),{label:'Kartklikk 3D',focus:false});setState('ready','3D-kartklikk satt som referansepunkt. Oppdaterer 10 beste soner …');});
+        threeDMap.on('click',event=>{const layers=zoneLayers.filter(id=>threeDMap.getLayer(id));const hit=layers.length?threeDMap.queryRenderedFeatures(event.point,{layers})[0]:null;if(hit?.properties?.id){selectZone(hit.properties.id,{scroll:false});return;}setBasePoint(L.latLng(event.lngLat.lat,event.lngLat.lng),{label:'Kartklikk 3D',focus:false});setState('ready','3D-kartklikk satt som referansepunkt. Oppdaterer 10 beste soner …');});
         zoneLayers.forEach(id=>{threeDMap.on('mouseenter',id,()=>{threeDMap.getCanvas().style.cursor='pointer';});threeDMap.on('mouseleave',id,()=>{threeDMap.getCanvas().style.cursor='';});});
         const n=document.querySelector('.map-notice');if(n)n.textContent='3D topo: roter kartet for å lese terreng og kanter. Dybdekoter vises i sjø; de er ikke en 3D-ekkoloddmodell.';
       });
@@ -349,7 +349,7 @@ function bindNative3DCanvas(){
   const point=e=>({x:e.clientX,y:e.clientY});
   canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture?.(e.pointerId);nativeThreeDView.pointers.set(e.pointerId,point(e));nativeThreeDView.moved=false;if(nativeThreeDView.pointers.size===2){const q=[...nativeThreeDView.pointers.values()];nativeThreeDView.lastPinch=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);}});
   canvas.addEventListener('pointermove',e=>{const prev=nativeThreeDView.pointers.get(e.pointerId);if(!prev)return;const now=point(e),dx=now.x-prev.x,dy=now.y-prev.y;nativeThreeDView.pointers.set(e.pointerId,now);if(Math.abs(dx)+Math.abs(dy)>2)nativeThreeDView.moved=true;if(nativeThreeDView.pointers.size===1){nativeThreeDView.yaw+=dx*.009;nativeThreeDView.pitch=bathyClamp(nativeThreeDView.pitch-dy*.006,0,1.28);renderNative3DCanvas();}else if(nativeThreeDView.pointers.size>=2){const q=[...nativeThreeDView.pointers.values()].slice(0,2),dist=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);if(nativeThreeDView.lastPinch>0)nativeThreeDView.zoom=bathyClamp(nativeThreeDView.zoom*(dist/nativeThreeDView.lastPinch),.58,2.7);nativeThreeDView.lastPinch=dist;renderNative3DCanvas();}});
-  const end=e=>{const pos=point(e);nativeThreeDView.pointers.delete(e.pointerId);if(nativeThreeDView.pointers.size<2)nativeThreeDView.lastPinch=0;if(!nativeThreeDView.moved){let best=null;for(const z of nativeThreeDProjectedZones){const d=Math.hypot(z.x-(pos.x-canvas.getBoundingClientRect().left),z.y-(pos.y-canvas.getBoundingClientRect().top));if(d<28&&(!best||d<best.d))best={...z,d};}if(best)selectZone(best.id,{scroll:true});}};
+  const end=e=>{const pos=point(e);nativeThreeDView.pointers.delete(e.pointerId);if(nativeThreeDView.pointers.size<2)nativeThreeDView.lastPinch=0;if(!nativeThreeDView.moved){let best=null;for(const z of nativeThreeDProjectedZones){const d=Math.hypot(z.x-(pos.x-canvas.getBoundingClientRect().left),z.y-(pos.y-canvas.getBoundingClientRect().top));if(d<28&&(!best||d<best.d))best={...z,d};}if(best)selectZone(best.id,{scroll:false});}};
   canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
   canvas.addEventListener('wheel',e=>{e.preventDefault();nativeThreeDView.zoom=bathyClamp(nativeThreeDView.zoom*(e.deltaY>0?.92:1.08),.58,2.7);renderNative3DCanvas();},{passive:false});
   canvas.addEventListener('dblclick',e=>{e.preventDefault();native3DCamera('pitch');});
@@ -413,10 +413,11 @@ async function fetchBathymetryGrid(){
   const requested=bathyBounds(),zoom=Math.max(10,Math.min(18,Math.round(map.getZoom())));
   const mobile=window.matchMedia?.('(max-width: 850px)').matches||navigator.maxTouchPoints>0;
   const quality=mobile?'mobile':'standard';
-  const url=`/api/bathymetry-grid?bbox=${encodeURIComponent([requested.west,requested.south,requested.east,requested.north].join(','))}&zoom=${zoom}&quality=${quality}`;
-  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),22000);
+  const water=freshwaterFishTypes.has($('fishType')?.value)?'freshwater':'saltwater';
+  const url=`/api/bathymetry-grid?bbox=${encodeURIComponent([requested.west,requested.south,requested.east,requested.north].join(','))}&zoom=${zoom}&quality=${quality}&water=${water}`;
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),26000);
   let response;
-  try{response=await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal,cache:'no-store'});}catch(error){if(error?.name==='AbortError')throw new Error('Kartverket brukte for lang tid. Zoom litt nærmere og trykk Oppdater bunn.');throw error;}finally{clearTimeout(timer);}
+  try{response=await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal,cache:'no-store'});}catch(error){if(error?.name==='AbortError')throw new Error('Dybdekilden brukte for lang tid. Zoom nærmere og trykk Oppdater.');throw error;}finally{clearTimeout(timer);}
   if(!response.ok){let message='Kunne ikke hente 3D-bunn';try{const j=await response.json();message=j.error||message;}catch{}throw new Error(message);}
   const grid=await response.json();
   if(!grid||!Array.isArray(grid.elevations)||!Array.isArray(grid.depths)||!Number.isFinite(grid.width)||!Number.isFinite(grid.height))throw new Error('3D-bunnen kom tilbake i ugyldig format.');
@@ -434,7 +435,36 @@ function bathyLandColor(height,cap,shade=1){
   const t=bathyClamp((height||0)/Math.max(1,cap),0,1),a=[49,78,63],b=[16,37,31];
   return `rgb(${bathyClamp(Math.round(bathyMix(a[0],b[0],t)*shade),0,255)},${bathyClamp(Math.round(bathyMix(a[1],b[1],t)*shade),0,255)},${bathyClamp(Math.round(bathyMix(a[2],b[2],t)*shade),0,255)})`;
 }
+function smoothBathymetryGrid(grid,passes=1){
+  if(!grid?.elevations||!grid?.depths||passes<=0)return grid;
+  let elevations=grid.elevations.map(r=>r.slice()),depths=grid.depths.map(r=>r.slice());
+  for(let pass=0;pass<passes;pass++){
+    const nextE=elevations.map(r=>r.slice()),nextD=depths.map(r=>r.slice());
+    for(let r=1;r<grid.height-1;r++)for(let c=1;c<grid.width-1;c++){
+      const centerE=elevations[r][c],centerD=depths[r][c];if(!Number.isFinite(centerE))continue;
+      const isWater=Number.isFinite(centerD),valsE=[],valsD=[];
+      for(let rr=r-1;rr<=r+1;rr++)for(let cc=c-1;cc<=c+1;cc++){
+        const e=elevations[rr][cc],d=depths[rr][cc];if(!Number.isFinite(e)||Number.isFinite(d)!==isWater)continue;valsE.push(e);if(isWater&&Number.isFinite(d))valsD.push(d);
+      }
+      if(valsE.length>=4){const avg=valsE.reduce((a,b)=>a+b,0)/valsE.length;nextE[r][c]=centerE*.58+avg*.42;}
+      if(isWater&&valsD.length>=4){const avg=valsD.reduce((a,b)=>a+b,0)/valsD.length;nextD[r][c]=centerD*.58+avg*.42;}
+    }
+    elevations=nextE;depths=nextD;
+  }
+  return {...grid,elevations,depths};
+}
+function bathyContourLevels(maxDepth){return [2,5,10,15,20,30,40,50,75,100,150].filter(v=>v<maxDepth*.98);}
+function bathyContourSegments(scene,level){
+  const out=[];
+  const edgePoint=(a,b)=>{const da=a?.depth,db=b?.depth;if(!Number.isFinite(da)||!Number.isFinite(db)||(da-level)*(db-level)>0||da===db)return null;const t=(level-da)/(db-da);if(t<0||t>1)return null;return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t,depth:level};};
+  for(let r=0;r<scene.grid.height-1;r++)for(let c=0;c<scene.grid.width-1;c++){
+    const a=scene.vertices[r][c],b=scene.vertices[r][c+1],d=scene.vertices[r+1][c],e=scene.vertices[r+1][c+1];if(!a||!b||!d||!e)continue;
+    const pts=[edgePoint(a,b),edgePoint(b,e),edgePoint(e,d),edgePoint(d,a)].filter(Boolean);if(pts.length===2)out.push([pts[0],pts[1]]);else if(pts.length===4){out.push([pts[0],pts[1]],[pts[2],pts[3]]);}
+  }
+  return out;
+}
 function buildBathyScene(grid){
+  const smoothPasses=window.matchMedia?.('(max-width: 850px)').matches?1:2;grid=smoothBathymetryGrid(grid,smoothPasses);
   const frame=bathyLocalFrame(grid),vertices=[];
   const lonForCol=i=>grid.west+(grid.east-grid.west)*i/Math.max(1,grid.width-1);
   const latForRow=i=>grid.north-(grid.north-grid.south)*i/Math.max(1,grid.height-1);
@@ -455,7 +485,8 @@ function buildBathyScene(grid){
   const addTri=(a,b,c)=>{const vals=[a,b,c].filter(Boolean);if(vals.length!==3)return;const seaCount=vals.filter(v=>v.sea).length;const avgDepth=vals.reduce((n,v)=>n+(v.depth||0),0)/3;const avgZ=vals.reduce((n,v)=>n+v.z,0)/3;triangles.push({v:vals,sea:seaCount>=2,depth:avgDepth,z:avgZ});};
   for(let r=0;r<grid.height-1;r++)for(let c=0;c<grid.width-1;c++){const a=vertices[r][c],b=vertices[r][c+1],d=vertices[r+1][c],e=vertices[r+1][c+1];addTri(a,b,e);addTri(a,e,d);}
   $('bathyDepthMax').textContent=`${depthCap} m+`;
-  return {grid,frame,vertices,triangles,depthCap,landCap,widthM,heightM,maxXY,verticalExaggeration};
+  const contourLevels=bathyContourLevels(depthCap);
+  return {grid,frame,vertices,triangles,depthCap,landCap,widthM,heightM,maxXY,verticalExaggeration,contourLevels};
 }
 function bathyProject(scene,v,w,h,view=bathyView){
   const yaw=view.yaw,pitch=view.pitch,cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
@@ -481,11 +512,13 @@ function renderBathyCanvas(){
   ctx.strokeStyle='rgba(183,242,245,.72)';ctx.lineWidth=1.15;ctx.beginPath();
   for(let r=0;r<scene.grid.height;r++)for(let c=0;c<scene.grid.width-1;c++){const a=scene.vertices[r][c],b=scene.vertices[r][c+1];if(a&&b&&a.sea!==b.sea){const pa=bathyProject(scene,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:0},w,h);ctx.moveTo(pa.x-1,pa.y);ctx.lineTo(pa.x+1,pa.y);}}
   ctx.stroke();
+  // FjordSpot-like readable depth contours on top of the mesh.
+  for(const level of scene.contourLevels||[]){const segments=bathyContourSegments(scene,level);ctx.beginPath();for(const seg of segments){const a=bathyProject(scene,seg[0],w,h),b=bathyProject(scene,seg[1],w,h);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);}ctx.strokeStyle=level<=10?'rgba(225,252,255,.42)':'rgba(203,240,248,.28)';ctx.lineWidth=level<=10?1.05:.75;ctx.stroke();}
   bathyProjectedZones=[];
   const zones=latestZones.filter(v=>v?.marker&&v.marker.lon>=scene.grid.west&&v.marker.lon<=scene.grid.east&&v.marker.lat>=scene.grid.south&&v.marker.lat<=scene.grid.north).slice(0,10);
   zones.forEach((zone,index)=>{const z=(bathyGridValueAt(scene.grid,zone.marker.lon,zone.marker.lat)??0)+2;const p=bathyProject(scene,{x:scene.frame.xForLon(zone.marker.lon),y:scene.frame.yForLat(zone.marker.lat),z},w,h);bathyProjectedZones.push({x:p.x,y:p.y,id:zone.id});ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fillStyle=threeDFeatureColor(zone);ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();ctx.font='700 11px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=3;ctx.fillText(`${index+1} · ${Math.round(zone.score||0)}`,p.x,p.y-10);ctx.shadowBlur=0;});
   const center=map.getCenter();if(center.lng>=scene.grid.west&&center.lng<=scene.grid.east&&center.lat>=scene.grid.south&&center.lat<=scene.grid.north){const z=(bathyGridValueAt(scene.grid,center.lng,center.lat)??0)+3;const p=bathyProject(scene,{x:scene.frame.xForLon(center.lng),y:scene.frame.yForLat(center.lat),z},w,h);ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle='#ef4444';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
-  ctx.font='600 11px system-ui,sans-serif';ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='rgba(222,244,234,.88)';ctx.fillText('Kartverket · interaktiv 3D-bunn',12,h-14);
+  ctx.font='600 11px system-ui,sans-serif';ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='rgba(222,244,234,.88)';const source=scene.grid.waterType==='freshwater'?`NVE · ${scene.grid.lakeName||'oppmålt vann'}`:'Kartverket';ctx.fillText(`${source} · interaktiv 3D-bunn`,12,h-14);
 }
 function bathyCamera(kind='pitch'){
   if(kind==='top'){bathyView.yaw=0;bathyView.pitch=0;bathyView.zoom=.96;}
@@ -498,7 +531,7 @@ function bindBathyCanvas(){
   const point=e=>({x:e.clientX,y:e.clientY});
   canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture?.(e.pointerId);bathyView.pointers.set(e.pointerId,point(e));bathyView.moved=false;if(bathyView.pointers.size===2){const q=[...bathyView.pointers.values()];bathyView.lastPinch=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);}});
   canvas.addEventListener('pointermove',e=>{const prev=bathyView.pointers.get(e.pointerId);if(!prev)return;const now=point(e),dx=now.x-prev.x,dy=now.y-prev.y;bathyView.pointers.set(e.pointerId,now);if(Math.abs(dx)+Math.abs(dy)>2)bathyView.moved=true;if(bathyView.pointers.size===1){bathyView.yaw+=dx*.009;bathyView.pitch=bathyClamp(bathyView.pitch-dy*.006,0,1.28);renderBathyCanvas();}else if(bathyView.pointers.size>=2){const q=[...bathyView.pointers.values()].slice(0,2),dist=Math.hypot(q[0].x-q[1].x,q[0].y-q[1].y);if(bathyView.lastPinch>0)bathyView.zoom=bathyClamp(bathyView.zoom*(dist/bathyView.lastPinch),.58,2.7);bathyView.lastPinch=dist;renderBathyCanvas();}});
-  const end=e=>{const pos=point(e);bathyView.pointers.delete(e.pointerId);if(bathyView.pointers.size<2)bathyView.lastPinch=0;if(!bathyView.moved){let best=null;for(const z of bathyProjectedZones){const d=Math.hypot(z.x-(pos.x-canvas.getBoundingClientRect().left),z.y-(pos.y-canvas.getBoundingClientRect().top));if(d<28&&(!best||d<best.d))best={...z,d};}if(best)selectZone(best.id,{scroll:true});}};
+  const end=e=>{const pos=point(e);bathyView.pointers.delete(e.pointerId);if(bathyView.pointers.size<2)bathyView.lastPinch=0;if(!bathyView.moved){let best=null;for(const z of bathyProjectedZones){const d=Math.hypot(z.x-(pos.x-canvas.getBoundingClientRect().left),z.y-(pos.y-canvas.getBoundingClientRect().top));if(d<28&&(!best||d<best.d))best={...z,d};}if(best)selectZone(best.id,{scroll:false});}};
   canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
   canvas.addEventListener('wheel',e=>{e.preventDefault();bathyView.zoom=bathyClamp(bathyView.zoom*(e.deltaY>0?.92:1.08),.58,2.7);renderBathyCanvas();},{passive:false});
   canvas.addEventListener('dblclick',e=>{e.preventDefault();bathyResetView();});
@@ -506,20 +539,19 @@ function bindBathyCanvas(){
 }
 async function refreshBathy3D(){
   if(!bathyActive||!$('bathyPanel')?.open)return;const token=++bathyLoadToken,status=$('bathyStatus'),summary=$('bathySummaryStatus'),empty=$('bathyEmpty');
-  if(status)status.textContent='Henter bunn for kartutsnittet …';if(summary)summary.textContent='Laster …';if(empty){empty.hidden=false;empty.textContent='Henter Kartverkets høyde- og dybdedata …';}
+  const freshwater=freshwaterFishTypes.has($('fishType')?.value);if(status)status.textContent='Henter bunn for kartutsnittet …';if(summary)summary.textContent='Laster …';if(empty){empty.hidden=false;empty.textContent=freshwater?'Henter oppmålte NVE-dybder …':'Henter Kartverkets høyde- og dybdedata …';}
   try{
     const grid=await fetchBathymetryGrid();if(token!==bathyLoadToken||!bathyActive)return;
     bathyLastGrid=grid;bathyScene=buildBathyScene(grid);bathyPlotReady=true;bindBathyCanvas();
     requestAnimationFrame(()=>{renderBathyCanvas();if(empty)empty.hidden=true;});
     const pointCount=latestZones.filter(v=>v?.marker&&v.marker.lon>=grid.west&&v.marker.lon<=grid.east&&v.marker.lat>=grid.south&&v.marker.lat<=grid.north).slice(0,10).length;
-    if(status)status.textContent=`Kartverket 3D · rutenett ca. ${grid.sampling||'–'} m · ${pointCount} fiskepunkt`;
-    if(summary)summary.textContent=`Klar · ca. ${grid.sampling||'–'} m rutenett`;
+    const sourceLabel=grid.waterType==='freshwater'?`NVE 3D · ${grid.lakeName||'innsjø'}`:'Kartverket 3D';
+    if(status)status.textContent=`${sourceLabel} · ca. ${grid.sampling||'–'} m rutenett · ${pointCount} fiskepunkt`;
+    if(summary)summary.textContent=`Klar · ${grid.waterType==='freshwater'?'NVE oppmålt':'Kartverket'} · ca. ${grid.sampling||'–'} m`;
   }catch(error){if(token!==bathyLoadToken)return;bathyPlotReady=false;bathyScene=null;if(status)status.textContent='3D bunn kunne ikke lastes';if(summary)summary.textContent='Kunne ikke laste';if(empty){empty.hidden=false;empty.textContent=`${error.message}`;}const w=$('warnings');if(w)w.textContent=`3D bunn: ${error.message}`;}
 }
 async function enableBathy3D(){
   bathyActive=true;bindBathyCanvas();
-  const freshwater=freshwaterFishTypes.has($('fishType')?.value),status=$('bathyStatus'),summary=$('bathySummaryStatus'),empty=$('bathyEmpty');
-  if(freshwater){bathyPlotReady=false;bathyScene=null;if(status)status.textContent='3D bunn er tilgjengelig for sjøområder';if(summary)summary.textContent='Sjøområder';if(empty){empty.hidden=false;empty.textContent='Velg en sjøart for Kartverkets 3D-bunn. For ferskvann brukes 3D terreng og NVE-dybdekart der data finnes.';}return;}
   await refreshBathy3D();
 }
 function disableBathy3D(){bathyActive=false;bathyLoadToken++;clearTimeout(bathyRefreshTimer);const summary=$('bathySummaryStatus');if(summary)summary.textContent=bathyPlotReady?'Klar – trykk for å åpne':'Trykk for å åpne';}
@@ -530,7 +562,7 @@ function syncBathyZones(){if(isBathy3DMode()&&bathyPlotReady&&bathyScene)renderB
 const labels = { vind:'Vind', skydekke:'Skydekke', kyst:'Kyst', vannkant:'Vannkant', eksponering:'Eksponering', temperatur:'Temperatur', lufttemperatur:'Lufttemperatur', tidspunkt:'Tidspunkt', dybde:'Dybde', storfisk:'Stor fisk', lufttrykk:'Lufttrykk', sjoetemperatur:'Sjøtemp', boelger:'Bølger', havstroem:'Havstrøm', tidevann:'Tidevann', maane:'Måne', personlig:'Mine fangster', habitat:'Habitat', forhold:'Nå' };
 const freshwaterFishTypes = new Set(['orret','abbor','gjedde']);
 const catchStorageKey='fiste-guiden-catch-log-v1';
-const analysisCacheKey='fiste-guiden-last-analysis-v36';
+const analysisCacheKey='fiste-guiden-last-analysis-v38';
 const fishLabels={all:'Alle sjøarter',sjoorret:'Sjøørret',makrell:'Makrell',sei:'Sei',orret:'Ørret (ferskvann)',abbor:'Abbor',gjedde:'Gjedde'};
 const speciesColors={sjoorret:'#ef4444',makrell:'#3b82f6',sei:'#22c55e'};
 let latestWeather=null;
@@ -1051,7 +1083,7 @@ function exportCatchGpx() {
   if(!entries.length){$('catchStatus').textContent='Ingen loggposter med kartposisjon å eksportere.';return;}
   const xmlEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const waypoints=entries.map(entry=>`<wpt lat="${entry.mapCenter.lat}" lon="${entry.mapCenter.lon}"><time>${xmlEscape(entry.time)}</time><name>${xmlEscape(entry.place||fishLabels[entry.fish]||'Fisketur')}</name><desc>${xmlEscape(`${entry.result==='fangst'?'Fangst':'Ingen fangst'} · ${fishLabels[entry.fish]||entry.fish}${entry.lure?' · '+entry.lure:''}`)}</desc><type>${entry.result==='fangst'?'catch':'session'}</type></wpt>`).join('');
-  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV37" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
+  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV38" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
   $('catchStatus').textContent=`Eksporterte ${entries.length} posisjoner som GPX.`;
 }
 function exportCatchJson() { const entries=readCatchEntries();downloadTextFile(`fiste-guiden-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2),'application/json');$('catchStatus').textContent=`Backup med ${entries.length} loggposter er eksportert.`; }
@@ -1121,19 +1153,31 @@ async function loadDepthProfileForZone(zone,slot){
     slot.innerHTML=depthProfileSvgHtml(data);slot.dataset.loaded='yes';
   }catch(error){slot.innerHTML=`<p class="muted">Dybdeprofil utilgjengelig: ${escapeHtml(error.message||String(error))}</p>`;}
 }
+function compactReasonText(value=''){
+  const parts=String(value||'').split(/(?<=[.!?])\s+/).filter(Boolean);return parts.slice(0,2).join(' ').trim()||String(value||'');
+}
+function biteGuideHtml(zone={}){
+  const guide=zone.biteGuide||{},rec=guide.recommended||{},timeline=Array.isArray(guide.timeline)?guide.timeline.slice(0,10):[];
+  const best=guide.bestTime?formatClock(guide.bestTime):'–',score=Math.round(Number(guide.score)||zone.score||0);
+  const bars=timeline.length?`<div class="bite-time-strip">${timeline.map(item=>`<article title="${escapeHtml(item.label||'')}"><time>${formatClock(item.time)}</time><i><em style="height:${Math.max(10,Math.min(100,Number(item.score)||0))}%"></em></i><b>${Math.round(Number(item.score)||0)}</b></article>`).join('')}</div>`:'<p class="muted">Ingen timeprognose tilgjengelig akkurat nå.</p>';
+  return `<details class="zone-detail bite-guide-detail"><summary><span>🎯 BiteGuide</span><small>${score}/100 · best ${best}</small></summary><div class="bite-score-card"><strong>${score}</strong><div><b>${escapeHtml(guide.label||'Huggforhold')}</b><small>Best neste timer: ${best}</small></div></div>${bars}<div class="bite-rec"><div>${rec.image?`<img class="zoomable-lure" src="${escapeHtml(rec.image)}" alt="${escapeHtml(rec.name||'Anbefalt sluk')}" tabindex="0">`:''}</div><section><span>Anbefalt nå</span><b>${escapeHtml(rec.name||rec.type||'Sluk')}</b><p><strong>Type:</strong> ${escapeHtml(rec.type||'–')}<br><strong>Farge:</strong> ${escapeHtml(rec.color||'–')}<br><strong>Størrelse/vekt:</strong> ${escapeHtml(rec.size||'–')}</p><small>${escapeHtml(rec.method||'')}</small></section></div><p class="detail-caveat">${escapeHtml(guide.disclaimer||'Veiledende score – ingen garanti for fangst.')}</p></details>`;
+}
+function lureDetailsHtml(lure={},presentation={},fly={}){
+  return `<details class="zone-detail lure-detail"><summary><span>🎣 Sluk fra min boks</span><small>${escapeHtml(lure.name||lure.type||'forslag')}</small></summary><div class="lean-lure"><img class="zoomable-lure" src="${escapeHtml(lure.image||'')}" alt="${escapeHtml(lure.name||lure.type||'Anbefalt sluk')}" tabindex="0"><div><span>FØRSTEVALG</span><b>${escapeHtml(lure.name||lure.type||'Anbefalt agn')}</b><small>${escapeHtml([lure.color,lure.weight].filter(Boolean).join(' · '))}</small><p>${escapeHtml(lure.reason||'')}</p></div></div>${leanAlternativeLures(lure.alternatives)}<div class="quick-advice"><b>Fisk slik</b><p>${escapeHtml(presentation.method||presentation.band||'Fisk av sonen systematisk og varier tempo og dybde.')}</p>${fly.recommended?`<small>Opphengerflue: ${escapeHtml(fly.pattern||'Ja')}${fly.color?' · '+escapeHtml(fly.color):''}</small>`:''}</div></details>`;
+}
 function analysisDetailsHtml(zone={}){
   const analysis=zone.analysis||{},habitat=zone.habitat||{},legal=zone.legal||{};
-  return `<div class="selected-detail-stack"><details class="zone-detail"><summary><span>Hvorfor akkurat her</span><small>Habitat + forhold</small></summary><div class="detail-columns"><section><b>Habitat</b>${factorRowsHtml(analysis.habitatFactors||[])}</section><section><b>Akkurat nå</b>${factorRowsHtml(analysis.liveFactors||[])}</section></div></details><details class="zone-detail depth-detail"><summary><span>Dybde og struktur</span><small>${escapeHtml(zone.structure?.label||'profil')}</small></summary>${quickStructureHtml(zone)}</details><details class="zone-detail"><summary><span>Habitat i området</span><small>${(habitat.signals||[]).length?`${habitat.signals.length} treff`:'skjult analyse'}</small></summary>${habitatDetailHtml(habitat)}</details><details class="zone-detail"><summary><span>Fredning og regler</span><small>${legal.blocked?'SPERRET':'kontroll'}</small></summary>${legalDetailHtml(legal)}</details><details class="zone-detail"><summary><span>Datagrunnlag</span><small>${Math.round(zone.dataQuality?.confidence??analysis.confidence??0)} %</small></summary>${confidenceDetailHtml(zone)}</details></div>`;
+  return `<div class="selected-detail-stack"><details class="zone-detail"><summary><span>📍 Hvorfor akkurat her</span><small>kort analyse</small></summary><div class="detail-columns"><section><b>Habitat/struktur</b>${factorRowsHtml(analysis.habitatFactors||[])}</section><section><b>Forhold nå</b>${factorRowsHtml(analysis.liveFactors||[])}</section></div></details><details class="zone-detail depth-detail"><summary><span>🌊 Dybde og struktur</span><small>${escapeHtml(zone.structure?.label||'profil')}</small></summary>${quickStructureHtml(zone)}</details><details class="zone-detail"><summary><span>⚠️ Regler</span><small>${legal.blocked?'SPERRET':'kontroll'}</small></summary>${legalDetailHtml(legal)}</details><details class="zone-detail"><summary><span>ℹ️ Mer analyse</span><small>${Math.round(zone.dataQuality?.confidence??analysis.confidence??0)} % data</small></summary><div class="detail-columns"><section><b>Habitatdata</b>${habitatDetailHtml(habitat)}</section><section><b>Datagrunnlag</b>${confidenceDetailHtml(zone)}</section></div></details></div>`;
 }
 function renderSelectedZone(zone){
   const holder=$('selectedZone');if(!holder)return;
-  if(!zone){holder.innerHTML='<span class="card-label">ANBEFALT SONE</span><h2>Ingen sikker sone i utsnittet</h2><p class="muted">Flytt kartet eller zoom litt ut.</p>';return;}
+  if(!zone){holder.innerHTML='<span class="card-label">VALGT PUNKT</span><h2>Ingen sikker sone i utsnittet</h2><p class="muted">Flytt kartet eller zoom litt ut.</p>';return;}
   const lure=zone.lure||{},presentation=lure.presentation||{},fly=lure.dropperFly||{};
   const fish=zone.fishType||$('fishType').value,fishLabel=zone.fishLabel||fishLabels[fish]||fish;
   const number=Math.max(1,latestZones.findIndex(x=>x.id===zone.id)+1);
   const distance=Number.isFinite(zone.distanceM)?formatDistance(zone.distanceM):'Ingen avstandsgrense';
-  const summary=zone.analysis?.summary||zone.reason||'';
-  holder.innerHTML=`<div class="selected-title-row"><div><span class="card-label">#${number} · ${escapeHtml(fishLabel)}</span><h2>${escapeHtml(zone.waterName||zone.name||'Anbefalt sone')}</h2></div><strong class="score-badge">${Math.round(zone.score||0)}/100</strong></div>${analysisScoreStripHtml(zone)}<div class="selected-chips"><span>${escapeHtml(zone.name||'')}</span><span>${escapeHtml(distance)}</span></div><p class="selected-reason">${escapeHtml(summary)}</p><div class="lean-lure"><img class="zoomable-lure" src="${escapeHtml(lure.image||'')}" alt="${escapeHtml(lure.name||lure.type||'Anbefalt sluk')}" tabindex="0"><div><span>FØRSTEVALG FRA DIN SLUKBOKS</span><b>${escapeHtml(lure.name||lure.type||'Anbefalt agn')}</b><small>${escapeHtml([lure.color,lure.weight].filter(Boolean).join(' · '))}</small><p>${escapeHtml(lure.reason||'')}</p></div></div>${leanAlternativeLures(lure.alternatives)}<div class="quick-advice"><b>Fisk slik</b><p>${escapeHtml(presentation.method||presentation.band||'Fisk av sonen systematisk og varier tempo og dybde.')}</p>${fly.recommended?`<small>Opphengerflue: ${escapeHtml(fly.pattern||'Ja')}${fly.color?' · '+escapeHtml(fly.color):''}</small>`:''}</div>${analysisDetailsHtml(zone)}<button class="secondary selected-map-button" type="button" id="selectedGo">Vis valgt sone på kartet</button>`;
+  const summary=compactReasonText(zone.analysis?.summary||zone.reason||'');
+  holder.innerHTML=`<div class="selected-title-row"><div><span class="card-label">#${number} · ${escapeHtml(fishLabel)}</span><h2>${escapeHtml(zone.waterName||zone.name||'Anbefalt sone')}</h2></div><strong class="score-badge">${Math.round(zone.score||0)}/100</strong></div><div class="selected-chips"><span>${escapeHtml(zone.name||'')}</span><span>${escapeHtml(distance)}</span></div><p class="selected-reason">${escapeHtml(summary)}</p>${biteGuideHtml(zone)}${lureDetailsHtml(lure,presentation,fly)}${analysisDetailsHtml(zone)}<button class="secondary selected-map-button" type="button" id="selectedGo">Vis punkt på kartet</button>`;
   $('selectedGo')?.addEventListener('click',()=>focusMapOnZone(zone,15));
   const depthDetails=holder.querySelector('.depth-detail');
   depthDetails?.addEventListener('toggle',()=>{if(depthDetails.open)loadDepthProfileForZone(zone,depthDetails.querySelector('[data-depth-profile]'));});
@@ -1155,7 +1199,7 @@ function renderZones(zones) {
   if(!zones.length){renderSelectedZone(null);sync3DZones();const radius=Number($('baseRadius').value)||0;$('zones').innerHTML=currentAnalysisBase()&&radius?`<div class="empty"><b>Ingen sone innen ${escapeHtml(formatDistance(radius))}</b><span>Klikk et nytt referansepunkt eller øk avstanden.</span></div>`:'<div class="empty"><b>Ingen sikre soner i utsnittet</b><span>Flytt kartet litt eller zoom nærmere vann.</span></div>';return;}
   const allMode=$('fishType').value==='all';
   $('zones').innerHTML=zones.map((zone,index)=>{const fish=zone.fishType||$('fishType').value,fishBadge=allMode?`<span class="species-badge species-badge-${fish}">${escapeHtml(zone.fishLabel||fishLabels[fish]||fish)}</span>`:'';return `<button type="button" class="zone-row lean-zone-row" data-zone="${zone.id}"><span class="zone-rank">${index+1}</span><span class="lean-zone-copy"><b>${escapeHtml(zone.waterName||`Sone ${index+1}`)}</b><small>${escapeHtml(zone.name||'')}</small>${fishBadge}</span><span class="lean-zone-lure">${zone.lure?.image?`<img src="${escapeHtml(zone.lure.image)}" alt="" loading="lazy">`:''}<small>${escapeHtml(zone.lure?.name||zone.lure?.type||'')}</small></span><strong>${Math.round(zone.score||0)}</strong></button>`;}).join('');
-  zones.forEach((zone,index)=>{const fish=zone.fishType||$('fishType').value,mapColor=allMode?(speciesColors[fish]||scoreColor(zone.score)):scoreColor(zone.score);const marker=L.circleMarker([zone.marker.lat,zone.marker.lon],{radius:7,color:'#10251f',weight:2,fillColor:mapColor,fillOpacity:1,opacity:1}).bindTooltip(String(index+1),{permanent:true,direction:'center',className:`zone-number ${allMode?`zone-number-${fish}`:''}`});const layer=Array.isArray(zone.polygon)&&zone.polygon.length>=3?L.polygon(zone.polygon,{color:mapColor,weight:2,fillColor:mapColor,fillOpacity:.24,opacity:.96}):L.circleMarker([zone.marker.lat,zone.marker.lon],{radius:15,color:mapColor,weight:2,fillColor:mapColor,fillOpacity:.10,opacity:.96});layer._zoneId=zone.id;marker._zoneId=zone.id;layer.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectZone(zone.id,{scroll:true});});marker.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectZone(zone.id,{scroll:true});});layer.addTo(zoneLayer);marker.addTo(zoneLayer);document.querySelector(`[data-zone="${zone.id}"]`)?.addEventListener('click',()=>{selectZone(zone.id,{scroll:true});focusMapOnZone(zone,15);});});
+  zones.forEach((zone,index)=>{const fish=zone.fishType||$('fishType').value,mapColor=allMode?(speciesColors[fish]||scoreColor(zone.score)):scoreColor(zone.score);const marker=L.circleMarker([zone.marker.lat,zone.marker.lon],{radius:7,color:'#10251f',weight:2,fillColor:mapColor,fillOpacity:1,opacity:1}).bindTooltip(String(index+1),{permanent:true,direction:'center',className:`zone-number ${allMode?`zone-number-${fish}`:''}`});const layer=Array.isArray(zone.polygon)&&zone.polygon.length>=3?L.polygon(zone.polygon,{color:mapColor,weight:2,fillColor:mapColor,fillOpacity:.24,opacity:.96}):L.circleMarker([zone.marker.lat,zone.marker.lon],{radius:15,color:mapColor,weight:2,fillColor:mapColor,fillOpacity:.10,opacity:.96});layer._zoneId=zone.id;marker._zoneId=zone.id;layer.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectZone(zone.id,{scroll:false});});marker.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectZone(zone.id,{scroll:false});});layer.addTo(zoneLayer);marker.addTo(zoneLayer);document.querySelector(`[data-zone="${zone.id}"]`)?.addEventListener('click',()=>{selectZone(zone.id,{scroll:false});focusMapOnZone(zone,15);});});
   if(!zones.some(z=>z.id===selectedZoneId))selectedZoneId=zones[0].id;selectZone(selectedZoneId);sync3DZones();sync3DReferenceAndLive();
 }
 async function loadZones({ immediate=false }={}) {
@@ -1197,6 +1241,17 @@ async function loadZones({ immediate=false }={}) {
     } finally { $('zones').setAttribute('aria-busy','false'); }
   }, immediate ? 0 : 550);
 }
+function updateFilterSummary(){
+  const target=$('filterSummary');if(!target)return;
+  const fish=$('fishType')?.selectedOptions?.[0]?.textContent?.trim()||'Fisk';
+  const mapName=$('mapStyle')?.selectedOptions?.[0]?.textContent?.trim()||'Kart';
+  target.textContent=`${fish} · ${mapName}`;
+}
+function configureMobilePanels(){
+  const filter=$('filterPanel');
+  if(filter&&window.matchMedia?.('(max-width: 850px)').matches) filter.open=false;
+  updateFilterSummary();
+}
 // ResizeObserver/invalidateSize can emit moveend without user interaction.
 // Listening to dragend instead prevents a render → resize → reload feedback loop.
 map.on('click',event=>{setBasePoint(event.latlng,{label:'Kartklikk',focus:false});setState('ready','Kartklikk satt som referansepunkt. Oppdaterer 10 beste soner …');});
@@ -1204,11 +1259,11 @@ map.on('dragend zoomend', () => {if(threeDSyncing)return;saveUiState();renderCon
 $('locate').addEventListener('click', () => { setState('locating','Finner posisjonen din …'); map.locate({ setView:true, maxZoom:14, enableHighAccuracy:true }); });
 $('live').addEventListener('click',startLiveMode);
 $('retry').addEventListener('click', () => loadZones({immediate:true}));
-$('fishType').addEventListener('change', () => { if($('fishType').value!=='all') $('catchFish').value=$('fishType').value; saveUiState(); renderFishingInsights(); updateWaterModeUI(); loadZones({immediate:true}); });
+$('fishType').addEventListener('change', () => { if($('fishType').value!=='all') $('catchFish').value=$('fishType').value; updateFilterSummary(); saveUiState(); renderFishingInsights(); updateWaterModeUI(); loadZones({immediate:true}); });
 $('fishGoal').addEventListener('change',()=>{saveUiState();loadZones({immediate:true});});
 $('baseRadius').addEventListener('change',()=>{saveUiState();updateBaseRadiusCircle();if(basePoint&&Number($('baseRadius').value)>0)focusBaseRadius();loadZones({immediate:true});});
 $('setBase').addEventListener('click',()=>{if(basePoint)clearBasePoint();else setBasePoint(map.getCenter(),{label:'Valgt base'});});
-$('mapStyle').addEventListener('change',()=>{applyMapStyle();saveUiState();});
+$('mapStyle').addEventListener('change',()=>{updateFilterSummary();applyMapStyle();saveUiState();});
 $('threeDTopView')?.addEventListener('click',()=>{if(threeDMap)threeDMap.easeTo({pitch:0,bearing:0,duration:450});else native3DCamera('top');});
 $('bathyTopView')?.addEventListener('click',()=>bathyCamera('top'));
 $('bathyPitchView')?.addEventListener('click',()=>bathyCamera('pitch'));
@@ -1225,7 +1280,7 @@ $('closeLureViewer').addEventListener('click', () => { lureViewer.close(); if(lu
 lureViewer.addEventListener('click', event => { if (event.target === lureViewer){ lureViewer.close(); if(lureViewerHistoryActive){lureViewerHistoryActive=false;history.back();} } });
 window.addEventListener('popstate',()=>{ if(lureViewer.open){lureViewerHistoryActive=false;lureViewer.close();} });
 document.addEventListener('click', event => { const image=event.target.closest?.('.zoomable-lure'); if (!image) return; event.preventDefault(); event.stopPropagation(); openLureViewer(image.currentSrc || image.src, image.alt); }, true);
-document.addEventListener('click', event => { const button=event.target.closest?.('.popup-details'); if(!button) return; event.preventDefault(); const zoneId=button.dataset.zone; map.closePopup(); selectZone(zoneId,{scroll:true}); });
+document.addEventListener('click', event => { const button=event.target.closest?.('.popup-details'); if(!button) return; event.preventDefault(); const zoneId=button.dataset.zone; map.closePopup(); selectZone(zoneId,{scroll:false}); });
 document.addEventListener('keydown', event => { const image=event.target.closest?.('.zoomable-lure'); if (image && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openLureViewer(image.currentSrc || image.src, image.alt); } });
 map.on('locationfound', event => { if (locationMarker) locationMarker.remove(); locationMarker=L.circleMarker(event.latlng,{radius:7,color:'#fff',weight:2,fillColor:'#38d477',fillOpacity:1}).addTo(map).bindPopup('Din posisjon').openPopup(); setBasePoint(event.latlng,{label:'Base: din posisjon',focus:false}); if(is3DMode()&&threeDMap){threeDProgrammaticMove=true;threeDMap.easeTo({center:[event.latlng.lng,event.latlng.lat],zoom:Math.max(14,threeDMap.getZoom()),pitch:62,duration:500});} else if(is3DMode()) scheduleNative3DRefresh(120); sync3DReferenceAndLive(); $('setBase').textContent='✓ Base = GPS · fjern'; setState('ready','Posisjon funnet. Bruker den som base og oppdaterer soner …'); });
 map.on('locationerror', () => setState('error','Kunne ikke hente posisjonen. Tillat posisjon eller flytt kartet manuelt.'));
@@ -1234,7 +1289,7 @@ window.addEventListener('offline', () => {const cached=readCachedAnalysis();setS
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&liveActive) acquireLiveWakeLock();});
 window.addEventListener('pagehide',()=>{if(liveWatchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(liveWatchId); releaseLiveWakeLock();});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/owned-lure-names.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=37.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=38.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;
@@ -1243,6 +1298,7 @@ const legacyBathyMapStyle=savedUiState.mapStyle==='bathy3d';
 if(savedUiState.mapStyle==='marine-depth') $('mapStyle').value='fishing';
 else if(legacyBathyMapStyle) $('mapStyle').value='topo';
 else if(['standard','topo','toporaster','terrain','satellite','hybrid','fishing','chart','3d'].includes(savedUiState.mapStyle)) $('mapStyle').value=savedUiState.mapStyle;
+configureMobilePanels();
 if(basePoint){baseMarker=L.circleMarker([basePoint.lat,basePoint.lon],{radius:7,color:'#fff',weight:2,fillColor:'#f2c94c',fillOpacity:.95}).addTo(map).bindTooltip('Lagret referansepunkt',{direction:'top'});$('setBase').textContent='✓ Base satt · fjern';$('setBase').classList.add('base-active');$('setBase').setAttribute('aria-pressed','true');updateBaseRadiusCircle();}
 initCatchLog();
 $('exportGpx')?.addEventListener('click',exportCatchGpx);
