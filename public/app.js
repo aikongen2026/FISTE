@@ -22,7 +22,7 @@ const sourceSpotLayer = L.layerGroup().addTo(map);
 const restrictionLayer = L.layerGroup().addTo(map);
 const conditionLayer = L.layerGroup().addTo(map);
 const boatRampLayer = L.layerGroup().addTo(map);
-// REV39: freshwater depth overlay comes from the same NVE REST layers used by 3D.
+// REV40: freshwater depth overlay comes from the same NVE REST layers used by 3D.
 // This avoids relying on a separate WMS toggle and lets the app say clearly when a lake has no surveyed depths.
 const freshwaterDepthLayer=L.layerGroup();
 let freshwaterDepthController=null;
@@ -933,7 +933,9 @@ function addNveDepthFeature(feature){
     const marker=L.circleMarker([Number(c[1]),Number(c[0])],{radius:3.5,color:'#d9fbff',weight:1.2,fillColor:'#138fd1',fillOpacity:.92,interactive:true});
     if(Number.isFinite(depth))marker.bindTooltip(`${depth.toFixed(depth%1?1:0)} m`,{direction:'top'});marker.addTo(freshwaterDepthLayer);return;
   }
-  const line=L.geoJSON(feature,{style:{color:'#159fe0',weight:2,opacity:.92,interactive:true}});
+  const color=Number.isFinite(depth)?(depth<=3?'#7ee8f6':depth<=8?'#28bde5':depth<=15?'#147fc8':'#083c88'):'#159fe0';
+  const major=Number.isFinite(depth)&&(Math.abs(depth%5)<.01||depth>=20);
+  const line=L.geoJSON(feature,{style:{color,weight:major?2.6:1.8,opacity:.94,interactive:true}});
   if(Number.isFinite(depth))line.bindTooltip(`${depth.toFixed(depth%1?1:0)} m`,{sticky:true,direction:'top'});line.addTo(freshwaterDepthLayer);
 }
 async function loadFreshwaterDepthOverlay({force=false}={}){
@@ -952,9 +954,9 @@ async function loadFreshwaterDepthOverlay({force=false}={}){
     for(const feature of data?.curves?.features||[])addNveDepthFeature(feature);
     for(const feature of data?.points?.features||[])addNveDepthFeature(feature);
     if(data.available){
-      const bits=[data.lakeName||'NVE-vann',`${data.curveCount||0} dybdekurver`];if(data.pointCount)bits.push(`${data.pointCount} målepunkter`);if(Number.isFinite(data.maxDepth))bits.push(`maks ${Number(data.maxDepth).toFixed(1).replace('.',',')} m`);
+      const bits=[data.lakeName||'NVE-vann',`${data.curveCount||0} dybdekurver`];if(data.pointCount)bits.push(`${data.pointCount} målepunkter`);if(Number.isFinite(data.maxDepth))bits.push(`maks ${Number(data.maxDepth).toFixed(1).replace('.',',')} m`);if(data.surveyQuality?.grade)bits.push(`kvalitet ${data.surveyQuality.grade}`);
       if(notice)notice.textContent=`NVE dybdekart · ${bits.join(' · ')}`;
-    }else if(notice)notice.textContent=`NVE har ikke oppmålte dybder for ${data.lakeName||'dette vannet'}. Topokartet beholdes – ingen falske dybder tegnes.`;
+    }else if(notice)notice.textContent=data.message||`NVE har ikke oppmålte dybder for ${data.lakeName||'dette vannet'}. Topokartet beholdes – ingen falske dybder tegnes.`;
     return data;
   }catch(error){
     if(error?.name==='AbortError')return null;freshwaterDepthLayer.clearLayers();freshwaterDepthInfo=null;
@@ -1114,6 +1116,27 @@ function tokenOverlap(a,b) {
   const tokens=value=>new Set(String(value||'').toLocaleLowerCase('no-NO').replace(/[^a-z0-9æøå]+/gi,' ').split(/\s+/).filter(word=>word.length>=3));
   const left=tokens(a),right=tokens(b);let count=0;for(const token of left)if(right.has(token))count++;return count;
 }
+function applyPersonalLureHistory(zone={}) {
+  const fish=zone.fishType||$('fishType')?.value,lure=zone.lure||{},candidates=Array.isArray(lure.candidates)?lure.candidates:[];
+  if(!fish||fish==='all'||candidates.length<2)return zone;
+  const entries=readCatchEntries().filter(entry=>entry?.fish===fish),sessions=entries.length,catches=entries.filter(entry=>entry?.result==='fangst'&&String(entry.lure||'').trim());
+  if(sessions<3||catches.length<2)return zone;
+  const bestCondition=Math.max(...candidates.map(c=>Number(c.conditionScore)||0));
+  const evaluated=candidates.map((candidate,index)=>{
+    const text=[candidate.name,candidate.type,candidate.color].filter(Boolean).join(' ');
+    const matched=catches.filter(entry=>tokenOverlap(entry.lure,text)>0);
+    const historyBoost=matched.length>=2?Math.min(6,matched.length*2):0;
+    const condition=Number(candidate.conditionScore)||0;
+    const eligible=condition>=bestCondition-8;
+    return {...candidate,_index:index,_historyBoost:eligible?historyBoost:0,_historyMatches:matched.length,_combined:condition+(eligible?historyBoost:0)};
+  }).sort((a,b)=>b._combined-a._combined||b.conditionScore-a.conditionScore||a._index-b._index);
+  const selected=evaluated[0];if(!selected||selected._historyBoost<=0)return zone;
+  const rest=evaluated.filter(c=>c.id!==selected.id).slice(0,6).map(c=>({id:c.id,name:c.name,type:c.type,color:c.color,image:c.image,inventoryNote:c.inventoryNote,ownedPhoto:true,matchScore:c.matchScore,conditionScore:c.conditionScore,matchReasons:c.matchReasons,weight:c.weight}));
+  const personal=`Egen fangstlogg støtter dette valget (${selected._historyMatches} relevante fangster); grunnmatchen mot dagens forhold er fortsatt innenfor 8 poeng av beste kandidat.`;
+  const nextLure={...lure,id:selected.id,name:selected.name,type:selected.type||lure.type,color:selected.color,image:selected.image,inventoryNote:selected.inventoryNote,matchScore:selected.matchScore,conditionScore:selected.conditionScore,matchReasons:selected.matchReasons,alternatives:rest,personalHistory:{matches:selected._historyMatches,boost:selected._historyBoost,reason:personal},reason:`${lure.reason||''} ${personal}`.trim()};
+  return {...zone,lure:nextLure};
+}
+
 function applyPersonalRanking(zones=[]) {
   const api=globalThis.FishingInsights;
   const fish=$('fishType').value;
@@ -1144,7 +1167,7 @@ function exportCatchGpx() {
   if(!entries.length){$('catchStatus').textContent='Ingen loggposter med kartposisjon å eksportere.';return;}
   const xmlEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const waypoints=entries.map(entry=>`<wpt lat="${entry.mapCenter.lat}" lon="${entry.mapCenter.lon}"><time>${xmlEscape(entry.time)}</time><name>${xmlEscape(entry.place||fishLabels[entry.fish]||'Fisketur')}</name><desc>${xmlEscape(`${entry.result==='fangst'?'Fangst':'Ingen fangst'} · ${fishLabels[entry.fish]||entry.fish}${entry.lure?' · '+entry.lure:''}`)}</desc><type>${entry.result==='fangst'?'catch':'session'}</type></wpt>`).join('');
-  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV39" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
+  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV40" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
   $('catchStatus').textContent=`Eksporterte ${entries.length} posisjoner som GPX.`;
 }
 function exportCatchJson() { const entries=readCatchEntries();downloadTextFile(`fiste-guiden-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2),'application/json');$('catchStatus').textContent=`Backup med ${entries.length} loggposter er eksportert.`; }
@@ -1221,10 +1244,13 @@ function biteGuideHtml(zone={}){
   const guide=zone.biteGuide||{},rec=guide.recommended||{},timeline=Array.isArray(guide.timeline)?guide.timeline.slice(0,10):[];
   const best=guide.bestTime?formatClock(guide.bestTime):'–',score=Math.round(Number(guide.score)||zone.score||0);
   const bars=timeline.length?`<div class="bite-time-strip">${timeline.map(item=>`<article title="${escapeHtml(item.label||'')}"><time>${formatClock(item.time)}</time><i><em style="height:${Math.max(10,Math.min(100,Number(item.score)||0))}%"></em></i><b>${Math.round(Number(item.score)||0)}</b></article>`).join('')}</div>`:'<p class="muted">Ingen timeprognose tilgjengelig akkurat nå.</p>';
-  return `<details class="zone-detail bite-guide-detail"><summary><span>🎯 BiteGuide</span><small>${score}/100 · best ${best}</small></summary><div class="bite-score-card"><strong>${score}</strong><div><b>${escapeHtml(guide.label||'Huggforhold')}</b><small>Best neste timer: ${best}</small></div></div>${bars}<div class="bite-rec"><div>${rec.image?`<img class="zoomable-lure" src="${escapeHtml(rec.image)}" alt="${escapeHtml(rec.name||'Anbefalt sluk')}" tabindex="0">`:''}</div><section><span>Anbefalt nå</span><b>${escapeHtml(rec.name||rec.type||'Sluk')}</b><p><strong>Type:</strong> ${escapeHtml(rec.type||'–')}<br><strong>Farge:</strong> ${escapeHtml(rec.color||'–')}<br><strong>Størrelse/vekt:</strong> ${escapeHtml(rec.size||'–')}</p><small>${escapeHtml(rec.method||'')}</small></section></div><p class="detail-caveat">${escapeHtml(guide.disclaimer||'Veiledende score – ingen garanti for fangst.')}</p></details>`;
+  const sourceLabels=(rec.sources||[]).map(src=>src.label).filter(Boolean).slice(0,2).join(' · ');
+  return `<details class="zone-detail bite-guide-detail"><summary><span>🎯 BiteGuide</span><small>${score}/100 · best ${best}</small></summary><div class="bite-score-card"><strong>${score}</strong><div><b>${escapeHtml(guide.label||'Huggforhold')}</b><small>Best neste timer: ${best}</small></div></div>${bars}<div class="bite-rec bite-rec-profile"><section><span>ANBEFALT PROFIL · UAVHENGIG AV DIN SLUKBOKS</span><b>${escapeHtml(rec.type||'Sluk/wobbler')}</b><p><strong>Farge:</strong> ${escapeHtml(rec.color||'–')}<br><strong>Størrelse/vekt:</strong> ${escapeHtml(rec.size||'–')}${rec.targetDepth?`<br><strong>Måldybde:</strong> ${escapeHtml(rec.targetDepth)}`:''}</p><small>${escapeHtml(rec.method||'')}</small>${rec.whyNow?`<p class="bite-why">${escapeHtml(rec.whyNow)}</p>`:''}${sourceLabels?`<em>Grunnlag: ${escapeHtml(sourceLabels)}</em>`:''}</section></div><p class="detail-caveat">${escapeHtml(guide.disclaimer||'Veiledende score – ingen garanti for fangst.')}</p></details>`;
 }
 function lureDetailsHtml(lure={},presentation={},fly={}){
-  return `<details class="zone-detail lure-detail"><summary><span>🎣 Sluk fra min boks</span><small>${escapeHtml(lure.name||lure.type||'forslag')}</small></summary><div class="lean-lure"><img class="zoomable-lure" src="${escapeHtml(lure.image||'')}" alt="${escapeHtml(lure.name||lure.type||'Anbefalt sluk')}" tabindex="0"><div><span>FØRSTEVALG</span><b>${escapeHtml(lure.name||lure.type||'Anbefalt agn')}</b><small>${escapeHtml([lure.color,lure.weight].filter(Boolean).join(' · '))}</small><p>${escapeHtml(lure.reason||'')}</p></div></div>${leanAlternativeLures(lure.alternatives)}<div class="quick-advice"><b>Fisk slik</b><p>${escapeHtml(presentation.method||presentation.band||'Fisk av sonen systematisk og varier tempo og dybde.')}</p>${fly.recommended?`<small>Opphengerflue: ${escapeHtml(fly.pattern||'Ja')}${fly.color?' · '+escapeHtml(fly.color):''}</small>`:''}</div></details>`;
+  const match=(lure.matchReasons||[]).slice(0,3).join(' · ');
+  const personal=lure.personalHistory?.reason||'';
+  return `<details class="zone-detail lure-detail"><summary><span>🎣 Sluk fra min boks</span><small>${escapeHtml(lure.name||lure.type||'forslag')}</small></summary><div class="lean-lure"><img class="zoomable-lure" src="${escapeHtml(lure.image||'')}" alt="${escapeHtml(lure.name||lure.type||'Anbefalt sluk')}" tabindex="0"><div><span>FØRSTEVALG · MATCHET MOT BITEGUIDE</span><b>${escapeHtml(lure.name||lure.type||'Anbefalt agn')}</b><small>${escapeHtml([lure.color,lure.weight].filter(Boolean).join(' · '))}</small>${match?`<p><strong>Hvorfor:</strong> ${escapeHtml(match)}</p>`:''}${personal?`<p><strong>Egen logg:</strong> ${escapeHtml(personal)}</p>`:''}</div></div>${leanAlternativeLures(lure.alternatives)}<div class="quick-advice"><b>Fisk slik</b><p>${escapeHtml(presentation.method||presentation.band||'Fisk av sonen systematisk og varier tempo og dybde.')}</p>${fly.recommended?`<small>Opphengerflue: ${escapeHtml(fly.pattern||'Ja')}${fly.color?' · '+escapeHtml(fly.color):''}</small>`:''}</div></details>`;
 }
 function analysisDetailsHtml(zone={}){
   const analysis=zone.analysis||{},habitat=zone.habitat||{},legal=zone.legal||{};
@@ -1256,7 +1282,7 @@ function selectZone(zoneId,{scroll=false}={}) {
   if(scroll){const target=$('selectedZoneCard');if(window.innerWidth<1000)target?.scrollIntoView({behavior:'smooth',block:'start'});else $('results')?.scrollTo({top:0,behavior:'smooth'});}
 }
 function renderZones(zones) {
-  zones=applyPersonalRanking(zones).slice(0,10);latestZones=zones;zoneLayer.clearLayers();drawNavigation(zones);$('zoneCount').textContent=`${zones.length} soner`;
+  zones=applyPersonalRanking(zones).map(applyPersonalLureHistory).slice(0,10);latestZones=zones;zoneLayer.clearLayers();drawNavigation(zones);$('zoneCount').textContent=`${zones.length} soner`;
   if(!zones.length){renderSelectedZone(null);sync3DZones();const radius=Number($('baseRadius').value)||0;$('zones').innerHTML=currentAnalysisBase()&&radius?`<div class="empty"><b>Ingen sone innen ${escapeHtml(formatDistance(radius))}</b><span>Klikk et nytt referansepunkt eller øk avstanden.</span></div>`:'<div class="empty"><b>Ingen sikre soner i utsnittet</b><span>Flytt kartet litt eller zoom nærmere vann.</span></div>';return;}
   const allMode=$('fishType').value==='all';
   $('zones').innerHTML=zones.map((zone,index)=>{const fish=zone.fishType||$('fishType').value,fishBadge=allMode?`<span class="species-badge species-badge-${fish}">${escapeHtml(zone.fishLabel||fishLabels[fish]||fish)}</span>`:'';return `<button type="button" class="zone-row lean-zone-row" data-zone="${zone.id}"><span class="zone-rank">${index+1}</span><span class="lean-zone-copy"><b>${escapeHtml(zone.waterName||`Sone ${index+1}`)}</b><small>${escapeHtml(zone.name||'')}</small>${fishBadge}</span><span class="lean-zone-lure">${zone.lure?.image?`<img src="${escapeHtml(zone.lure.image)}" alt="" loading="lazy">`:''}<small>${escapeHtml(zone.lure?.name||zone.lure?.type||'')}</small></span><strong>${Math.round(zone.score||0)}</strong></button>`;}).join('');
@@ -1349,7 +1375,7 @@ window.addEventListener('offline', () => {const cached=readCachedAnalysis();setS
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&liveActive) acquireLiveWakeLock();});
 window.addEventListener('pagehide',()=>{if(liveWatchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(liveWatchId); releaseLiveWakeLock();});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/owned-lure-names.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=39.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=40.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;

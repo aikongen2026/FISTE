@@ -1,27 +1,28 @@
-# Testresultat – Fiste guiden REV39
+# Testresultat – Fiste guiden REV40
 
-Kjørt etter kart-/ferskvannsoppdateringen:
+Kontrollert 26.09.2026.
 
-- `node --check public/app.js`: OK
 - `node --check server.js`: OK
-- `npm run verify`: OK – REV 39 serveres fra `/public`
-- `npm test`: **42/42 tester bestått**
-- Lokal server startet: OK
+- `node --check public/app.js`: OK
+- `npm test`: **49/49 tester OK**
+- `npm run verify`: OK – REV 40 serveres fra `/public`
+- Lokal server: OK
 - `/api/health`: OK
-  - `version: v15-rev39`
-  - `revision: REV 39`
-  - `freshwaterDepthOverlay: true`
-  - `freshwaterSpeciesDepthRanking: true`
-  - `freshwaterBathymetry3d: true`
-  - `biteGuide: true`
-- `/api/freshwater-depth-overlay` inputvalidering: OK (ugyldig bbox gir HTTP 400)
+  - `version: v16-rev40`
+  - `revision: REV 40`
+  - `biteGuideIndependent: true`
+  - `smartOwnedLureMatching: true`
+  - `nveMeasuredLakeLayer: true`
+  - `nvePagination: true`
 
-Spesifikke regresjonstester:
-- De fire fjernede kartlagene finnes ikke lenger i kartmenyen.
-- NVE REST-overlay er koblet automatisk til ferskvanns-Fiskekart.
-- NVE dybdekurver og dybdepunkter brukes av serverintegrasjonen.
-- Ferskvannsarter bruker NVE-dybde/struktur i habitatmodellen når data finnes.
-- Gamle sjø-/sluk-/BiteGuide-/Live GPS-funksjoner består fortsatt testene.
+NVE-kontroll:
+- Offisielle NVE-lag og feltskjema ble kontrollert mot Innsjødatabase2 MapServer.
+- Kode/test kontrollerer bruk av lag 3 (målte vann), lag 2 (DybdeKurve), lag 1
+  (DybdePunkt), lag 4 (metadata), paginering og ærlig manglende-data-flyt.
+- Eksterne NVE-kall kan ikke kjøres ende-til-ende i den lokale testcontaineren uten
+  internettilgang; derfor er selve request-/behandlingslogikken testet lokalt mot
+  tjenestens verifiserte skjema.
 
-Begrensning i testmiljøet:
-- Sandkassen har ikke utgående DNS/internett i kode-runtime, så en full live HTTP-røyk-test mot NVE kan ikke kjøres herfra. NVE-tjenestene og lag-IDene er kontrollert mot NVEs offentlige tjenestekatalog, og integrasjonen har egen feilhåndtering hvis ekstern tjeneste er utilgjengelig.
+Slukvariasjon kontrollert med 162 sjøørret-scenarier (lys, skydekke, vind,
+dybde og struktur): **10 forskjellige primærsluker** fra brukerens faktiske bilder ble
+valgt. Variasjonen kommer fra forholdsmatchen; tilfeldig rotasjon brukes ikke.

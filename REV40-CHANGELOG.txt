@@ -1,0 +1,39 @@
+FISTE GUIDEN REV40 – SMART BITEGUIDE / SLUKMATCH / NVE
+========================================================
+
+1. BiteGuide er frikoblet fra brukerens egen slukboks.
+   - BiteGuide beregner først en IDEELL agnprofil: type, farge, størrelse/vekt,
+     måldybde og presentasjon.
+   - Profilen bygger på art + lys/vær + dybde/struktur + kildekontrollert
+     sportsfiske-/produsentveiledning.
+   - Egen slukboks kan derfor ikke lenger bestemme BiteGuide-anbefalingen.
+
+2. Egne slukbilder beholdes og matches smartere.
+   - Alle aktuelle fotograferte sluker scores mot BiteGuide-profilen.
+   - Fargen leses også fra faktisk fargenavn på hvert slukbilde, slik at
+     grønn/holografisk, blå/sølv, rosa/rød, kobber/oransje osv. ikke lenger
+     behandles som samme variant.
+   - Dybde, dybdekant/renne, grunne/rygg, vegetasjon, vind, lys, art og mål
+     påvirker valget.
+   - Steds-hash brukes bare som mikroskopisk tie-breaker og kan ikke overstyre
+     et bedre forholdsmatch.
+
+3. Egen fangstlogg kan lære slukvalget lokalt på telefonen.
+   - Minst 3 turer og minst 2 relevante fangster kreves før fangsthistorikken
+     får påvirke slukrekkefølgen.
+   - Historikk kan bare løfte sluker som allerede ligger innen 8 poeng av
+     beste forholdsmatch.
+   - Fangstloggen sendes ikke til serveren.
+
+4. NVE ferskvann er strammet inn.
+   - Appen sjekker først NVE lag 3: Innsjø ved dybdemåling.
+   - Dybdekurver (lag 2) og dybdepunkter (lag 1) hentes med paginering.
+   - Metadata fra Dybdekart (lag 4) brukes til maks-/middeldyp, måleår,
+     metode, digitalt produkt og ekvidistanse.
+   - Kvalitet A/B/C vises ut fra om data er vektor fra oppmålte punkter,
+     vektorisert kart eller skannet eldre kart.
+   - Hvis NVE ikke har et oppmålt dybdekart, tegnes ingen oppdiktede dybder.
+
+5. NVE-kurver har tydeligere dybdefarger og hovedkoter.
+6. 3D-bunn bruker bare NVE-vann som er registrert med dybdemåling.
+7. AutoDeploy V2 er beholdt og leser REV automatisk fra package.json.
