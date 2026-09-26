@@ -1,20 +1,14 @@
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
+$RepoUrl = 'https://github.com/aikongen2026/FISTE.git'
+$Branch = 'main'
+$SiteUrl = 'https://fiste.onrender.com'
+$ExpectedHealthVersion = 'v15-rev39'
+$ExpectedUiRevision = 'REV 39'
 $SourceDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$PackagePath = Join-Path $SourceDir 'package.json'
-if (-not (Test-Path $PackagePath)) { throw "Fant ikke package.json i $SourceDir" }
-$Package = Get-Content -Raw -LiteralPath $PackagePath | ConvertFrom-Json
-$RevisionNumber = [int]$Package.appRevision
-$ExpectedUiRevision = ('REV {0:D2}' -f $RevisionNumber)
-
-# Kan overstyres med miljo-variabler, men normalt trenger du aldri endre disse.
-$RepoUrl = if ($env:FISTE_REPO_URL) { $env:FISTE_REPO_URL } else { 'https://github.com/aikongen2026/FISTE.git' }
-$Branch = if ($env:FISTE_GIT_BRANCH) { $env:FISTE_GIT_BRANCH } else { 'main' }
-$SiteUrl = if ($env:FISTE_SITE_URL) { $env:FISTE_SITE_URL.TrimEnd('/') } else { 'https://fiste.onrender.com' }
-
 $WorkRoot = Join-Path $env:LOCALAPPDATA 'FisteAutoDeploy'
-$RepoDir = Join-Path $WorkRoot 'FISTE-1'
+$RepoDir = Join-Path $WorkRoot 'FISTE'
 
 function Write-Step([string]$Text) {
     Write-Host "`n==> $Text" -ForegroundColor Cyan
@@ -62,28 +56,86 @@ function Install-GitWithWinget {
     $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
     if (-not $winget) { return $false }
 
-    Write-Step 'Git mangler. Installerer Git for Windows automatisk'
+    Write-Step 'Git mangler. Installerer Git for Windows automatisk med winget'
+    Write-Host 'Windows kan vise ett installasjons-/UAC-vindu. Godkjenn dette hvis du blir spurt.' -ForegroundColor Yellow
+
     $args = @(
         'install','--id','Git.Git','-e','--source','winget',
-        '--accept-package-agreements','--accept-source-agreements','--silent'
+        '--accept-package-agreements','--accept-source-agreements',
+        '--silent'
     )
-    & $winget.Source @args
 
+    & $winget.Source @args
+    $code = $LASTEXITCODE
+
+    # Winget can return a non-zero status when the package is already installed.
     for ($i = 0; $i -lt 20; $i++) {
         Start-Sleep -Seconds 2
         if (Refresh-GitPath) { return $true }
     }
+
+    if ($code -ne 0) {
+        Write-Host "Winget returnerte kode $code. Prover direkte installasjon som reserve." -ForegroundColor Yellow
+    }
+    return $false
+}
+
+function Install-GitDirect {
+    Write-Step 'Prover direkte installasjon av offisiell Git for Windows'
+    $tempExe = Join-Path $env:TEMP 'Fiste-GitForWindows-Setup.exe'
+
+    try {
+        $headers = @{ 'User-Agent' = 'Fiste-AutoDeploy' }
+        $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/git-for-windows/git/releases/latest' -Headers $headers -TimeoutSec 30
+        $asset = $release.assets |
+            Where-Object { $_.name -match '^Git-.*-64-bit\.exe$' -and $_.name -notmatch 'Portable' } |
+            Select-Object -First 1
+
+        if (-not $asset) { throw 'Fant ikke 64-bit Git-installasjonsfil i siste offisielle utgivelse.' }
+
+        Write-Host "Laster ned $($asset.name)..."
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $tempExe -Headers $headers -UseBasicParsing -TimeoutSec 180
+
+        Write-Host 'Starter Git-installasjon for gjeldende Windows-bruker...'
+        $proc = Start-Process -FilePath $tempExe -ArgumentList @('/VERYSILENT','/NORESTART','/NOCANCEL','/SP-','/CURRENTUSER') -Wait -PassThru
+        if ($proc.ExitCode -ne 0) {
+            throw "Git-installasjonen returnerte kode $($proc.ExitCode)."
+        }
+
+        for ($i = 0; $i -lt 20; $i++) {
+            Start-Sleep -Seconds 2
+            if (Refresh-GitPath) { return $true }
+        }
+    }
+    catch {
+        Write-Host "Direkte installasjon feilet: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+    finally {
+        Remove-Item $tempExe -Force -ErrorAction SilentlyContinue
+    }
+
     return $false
 }
 
 function Ensure-Git {
     $git = Refresh-GitPath
     if ($git) { return $git }
+
     if (Install-GitWithWinget) {
         $git = Refresh-GitPath
         if ($git) { return $git }
     }
-    throw 'Git kunne ikke finnes eller installeres automatisk.'
+
+    if (Install-GitDirect) {
+        $git = Refresh-GitPath
+        if ($git) { return $git }
+    }
+
+    Write-Host ''
+    Write-Host 'Kunne ikke installere Git automatisk.' -ForegroundColor Red
+    Write-Host 'Den offisielle Git-siden apnes na. Installer x64-versjonen og dobbeltklikk deretter denne filen pa nytt.'
+    Start-Process 'https://git-scm.com/install/windows'
+    return $null
 }
 
 function Run-Git([string[]]$Arguments) {
@@ -93,45 +145,34 @@ function Run-Git([string[]]$Arguments) {
     }
 }
 
-function Test-RepoRemote {
-    if (-not (Test-Path (Join-Path $RepoDir '.git'))) { return }
-    $remote = (& $script:GitExe -C $RepoDir remote get-url origin 2>$null)
-    if ($LASTEXITCODE -eq 0 -and $remote -and ($remote.Trim() -ne $RepoUrl)) {
-        Write-Step 'Oppdaterer lagret GitHub-adresse for Fiste'
-        Run-Git @('-C',$RepoDir,'remote','set-url','origin',$RepoUrl)
-    }
-}
-
 try {
-    Write-Host 'FISTE - AUTOMATISK OPPDATERING' -ForegroundColor Green
-    Write-Host "Kilde: $SourceDir"
-    Write-Host "Versjon: $ExpectedUiRevision"
-    Write-Host 'Du trenger ikke a apne GitHub eller Render manuelt.'
+    Write-Host 'FISTE - ETT KLIKK TIL GITHUB + RENDER' -ForegroundColor Green
+    Write-Host 'Denne filen installerer Git ved behov, synkroniserer Fiste til GitHub og venter pa Render.'
 
     $script:GitExe = Ensure-Git
+    if (-not $script:GitExe) { exit 10 }
+
     Write-Step "Git er klar: $script:GitExe"
     New-Item -ItemType Directory -Path $WorkRoot -Force | Out-Null
 
     if (-not (Test-Path (Join-Path $RepoDir '.git'))) {
         if (Test-Path $RepoDir) { Remove-Item $RepoDir -Recurse -Force }
-        Write-Step 'Kloner Fiste-repoet (bare forste gang)'
+        Write-Step 'Kloner FISTE-repoet forste gang'
         Run-Git @('clone','--branch',$Branch,'--single-branch',$RepoUrl,$RepoDir)
-    }
-    else {
-        Test-RepoRemote
-        Write-Step 'Henter siste versjon automatisk'
+    } else {
+        Write-Step 'Henter siste versjon fra GitHub'
         Run-Git @('-C',$RepoDir,'fetch','origin',$Branch,'--prune')
         Run-Git @('-C',$RepoDir,'checkout',$Branch)
         Run-Git @('-C',$RepoDir,'reset','--hard',"origin/$Branch")
     }
 
-    Write-Step 'Synkroniserer denne versjonen til deploy-repoet'
+    Write-Step 'Synkroniserer de nye appfilene'
     $roboArgs = @(
         $SourceDir,
         $RepoDir,
         '/MIR','/R:2','/W:1','/NFL','/NDL','/NP','/NJH','/NJS',
-        '/XD','.git','.github','node_modules','.deploy-cache',
-        '/XF','1-OPPDATER-OG-APNE-FISTE.bat','deploy-fiste.ps1','DEPLOY-INFO.txt','AUTO-DEPLOY.txt'
+        '/XD','.git','node_modules','.deploy-cache',
+        '/XF','1-OPPDATER-OG-APNE-FISTE.bat','deploy-fiste.ps1','DEPLOY-INFO.txt'
     )
     & robocopy.exe @roboArgs | Out-Null
     $roboExit = $LASTEXITCODE
@@ -146,59 +187,52 @@ try {
 
     if ($changes) {
         $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm'
-        Write-Step "Lager automatisk commit for $ExpectedUiRevision"
+        Write-Step "Lager commit: Fiste $ExpectedUiRevision"
         Run-Git @('-C',$RepoDir,'commit','-m',"Deploy Fiste $ExpectedUiRevision - $stamp")
 
-        Write-Step 'Sender til GitHub automatisk'
-        # Git Credential Manager husker godkjenningen etter forste innlogging.
-        # Forste gang kan et Microsoft/GitHub-vindu dukke opp for sikker godkjenning.
-        $env:GCM_INTERACTIVE = 'Auto'
+        Write-Step 'Laster opp til GitHub'
+        Write-Host 'Forste gang kan GitHub/Git Credential Manager apne nettleseren for innlogging. Godkjenn en gang.' -ForegroundColor Yellow
+        $env:GCM_INTERACTIVE = 'Always'
         $env:GIT_TERMINAL_PROMPT = '1'
         Run-Git @('-C',$RepoDir,'push','origin',$Branch)
-    }
-    else {
-        Write-Step 'Ingen filendringer - repoet har allerede denne versjonen'
+    } else {
+        Write-Step 'Ingen filendringer a sende til GitHub'
     }
 
-    Write-Step 'Venter pa Render Auto-Deploy'
+    Write-Step 'Venter pa at Render skal bygge den nye versjonen'
     $healthUrl = "$SiteUrl/api/health"
     $deployed = $false
-    $lastHealth = $null
-    for ($i = 1; $i -le 90; $i++) {
-        Start-Sleep -Seconds 4
+    for ($i = 1; $i -le 72; $i++) {
+        Start-Sleep -Seconds 5
         try {
-            $lastHealth = Invoke-RestMethod -Uri ($healthUrl + '?t=' + [DateTimeOffset]::Now.ToUnixTimeMilliseconds()) -TimeoutSec 10 -Headers @{'Cache-Control'='no-cache'}
-            $healthRevision = [string]$lastHealth.revision
-            if ($healthRevision -eq $ExpectedUiRevision -or $healthRevision -eq ("REV $RevisionNumber")) {
+            $health = Invoke-RestMethod -Uri ($healthUrl + '?t=' + [DateTimeOffset]::Now.ToUnixTimeSeconds()) -TimeoutSec 10 -Headers @{'Cache-Control'='no-cache'}
+            if ($health.version -eq $ExpectedHealthVersion -or $health.revision -eq $ExpectedUiRevision) {
                 $deployed = $true
                 break
             }
             Write-Host '.' -NoNewline
-        }
-        catch {
+        } catch {
             Write-Host '.' -NoNewline
         }
     }
     Write-Host ''
 
     if ($deployed) {
-        Write-Host "FERDIG: $ExpectedUiRevision er live pa Render." -ForegroundColor Green
-    }
-    else {
-        $seen = if ($lastHealth -and $lastHealth.revision) { [string]$lastHealth.revision } else { 'ingen respons' }
-        Write-Host "Koden er sendt til GitHub, men Render bekreftet ikke $ExpectedUiRevision innen 6 minutter. Sist sett: $seen" -ForegroundColor Yellow
-        Write-Host 'Render fortsetter normalt deployen i bakgrunnen hvis Auto-Deploy er aktivert.'
+        Write-Host "FERDIG: GitHub og Render viser $ExpectedUiRevision." -ForegroundColor Green
+    } else {
+        Write-Host 'GitHub er oppdatert, men Render bekreftet ikke ny versjon innen 6 minutter.' -ForegroundColor Yellow
+        Write-Host 'Hvis Render Auto-Deploy star pa On Commit, bygger den normalt ferdig av seg selv.'
     }
 
-    Write-Step 'Apner den ferdige appen - ikke GitHub'
-    $cacheBust = [DateTimeOffset]::Now.ToUnixTimeMilliseconds()
+    Write-Step 'Apner Fiste i nettleseren'
+    $cacheBust = [DateTimeOffset]::Now.ToUnixTimeSeconds()
     Start-Process "$SiteUrl/?deploy=$cacheBust"
     exit 0
 }
 catch {
     Write-Host "`nFEIL: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host ''
-    Write-Host 'Du skal normalt ikke bruke GitHub-nettsiden.'
-    Write-Host 'Hvis dette er aller forste kjøring, kan Git Credential Manager kreve en engangsinnlogging.'
+    Write-Host 'Vanligste arsak er at GitHub-innlogging ikke er fullfort, eller at repoet ikke kan pushes.'
+    Write-Host 'Repo: https://github.com/aikongen2026/FISTE'
     exit 1
 }
