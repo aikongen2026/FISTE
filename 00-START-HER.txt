@@ -1,11 +1,8 @@
-FISTE REV36 - ONE CLICK
+FISTE REV39 - START HER
 =======================
 
-1. Pakk ut hele ZIP-filen.
-2. Dobbeltklikk: 1-OPPDATER-OG-APNE-FISTE.bat
-3. Hvis Git mangler, prover scriptet a installere Git for Windows automatisk.
-4. Forste gang GitHub trenger innlogging, godkjenn innloggingen i nettleseren.
-5. Deretter pushes filene til GitHub og Render bygger automatisk.
-6. Fiste apnes nar deploy er ferdig, eller etter ventetiden hvis Render bruker lengre tid.
+For a oppdatere live-appen:
+Dobbeltklikk 1-OPPDATER-OG-APNE-FISTE.bat
 
-Du trenger normalt IKKE installere Git manuelt.
+Du trenger ikke apne GitHub eller Render manuelt.
+Scriptet leser versjonsnummeret automatisk og gjor commit, push, Render-venting og apning av Fiste for deg.

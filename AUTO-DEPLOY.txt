@@ -1,0 +1,22 @@
+FISTE AUTO-DEPLOY V2
+====================
+
+Fra denne pakken skal du ikke laste opp filer manuelt i GitHub.
+
+BRUK:
+1. Pakk ut den nye Fiste-versjonen.
+2. Dobbeltklikk 1-OPPDATER-OG-APNE-FISTE.bat.
+3. Scriptet leser REV-nummeret automatisk fra package.json.
+4. Scriptet synkroniserer filene, lager commit og pusher til GitHub.
+5. Render Auto-Deploy starter automatisk.
+6. Scriptet venter til riktig REV er live og apner Fiste.
+
+VIKTIG:
+- Du trenger ikke apne GitHub eller Render for normale oppdateringer.
+- Forste gang pa en ny PC kan GitHub/Git Credential Manager be om en engangsinnlogging. Dette kan ikke fjernes sikkert uten a lagre et hemmelig token, og token lagres derfor ikke i pakken.
+- Senere versjoner kan bruke den samme deploy-filen uten hardkodet REV-nummer.
+
+Standard:
+Repo: https://github.com/aikongen2026/FISTE.git
+Branch: main
+App: https://fiste.onrender.com
