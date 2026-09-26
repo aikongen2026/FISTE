@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "16.0.0",
-  "appRevision": 40,
-  "description": "Fiste guiden REV40 – uavhengig, kildebasert BiteGuide, smartere matching av egne sluker, forbedret NVE-dybdekart/3D og automatisk deploy.",
+  "version": "17.0.0",
+  "appRevision": 41,
+  "description": "Fiste guiden REV41 – forbedret ferskvanns-batymetri, trygg NVE-kobling, ryddigere feilmeldinger og automatisk deploy.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",

@@ -1380,22 +1380,28 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
   let freshwaterAreas=[];
   let freshwaterLookup='OSM geometri';
   if(freshwater) {
-    try {
-      freshwaterAreas=await fetchFreshwaterAreas({west,south,east,north});
-      // Overpass can answer successfully with zero polygon features for a visible
-      // freshwater body (especially complex multipolygons / river-like water).
-      // Treat an empty result as a lookup miss, not as proof that no water exists.
-      if(!freshwaterAreas.length){
-        const fallback=await fetchNominatimWater({west,south,east,north});
-        freshwaterAreas=fallback?[fallback]:[];
-        if(fallback) freshwaterLookup='OSM punktkontroll + kartvann';
-      }
-    } catch(error) {
+    // NVE's lake polygons are the stable first choice for Norwegian lakes. OSM remains the
+    // fallback for rivers, very small waters and places not represented in NVE's lake database.
+    try{
+      freshwaterAreas=await fetchNveFreshwaterAreas({west,south,east,north});
+      if(freshwaterAreas.length)freshwaterLookup='NVE Innsjødatabase';
+    }catch(error){freshwaterMaskError=error.message||String(error);}
+    if(!freshwaterAreas.length){
       try {
-        const fallback=await fetchNominatimWater({west,south,east,north});
-        freshwaterAreas=fallback?[fallback]:[];
-        freshwaterLookup='OSM punktkontroll + kartvann';
-      } catch(fallbackError) { freshwaterMaskError=fallbackError.message||error.message||String(fallbackError); }
+        freshwaterAreas=await fetchFreshwaterAreas({west,south,east,north});freshwaterLookup='OSM geometri';
+        if(!freshwaterAreas.length){
+          const fallback=await fetchNominatimWater({west,south,east,north});
+          freshwaterAreas=fallback?[fallback]:[];
+          if(fallback) freshwaterLookup='OSM punktkontroll + kartvann';
+        }
+        if(freshwaterAreas.length)freshwaterMaskError=null;
+      } catch(error) {
+        try {
+          const fallback=await fetchNominatimWater({west,south,east,north});
+          freshwaterAreas=fallback?[fallback]:[];
+          if(fallback){freshwaterLookup='OSM punktkontroll + kartvann';freshwaterMaskError=null;}
+        } catch(fallbackError) { freshwaterMaskError=fallbackError.message||error.message||freshwaterMaskError||String(fallbackError); }
+      }
     }
   }
   let freshwaterBathy=null,freshwaterDepthError=null;
@@ -1474,9 +1480,10 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
     delete zone._point; delete zone._coast; delete zone._exposure; delete zone._hour; delete zone._freshwaterName;
   }));
   zones.sort((a,b)=>b.score-a.score||b.analysis.confidence-a.analysis.confidence);
-  const warning=[maskError?'Vannmasken svarte ikke; prøv igjen om litt.':null,freshwaterMaskError?'OSM-kontrollen for ferskvann svarte ikke; ingen ferskvannssoner vises før kontrollen virker.':null,freshwater&&freshwaterDepthError?`NVE-dybde: ${freshwaterDepthError}`:null,restrictedWaters?`${restrictedWaters} kandidat(er) i kjent helårsforbud ble hardfiltrert bort.`:null,depthError?'Dybde/struktur er midlertidig ufullstendig for noen soner.':null,habitatError?'Marine habitatdata svarte ikke; analysen fortsetter uten dette laget.':null].filter(Boolean).join(' ')||null;
+  const nveDepthServiceFailure=freshwaterDepthError&&!/har ikke registrert oppmålt dybdekart|Fant ikke et NVE-vann|for lite NVE-dybdedata|for lite målegeometri/i.test(freshwaterDepthError);
+  const warning=[maskError?'Vannmasken svarte ikke; prøv igjen om litt.':null,freshwaterMaskError&&!freshwaterAreas.length?'Vanngeometrien kunne ikke bekreftes akkurat nå.':null,freshwater&&nveDepthServiceFailure?'NVE-dybdetjenesten svarte ikke; analysen fortsetter uten dybde.':null,restrictedWaters?`${restrictedWaters} kandidat(er) i kjent helårsforbud ble hardfiltrert bort.`:null,depthError?'Dybde/struktur er midlertidig ufullstendig for noen soner.':null,habitatError?'Marine habitatdata svarte ikke; analysen fortsetter uten dette laget.':null].filter(Boolean).join(' ')||null;
   const source=freshwater?`${freshwaterLookup} + MET Norway${freshwaterBathy?' + NVE Dybdekart (automatisk)':''}`:`OSM vannmaske + EMODnet dybde/struktur + MET Norway${marineConditions?' + Open-Meteo Marine':''}${habitatContext?.available?' + Miljødirektoratet/Fiskeridirektoratet habitat':''}`;
-  return {zones,stats:{tested,rejected,goal,base,radiusM,strictLandmask:true,waterType,waterMaskAvailable:!maskError&&!freshwaterMaskError,freshwaterAreas:freshwater?freshwaterAreas.length:null,freshwaterLookup:freshwater?freshwaterLookup:null,freshwaterDepthSource:freshwaterBathy?'NVE Dybdekart':null,freshwaterLake:freshwaterBathy?.lakeName||null,restrictedWaters,hardRestrictionFilter:true,habitatCoveragePercent:freshwater?null:(habitatContext?.coveragePercent||0),depthAvailable:zones.filter(z=>Number.isFinite(z.depth?.meters)).length,depthResolutionM:freshwater?(freshwaterBathy?.samplingApproxM||null):125,warning,generatedAt:new Date().toISOString(),source}};
+  return {zones,stats:{tested,rejected,goal,base,radiusM,strictLandmask:true,waterType,waterMaskAvailable:!maskError&&!freshwaterMaskError,freshwaterAreas:freshwater?freshwaterAreas.length:null,freshwaterLookup:freshwater?freshwaterLookup:null,freshwaterDepthSource:freshwaterBathy?'NVE Dybdekart':null,freshwaterLake:freshwaterBathy?.lakeName||null,freshwaterDepthNote:freshwaterDepthError||null,restrictedWaters,hardRestrictionFilter:true,habitatCoveragePercent:freshwater?null:(habitatContext?.coveragePercent||0),depthAvailable:zones.filter(z=>Number.isFinite(z.depth?.meters)).length,depthResolutionM:freshwater?(freshwaterBathy?.samplingApproxM||null):125,warning,generatedAt:new Date().toISOString(),source}};
 }
 
 async function boatRamps({west,south,east,north}) {
@@ -1641,6 +1648,41 @@ function pickNveLake(features=[],centerLon,centerLat) {
   for(const feature of features){const c=geoJsonGeometryCenter(feature.geometry);if(!c)continue;const d=distanceMeters(centerLat,centerLon,c.lat,c.lon);if(d<bestDistance){bestDistance=d;best=feature;}}
   return bestDistance<=2500?best:null;
 }
+
+async function resolveNveDepthContext({west,south,east,north,centerLon=(west+east)/2,centerLat=(south+north)/2}={}) {
+  const all=await nveLakeQuery(5,{west,south,east,north,outFields:'vatnlnr,navn,areal_km2,dybdekart',resultRecordCount:500});
+  const lake=pickNveLake(all?.features||[],centerLon,centerLat);
+  if(!lake) return {lake:null,lakeId:null,lakeName:null,where:null,meta:{type:'FeatureCollection',features:[]},hasDepthMap:false};
+  const props=nveFeatureProperties(lake),lakeId=nveLakeId(props),lakeName=nveLakeName(props);
+  if(!Number.isFinite(lakeId)) return {lake,lakeId:null,lakeName,where:null,meta:{type:'FeatureCollection',features:[]},hasDepthMap:false};
+  const where=`vatnlnr=${Math.trunc(lakeId)}`;
+  const meta=await nveLakeQuery(4,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,middeldyp_m,maksdyp_m,oppmaltav,oppmaltaar,oppmaltmetode,malemetode,digitaltprodukt,ekvidistanse_m',returnGeometry:false,resultRecordCount:20});
+  return {lake,lakeId,lakeName,where,meta,hasDepthMap:Boolean(meta?.features?.length)};
+}
+function nveFeaturesToFreshwaterAreas(features=[]) {
+  const areas=[];
+  for(const feature of features){
+    const props=nveFeatureProperties(feature),polygons=geoJsonPolygonRings(feature.geometry),name=nveLakeName(props),id=nveLakeId(props);
+    for(const polygon of polygons){
+      const outer=(polygon?.[0]||[]).map(([lon,lat])=>({lat:Number(lat),lon:Number(lon)})).filter(pt=>Number.isFinite(pt.lat)&&Number.isFinite(pt.lon));
+      if(outer.length<4)continue;if(!sameCoordinate(outer[0],outer[outer.length-1]))outer.push({...outer[0]});
+      const holes=[];
+      for(const ring of (polygon||[]).slice(1)){
+        const hole=(ring||[]).map(([lon,lat])=>({lat:Number(lat),lon:Number(lon)})).filter(pt=>Number.isFinite(pt.lat)&&Number.isFinite(pt.lon));
+        if(hole.length>=4){if(!sameCoordinate(hole[0],hole[hole.length-1]))hole.push({...hole[0]});holes.push(hole);}
+      }
+      areas.push({ring:outer,holes,name,restricted:false,tags:{source:'NVE Innsjødatabase2',dybdekart:props.dybdekart||null},id:`nve/${Number.isFinite(id)?id:'lake'}`,lookup:'nve'});
+    }
+  }
+  return areas;
+}
+async function fetchNveFreshwaterAreas({west,south,east,north}) {
+  const key=`freshwater-nve:${west.toFixed(3)},${south.toFixed(3)},${east.toFixed(3)},${north.toFixed(3)}`;
+  return cached(key,6*60*60*1000,async()=>{
+    const result=await nveLakeQuery(5,{west,south,east,north,outFields:'vatnlnr,navn,areal_km2,dybdekart',resultRecordCount:1000});
+    return nveFeaturesToFreshwaterAreas(result?.features||[]);
+  });
+}
 function densifyGeoJsonLines(features=[],maxSamples=1800) {
   const raw=[];
   for(const feature of features) {
@@ -1670,30 +1712,24 @@ function inverseDistanceDepth(samples,lon,lat,centerLat,maxDepth){
   for(const s of samples){const dx=(s.lon-lon)*sx,dy=(s.lat-lat)*sy,d2=dx*dx+dy*dy;if(d2<1)return clamp(s.depth,0,maxDepth);if(nearest.length<8){nearest.push({d2,depth:s.depth});nearest.sort((a,b)=>a.d2-b.d2);}else if(d2<nearest[7].d2){nearest[7]={d2,depth:s.depth};nearest.sort((a,b)=>a.d2-b.d2);}}
   if(!nearest.length)return null;let sum=0,weight=0;for(const n of nearest){const w=1/Math.max(16,n.d2);sum+=n.depth*w;weight+=w;}return weight?clamp(sum/weight,0,maxDepth):null;
 }
-async function nveFreshwaterBathymetryGrid({west,south,east,north,zoom=13,quality='standard'}) {
+async function nveFreshwaterBathymetryGrid({west,south,east,north,zoom=13,quality='standard',focusLat=null,focusLon=null}) {
   const plan=bathymetryGridPlan({west,south,east,north,zoom,quality});
-  const centerLon=(west+east)/2,centerLat=(south+north)/2;
+  const centerLon=Number.isFinite(focusLon)?focusLon:(west+east)/2,centerLat=Number.isFinite(focusLat)?focusLat:(south+north)/2;
   const key=`bathy-grid-nve:${plan.quality}:${west.toFixed(4)},${south.toFixed(4)},${east.toFixed(4)},${north.toFixed(4)},${plan.width}x${plan.height}`;
   return cached(key,12*60*60*1000,async()=>{
-    // Layer 3 is NVE's own polygon layer for lakes that actually have depth measurements.
-    // We use it first so the app never manufactures a 3D lake from a plain lake polygon.
-    const measured=await nveLakeQuery(3,{west,south,east,north,outFields:'vatnlnr,innsjonavn',resultRecordCount:300});
-    let lake=pickNveLake(measured?.features||[],centerLon,centerLat);
-    if(!lake){
-      const allLakes=await nveLakeQuery(5,{west,south,east,north,outFields:'vatnlnr,navn,areal_km2,dybdekart',resultRecordCount:200});
-      const nearest=pickNveLake(allLakes?.features||[],centerLon,centerLat),name=nearest?nveLakeName(nveFeatureProperties(nearest)):'dette vannet';
-      throw new Error(`NVE har ikke registrert oppmålt dybdekart for ${name}. Appen viser ikke kunstige dybder.`);
-    }
-    const props=nveFeatureProperties(lake),lakeId=nveLakeId(props);if(!Number.isFinite(lakeId))throw new Error('NVE-vannet mangler gyldig vann-ID.');
-    const where=`vatnlnr=${Math.trunc(lakeId)}`;
-    const [curves,points,meta]=await Promise.all([
+    // Resolve the lake from NVE's complete lake database first, then verify that the SAME lake
+    // has a Dybdekart record. This prevents accidentally borrowing depths from a nearby lake.
+    const context=await resolveNveDepthContext({west,south,east,north,centerLon,centerLat});
+    if(!context.lake)throw new Error('Fant ikke et NVE-vann i kartutsnittet.');
+    if(!context.hasDepthMap)throw new Error(`NVE har ikke registrert oppmålt dybdekart for ${context.lakeName}.`);
+    const lake=context.lake,props=nveFeatureProperties(lake),lakeId=context.lakeId,where=context.where,meta=context.meta;
+    const [curves,points]=await Promise.all([
       nveLakeQueryAll(2,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000},12000),
-      nveLakeQueryAll(1,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000},8000),
-      nveLakeQuery(4,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,middeldyp_m,maksdyp_m,oppmaltav,oppmaltaar,oppmaltmetode,malemetode,digitaltprodukt,ekvidistanse_m',returnGeometry:false,resultRecordCount:20})
+      nveLakeQueryAll(1,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000},8000)
     ]);
-    const contourSamples=densifyGeoJsonLines(curves?.features||[],2600),depthPointSamples=nvePointSamples(points?.features||[],1100),shoreSamples=nveShorelineSamples(lake.geometry,850);
+    const contourSamples=densifyGeoJsonLines(curves?.features||[],3000),depthPointSamples=nvePointSamples(points?.features||[],1300),shoreSamples=nveShorelineSamples(lake.geometry,1000);
     const samples=[...contourSamples,...depthPointSamples,...shoreSamples];
-    if(contourSamples.length<6&&depthPointSamples.length<4)throw new Error(`NVE har målt ${nveLakeName(props)}, men det er ikke nok dybdegeometri i dette utsnittet til et ærlig 3D-bunnkart. Zoom nærmere kartområdet med dybdekoter.`);
+    if(contourSamples.length<6&&depthPointSamples.length<4)throw new Error(`NVE har dybdekart for ${context.lakeName}, men dette utsnittet inneholder for lite målegeometri. Zoom nærmere dybdekotene.`);
     const metaProps=nveFeatureProperties(meta?.features?.[0]||{}),surveyQuality=nveSurveyQuality(metaProps),documentedMax=Number(metaProps.maksdyp_m??metaProps.maksdyp);
     const observedMax=Math.max(0,...samples.map(s=>Number(s.depth)||0));const maxDepth=Math.max(1,Number.isFinite(documentedMax)?documentedMax:observedMax,observedMax);
     const elevations=Array.from({length:plan.height},()=>Array(plan.width).fill(null)),depths=Array.from({length:plan.height},()=>Array(plan.width).fill(null));let validSea=0;
@@ -1704,8 +1740,8 @@ async function nveFreshwaterBathymetryGrid({west,south,east,north,zoom=13,qualit
         const depth=inverseDistanceDepth(samples,lon,lat,centerLat,maxDepth);if(!Number.isFinite(depth))continue;depths[row][col]=depth;elevations[row][col]=-depth;validSea++;
       }
     }
-    if(validSea<Math.max(40,plan.totalPoints*.08))throw new Error(`For lite NVE-dybdedata i kartutsnittet for ${nveLakeName(props)}. Zoom nærmere vannet.`);
-    return {west,south,east,north,width:plan.width,height:plan.height,quality:plan.quality,elevations,depths,maxDepth,maxLand:0,validSea,validLand:0,source:'NVE Innsjødatabase2',dataSource:surveyQuality.label,sourceResolution:null,samplingApproxM:plan.spacingM,generatedAt:new Date().toISOString(),waterType:'freshwater',lakeId,lakeName:nveLakeName(props),survey:{maxDepth:Number.isFinite(documentedMax)?documentedMax:null,meanDepth:Number.isFinite(Number(metaProps.middeldyp_m))?Number(metaProps.middeldyp_m):null,quality:surveyQuality,curveCount:curves.features.length,pointCount:points.features.length,pages:{curves:curves.pages,points:points.pages}},navigationWarning:'NVE-dybder og interpolert 3D-flate er kun for fiskeplanlegging, ikke navigasjon.'};
+    if(validSea<Math.max(40,plan.totalPoints*.08))throw new Error(`For lite NVE-dybdedata i kartutsnittet for ${context.lakeName}. Zoom nærmere vannet.`);
+    return {west,south,east,north,width:plan.width,height:plan.height,quality:plan.quality,elevations,depths,maxDepth,maxLand:0,validSea,validLand:0,source:'NVE Innsjødatabase2',dataSource:surveyQuality.label,sourceResolution:null,samplingApproxM:plan.spacingM,generatedAt:new Date().toISOString(),waterType:'freshwater',lakeId,lakeName:context.lakeName,survey:{maxDepth:Number.isFinite(documentedMax)?documentedMax:null,meanDepth:Number.isFinite(Number(metaProps.middeldyp_m))?Number(metaProps.middeldyp_m):null,quality:surveyQuality,curveCount:curves.features.length,pointCount:points.features.length,pages:{curves:curves.pages,points:points.pages}},navigationWarning:'NVE-dybder og interpolert flate er kun for fiskeplanlegging, ikke navigasjon.'};
   });
 }
 
@@ -1727,29 +1763,23 @@ function freshwaterStructureFromGrid(grid,lat,lon){
   if(structure.available)structure.direction=best.bearing;
   return {depth:center,structure};
 }
-async function freshwaterDepthOverlay({west,south,east,north,zoom=13}){
-  const centerLon=(west+east)/2,centerLat=(south+north)/2;
+async function freshwaterDepthOverlay({west,south,east,north,zoom=13,focusLat=null,focusLon=null}){
+  const centerLon=Number.isFinite(focusLon)?focusLon:(west+east)/2,centerLat=Number.isFinite(focusLat)?focusLat:(south+north)/2;
   const key=`nve-overlay:${west.toFixed(3)},${south.toFixed(3)},${east.toFixed(3)},${north.toFixed(3)}@${Math.round(zoom)}`;
   return cached(key,2*60*60*1000,async()=>{
-    const measured=await nveLakeQuery(3,{west,south,east,north,outFields:'vatnlnr,innsjonavn',resultRecordCount:300});
-    let lake=pickNveLake(measured?.features||[],centerLon,centerLat);
-    if(!lake){
-      const all=await nveLakeQuery(5,{west,south,east,north,outFields:'vatnlnr,navn,areal_km2,dybdekart',resultRecordCount:200});
-      const base=pickNveLake(all?.features||[],centerLon,centerLat),baseProps=nveFeatureProperties(base||{});
-      return {available:false,measured:false,lakeName:base?nveLakeName(baseProps):null,lakeId:base?nveLakeId(baseProps):null,curveCount:0,pointCount:0,maxDepth:null,surveyMethod:null,surveyQuality:null,curves:{type:'FeatureCollection',features:[]},points:{type:'FeatureCollection',features:[]},lake:{type:'FeatureCollection',features:base?[base]:[]},source:'NVE Innsjødatabase2',message:base?`NVE har ikke registrert oppmålt dybdekart for ${nveLakeName(baseProps)}.`:'Fant ikke et NVE-vann i utsnittet.'};
-    }
-    const props=nveFeatureProperties(lake),lakeId=nveLakeId(props),lakeName=nveLakeName(props);
-    if(!Number.isFinite(lakeId))return {available:false,measured:true,lakeName,lakeId:null,curveCount:0,pointCount:0,maxDepth:null,surveyMethod:null,surveyQuality:null,curves:{type:'FeatureCollection',features:[]},points:{type:'FeatureCollection',features:[]},lake:{type:'FeatureCollection',features:[lake]},source:'NVE Innsjødatabase2'};
-    const where=`vatnlnr=${Math.trunc(lakeId)}`;
-    const [curves,points,meta]=await Promise.all([
+    const context=await resolveNveDepthContext({west,south,east,north,centerLon,centerLat});
+    const base=context.lake,baseProps=nveFeatureProperties(base||{});
+    if(!base)return {available:false,measured:false,lakeName:null,lakeId:null,curveCount:0,pointCount:0,maxDepth:null,surveyMethod:null,surveyQuality:null,curves:{type:'FeatureCollection',features:[]},points:{type:'FeatureCollection',features:[]},lake:{type:'FeatureCollection',features:[]},source:'NVE Innsjødatabase2',message:'Fant ikke et NVE-vann i utsnittet.'};
+    if(!context.hasDepthMap)return {available:false,measured:false,lakeName:context.lakeName,lakeId:context.lakeId,curveCount:0,pointCount:0,maxDepth:null,surveyMethod:null,surveyQuality:null,curves:{type:'FeatureCollection',features:[]},points:{type:'FeatureCollection',features:[]},lake:{type:'FeatureCollection',features:[base]},source:'NVE Innsjødatabase2',message:`NVE har ikke registrert oppmålt dybdekart for ${context.lakeName}.`};
+    const where=context.where,lakeId=context.lakeId,lakeName=context.lakeName,meta=context.meta;
+    const [curves,points]=await Promise.all([
       nveLakeQueryAll(2,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000},12000),
-      nveLakeQueryAll(1,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000},8000),
-      nveLakeQuery(4,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,middeldyp_m,maksdyp_m,oppmaltav,oppmaltaar,oppmaltmetode,malemetode,digitaltprodukt,ekvidistanse_m',returnGeometry:false,resultRecordCount:20})
+      nveLakeQueryAll(1,{west,south,east,north,where,outFields:'vatnlnr,innsjonavn,dybde_m',resultRecordCount:2000},8000)
     ]);
     const cf=(curves?.features||[]).map(f=>({...f,properties:{...nveFeatureProperties(f),fisteKind:'curve'}}));
     const pf=(points?.features||[]).map(f=>({...f,properties:{...nveFeatureProperties(f),fisteKind:'point'}}));
     const mp=nveFeatureProperties(meta?.features?.[0]||{}),maxDepth=Number(mp.maksdyp_m??mp.maksdyp),surveyQuality=nveSurveyQuality(mp);
-    return {available:cf.length>0||pf.length>0,measured:true,lakeName,lakeId,curveCount:cf.length,pointCount:pf.length,maxDepth:Number.isFinite(maxDepth)?maxDepth:null,meanDepth:Number.isFinite(Number(mp.middeldyp_m))?Number(mp.middeldyp_m):null,surveyMethod:surveyQuality.label,surveyQuality,curves:{type:'FeatureCollection',features:cf},points:{type:'FeatureCollection',features:pf},lake:{type:'FeatureCollection',features:[lake]},source:'NVE Innsjødatabase2 · Innsjø ved dybdemåling + DybdeKurve/DybdePunkt',pages:{curves:curves.pages,points:points.pages},generatedAt:new Date().toISOString()};
+    return {available:cf.length>0||pf.length>0,measured:true,lakeName,lakeId,curveCount:cf.length,pointCount:pf.length,maxDepth:Number.isFinite(maxDepth)?maxDepth:null,meanDepth:Number.isFinite(Number(mp.middeldyp_m))?Number(mp.middeldyp_m):null,surveyMethod:surveyQuality.label,surveyQuality,curves:{type:'FeatureCollection',features:cf},points:{type:'FeatureCollection',features:pf},lake:{type:'FeatureCollection',features:[base]},source:'NVE Innsjødatabase2 · Dybdekart + DybdeKurve/DybdePunkt',pages:{curves:curves.pages,points:points.pages},generatedAt:new Date().toISOString()};
   });
 }
 
@@ -1803,7 +1833,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v16-rev40',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,freshwaterDepthOverlay:true,freshwaterSpeciesDepthRanking:true,biteGuide:true,biteGuideIndependent:true,smartOwnedLureMatching:true,nveMeasuredLakeLayer:true,nvePagination:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v17-rev41',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,freshwaterDepthOverlay:true,freshwaterSpeciesDepthRanking:true,biteGuide:true,biteGuideIndependent:true,smartOwnedLureMatching:true,nveDepthMetadataCheck:true,nveLakeGeometryFallback:true,nvePagination:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
@@ -1825,13 +1855,17 @@ async function handleApi(req,res,url) {
     }
     if(url.pathname==='/api/freshwater-depth-overlay') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
+      const focusLat=Number(url.searchParams.get('focusLat')),focusLon=Number(url.searchParams.get('focusLon'));
+      if(Number.isFinite(focusLat)&&Number.isFinite(focusLon))input={...input,focusLat,focusLon};
       try{return send(res,200,await freshwaterDepthOverlay(input),'application/json; charset=utf-8',{'Cache-Control':'public, max-age=7200'});}catch(error){return send(res,502,{error:error.message});}
     }
     if(url.pathname==='/api/bathymetry-grid') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
       const quality=url.searchParams.get('quality')==='mobile'?'mobile':'standard';
       const water=url.searchParams.get('water')==='freshwater'?'freshwater':'saltwater';
-      try{const data=water==='freshwater'?await nveFreshwaterBathymetryGrid({...input,quality}):await kartverketBathymetryGrid({...input,quality});return send(res,200,data,'application/json; charset=utf-8',{'Cache-Control':'public, max-age=21600'});}catch(error){return send(res,502,{error:error.message});}
+      const focusLat=Number(url.searchParams.get('focusLat')),focusLon=Number(url.searchParams.get('focusLon'));
+      const focus=Number.isFinite(focusLat)&&Number.isFinite(focusLon)?{focusLat,focusLon}:{};
+      try{const data=water==='freshwater'?await nveFreshwaterBathymetryGrid({...input,quality,...focus}):await kartverketBathymetryGrid({...input,quality});return send(res,200,data,'application/json; charset=utf-8',{'Cache-Control':'public, max-age=21600'});}catch(error){return send(res,502,{error:error.message});}
     }
     if(url.pathname==='/api/bathymetry-raster') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'13');}catch(error){return send(res,400,{error:error.message});}
@@ -1890,4 +1924,4 @@ function createServer() {
 }
 function startServer(port=PORT) { const server=createServer(); return server.listen(port,()=>{ let ip='localhost'; for(const list of Object.values(os.networkInterfaces())) for(const item of list||[]) if(item.family==='IPv4'&&!item.internal) ip=item.address; console.log(`Fiste guiden kjører på http://${ip}:${port}`); }); }
 if(require.main===module) startServer();
-module.exports={nveLakeQuery,nveLakeQueryAll,nveSurveyQuality,deriveIdealLureProfile,colorTagsFromText,selectPhotographedLures,sourceBackedLureChoice,kartverketBathymetryGrid,nveFreshwaterBathymetryGrid,freshwaterDepthOverlay,sampleBathymetryGridDepth,freshwaterStructureFromGrid,geoJsonContainsPoint,inverseDistanceDepth,buildZoneBiteGuide,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};
+module.exports={nveLakeQuery,nveLakeQueryAll,nveSurveyQuality,resolveNveDepthContext,nveFeaturesToFreshwaterAreas,fetchNveFreshwaterAreas,deriveIdealLureProfile,colorTagsFromText,selectPhotographedLures,sourceBackedLureChoice,kartverketBathymetryGrid,nveFreshwaterBathymetryGrid,freshwaterDepthOverlay,sampleBathymetryGridDepth,freshwaterStructureFromGrid,geoJsonContainsPoint,inverseDistanceDepth,buildZoneBiteGuide,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};

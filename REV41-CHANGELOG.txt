@@ -1,0 +1,24 @@
+FISTE GUIDEN REV41 – DYBDEKART + FEILMELDINGSFIX
+================================================
+
+NYTT
+- Ferskvannskart med fylte blå dybdeband under NVE-kotene.
+- Dybdeetiketter på kartet.
+- Sikker NVE-kobling: innsjø-ID fra lag 5 kontrolleres mot lag 4 før lag 2/1 hentes.
+- NVE-innsjøpolygon brukes som førstevalg for soner på innsjøer.
+- Ferskvanns-3D bruker samme NVE-datagrunnlag der oppmåling finnes.
+
+RETTET
+- Ingen risiko for at nærmeste målte nabovann blir brukt på feil innsjø.
+- Manglende NVE-dybde vises som kort informasjon, ikke stor oransje feil.
+- Båtrampefeil spammes ikke gjentatte ganger.
+- Varsler dedupliseres.
+- OFFLINE vises bare når nettleseren faktisk er offline.
+- Sonedata prøves på nytt før cache brukes.
+
+BEHOLDT
+- BiteGuide og smart slukmatching.
+- Brukerens egne slukbilder.
+- Live GPS.
+- Mobilførst layout.
+- AutoDeploy V2.

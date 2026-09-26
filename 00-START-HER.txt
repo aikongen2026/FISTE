@@ -1,9 +1,9 @@
-FISTE REV40 - START HER
+FISTE REV41 - START HER
 =======================
 
 1. Pakk ut hele ZIP-filen.
 2. Dobbeltklikk 1-OPPDATER-OG-APNE-FISTE.bat.
 3. Scriptet oppdaterer GitHub og venter på Render automatisk.
-4. Når REV40 er live åpnes appen.
+4. Når REV41 er live åpnes appen.
 
 Første gang på en PC kan Git Credential Manager be om GitHub-godkjenning.
