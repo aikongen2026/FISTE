@@ -27,7 +27,7 @@ const sourceSpotLayer = L.layerGroup().addTo(map);
 const restrictionLayer = L.layerGroup().addTo(map);
 const conditionLayer = L.layerGroup().addTo(map);
 const boatRampLayer = L.layerGroup().addTo(map);
-// REV41: freshwater depth overlay comes from the same NVE REST layers used by 3D.
+// REV42: freshwater depth overlay comes from the same NVE REST layers used by 3D.
 // This avoids relying on a separate WMS toggle and lets the app say clearly when a lake has no surveyed depths.
 const freshwaterDepthLayer=L.layerGroup();
 let freshwaterDepthController=null;
@@ -1229,7 +1229,7 @@ function exportCatchGpx() {
   if(!entries.length){$('catchStatus').textContent='Ingen loggposter med kartposisjon å eksportere.';return;}
   const xmlEscape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const waypoints=entries.map(entry=>`<wpt lat="${entry.mapCenter.lat}" lon="${entry.mapCenter.lon}"><time>${xmlEscape(entry.time)}</time><name>${xmlEscape(entry.place||fishLabels[entry.fish]||'Fisketur')}</name><desc>${xmlEscape(`${entry.result==='fangst'?'Fangst':'Ingen fangst'} · ${fishLabels[entry.fish]||entry.fish}${entry.lure?' · '+entry.lure:''}`)}</desc><type>${entry.result==='fangst'?'catch':'session'}</type></wpt>`).join('');
-  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV41" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
+  downloadTextFile(`fiste-guiden-fangster-${new Date().toISOString().slice(0,10)}.gpx`,`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Fiste guiden REV42" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}</gpx>`,'application/gpx+xml');
   $('catchStatus').textContent=`Eksporterte ${entries.length} posisjoner som GPX.`;
 }
 function exportCatchJson() { const entries=readCatchEntries();downloadTextFile(`fiste-guiden-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({version:1,exportedAt:new Date().toISOString(),entries},null,2),'application/json');$('catchStatus').textContent=`Backup med ${entries.length} loggposter er eksportert.`; }
@@ -1249,7 +1249,7 @@ function applyAnalysisData(data,{cached=false,offline=false,errorMessage=''}={})
 }
 function leanAlternativeLures(alternatives=[]){
   if(!Array.isArray(alternatives)||!alternatives.length)return '';
-  return `<div class="lean-alt-grid">${alternatives.slice(0,3).map(alt=>`<article><img class="zoomable-lure" src="${escapeHtml(alt.image||'')}" alt="${escapeHtml(alt.name||alt.type||'Alternativ sluk')}" loading="lazy" tabindex="0"><div><b>${escapeHtml(alt.name||alt.type||'Alternativ')}</b><small>${escapeHtml(alt.color||'')}</small></div></article>`).join('')}</div>`;
+  return `<div class="lean-alt-grid">${alternatives.slice(0,3).map(alt=>`<article><img class="zoomable-lure" src="${escapeHtml(alt.image||'')}" alt="${escapeHtml(alt.name||alt.type||'Alternativ sluk')}" loading="lazy" tabindex="0"><div><b>${escapeHtml(alt.name||alt.type||'Alternativ')}</b><small>${escapeHtml(alt.color||'')}${Number.isFinite(Number(alt.matchScore))?` · ${Math.round(Number(alt.matchScore))}/100`:''}${alt.strategy?` · ${escapeHtml(String(alt.strategy).replaceAll('-', ' '))}`:''}</small></div></article>`).join('')}</div>`;
 }
 
 const depthProfileCache=new Map();
@@ -1312,12 +1312,18 @@ function biteGuideHtml(zone={}){
   const best=guide.bestTime?formatClock(guide.bestTime):'–',score=Math.round(Number(guide.score)||zone.score||0);
   const bars=timeline.length?`<div class="bite-time-strip">${timeline.map(item=>`<article title="${escapeHtml(item.label||'')}"><time>${formatClock(item.time)}</time><i><em style="height:${Math.max(10,Math.min(100,Number(item.score)||0))}%"></em></i><b>${Math.round(Number(item.score)||0)}</b></article>`).join('')}</div>`:'<p class="muted">Ingen timeprognose tilgjengelig akkurat nå.</p>';
   const sourceLabels=(rec.sources||[]).map(src=>src.label).filter(Boolean).slice(0,2).join(' · ');
-  return `<details class="zone-detail bite-guide-detail"><summary><span>🎯 BiteGuide</span><small>${score}/100 · best ${best}</small></summary><div class="bite-score-card"><strong>${score}</strong><div><b>${escapeHtml(guide.label||'Huggforhold')}</b><small>Best neste timer: ${best}</small></div></div>${bars}<div class="bite-rec bite-rec-profile"><section><span>ANBEFALT PROFIL · UAVHENGIG AV DIN SLUKBOKS</span><b>${escapeHtml(rec.type||'Sluk/wobbler')}</b><p><strong>Farge:</strong> ${escapeHtml(rec.color||'–')}<br><strong>Størrelse/vekt:</strong> ${escapeHtml(rec.size||'–')}${rec.targetDepth?`<br><strong>Måldybde:</strong> ${escapeHtml(rec.targetDepth)}`:''}</p><small>${escapeHtml(rec.method||'')}</small>${rec.whyNow?`<p class="bite-why">${escapeHtml(rec.whyNow)}</p>`:''}${sourceLabels?`<em>Grunnlag: ${escapeHtml(sourceLabels)}</em>`:''}</section></div><p class="detail-caveat">${escapeHtml(guide.disclaimer||'Veiledende score – ingen garanti for fangst.')}</p></details>`;
+  const context=[rec.clarity?.label,Number.isFinite(Number(rec.waterTemp))?`${Number(rec.waterTemp).toFixed(1).replace('.',',')} °C vann`:null].filter(Boolean).join(' · ');
+  const refs=Array.isArray(guide.references)?guide.references:[];
+  const referenceHtml=refs.length?`<div class="bite-reference-wrap"><div class="bite-reference-head"><b>REFERANSEAGN · IKKE FRA DIN SLUKBOKS</b><span>Viser agntyper/modeller som passer profilen nå</span></div><div class="bite-reference-grid">${refs.map((ref,index)=>`<article class="bite-reference-card"><div class="bite-ref-mode">${escapeHtml(ref.mode||`Alternativ ${index+1}`)}</div>${ref.image?`<img class="zoomable-lure" src="${escapeHtml(ref.image)}" alt="Referanseagn: ${escapeHtml(ref.title||ref.type||'sluk')}" loading="lazy" tabindex="0">`:''}<div><b>${escapeHtml(ref.title||ref.type||'Referanseagn')}</b><small>${escapeHtml([ref.color,ref.size].filter(Boolean).join(' · '))}</small><p>${escapeHtml(ref.why||'')}</p>${ref.sourceLabel?`<em>${escapeHtml(ref.sourceLabel)}</em>`:''}</div></article>`).join('')}</div></div>`:'';
+  return `<details class="zone-detail bite-guide-detail"><summary><span>🎯 BiteGuide</span><small>${score}/100 · best ${best}</small></summary><div class="bite-score-card"><strong>${score}</strong><div><b>${escapeHtml(guide.label||'Huggforhold')}</b><small>Best neste timer: ${best}</small></div></div>${bars}<div class="bite-rec bite-rec-profile"><section><span>ANBEFALT PROFIL · UAVHENGIG AV DIN SLUKBOKS</span><b>${escapeHtml(rec.type||'Sluk/wobbler')}</b><p><strong>Farge:</strong> ${escapeHtml(rec.color||'–')}<br><strong>Størrelse/vekt:</strong> ${escapeHtml(rec.size||'–')}${rec.targetDepth?`<br><strong>Måldybde:</strong> ${escapeHtml(rec.targetDepth)}`:''}${context?`<br><strong>Forhold:</strong> ${escapeHtml(context)}`:''}</p><small>${escapeHtml(rec.method||'')}</small>${rec.whyNow?`<p class="bite-why">${escapeHtml(rec.whyNow)}</p>`:''}${sourceLabels?`<em>Grunnlag: ${escapeHtml(sourceLabels)}</em>`:''}</section></div>${referenceHtml}<p class="detail-caveat">${escapeHtml(guide.disclaimer||'Veiledende score – ingen garanti for fangst.')}</p></details>`;
 }
 function lureDetailsHtml(lure={},presentation={},fly={}){
-  const match=(lure.matchReasons||[]).slice(0,3).join(' · ');
+  const match=(lure.matchReasons||[]).slice(0,4).join(' · ');
   const personal=lure.personalHistory?.reason||'';
-  return `<details class="zone-detail lure-detail"><summary><span>🎣 Sluk fra min boks</span><small>${escapeHtml(lure.name||lure.type||'forslag')}</small></summary><div class="lean-lure"><img class="zoomable-lure" src="${escapeHtml(lure.image||'')}" alt="${escapeHtml(lure.name||lure.type||'Anbefalt sluk')}" tabindex="0"><div><span>FØRSTEVALG · MATCHET MOT BITEGUIDE</span><b>${escapeHtml(lure.name||lure.type||'Anbefalt agn')}</b><small>${escapeHtml([lure.color,lure.weight].filter(Boolean).join(' · '))}</small>${match?`<p><strong>Hvorfor:</strong> ${escapeHtml(match)}</p>`:''}${personal?`<p><strong>Egen logg:</strong> ${escapeHtml(personal)}</p>`:''}</div></div>${leanAlternativeLures(lure.alternatives)}<div class="quick-advice"><b>Fisk slik</b><p>${escapeHtml(presentation.method||presentation.band||'Fisk av sonen systematisk og varier tempo og dybde.')}</p>${fly.recommended?`<small>Opphengerflue: ${escapeHtml(fly.pattern||'Ja')}${fly.color?' · '+escapeHtml(fly.color):''}</small>`:''}</div></details>`;
+  const quality=lure.matchQuality|| (Number(lure.matchScore)>=88?'Svært god':Number(lure.matchScore)>=74?'God':'Brukbar');
+  const weak=Number.isFinite(Number(lure.matchScore))&&Number(lure.matchScore)<70;
+  const model=lure.modelIdentification&& !/ikke fastslått/i.test(lure.modelIdentification)?lure.modelIdentification:'';
+  return `<details class="zone-detail lure-detail"><summary><span>🎣 Sluk fra min boks</span><small>${escapeHtml(quality)} match · ${Number.isFinite(Number(lure.matchScore))?Math.round(Number(lure.matchScore)):'–'}/100</small></summary>${weak?`<p class="own-lure-warning">Du har ingen sterk match til idealprofilen her. Dette er nærmeste alternativ i slukboksen.</p>`:''}<div class="lean-lure"><img class="zoomable-lure" src="${escapeHtml(lure.image||'')}" alt="${escapeHtml(lure.name||lure.type||'Anbefalt sluk')}" tabindex="0"><div><span>FØRSTEVALG · DITT FAKTISKE FOTO</span><b>${escapeHtml(lure.name||lure.type||'Anbefalt agn')}</b><small>${escapeHtml([lure.color,lure.weight].filter(Boolean).join(' · '))}</small>${model?`<p><strong>Identifisert som:</strong> ${escapeHtml(model)}</p>`:''}${match?`<p><strong>Hvorfor:</strong> ${escapeHtml(match)}</p>`:''}${personal?`<p><strong>Egen logg:</strong> ${escapeHtml(personal)}</p>`:''}</div></div>${leanAlternativeLures(lure.alternatives)}<div class="quick-advice"><b>Fisk slik</b><p>${escapeHtml(presentation.method||presentation.band||'Fisk av sonen systematisk og varier tempo og dybde.')}</p>${fly.recommended?`<small>Opphengerflue: ${escapeHtml(fly.pattern||'Ja')}${fly.color?' · '+escapeHtml(fly.color):''}</small>`:''}</div></details>`;
 }
 function analysisDetailsHtml(zone={}){
   const analysis=zone.analysis||{},habitat=zone.habitat||{},legal=zone.legal||{};
@@ -1444,7 +1450,7 @@ window.addEventListener('offline', () => {const cached=readCachedAnalysis();setS
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&liveActive) acquireLiveWakeLock();});
 window.addEventListener('pagehide',()=>{if(liveWatchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(liveWatchId); releaseLiveWakeLock();});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/owned-lure-names.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=41.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=42.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;

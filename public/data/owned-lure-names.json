@@ -1,151 +1,494 @@
 {
   "lures": [
     {
-      "name": "Minnowwobbler · hvit/sølv med sorte prikker"
+      "id": "L001",
+      "name": "L001 · Liten minnowwobbler · sølv/oliven med rød tone",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Minnowwobbler · sølv/sort natur"
+      "id": "L002",
+      "name": "L002 · Liten minnowwobbler · sølv/sort/gull",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Minnowwobbler · blå/sølv"
+      "id": "L003",
+      "name": "L003 · Liten minnowwobbler · gull/gul/oransje med sorte prikker",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Minnowwobbler · sølv natur"
+      "id": "L004",
+      "name": "L004 · Liten minnowwobbler · kobber/brun med mørke striper",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Minnow- og småfiskwobblere · #5"
+      "id": "L005",
+      "name": "L005 · Liten minnowwobbler · sølv/rosa med mørke prikker",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #1"
+      "id": "L006",
+      "name": "L006 · Liten minnowwobbler · gull/brun/oliven naturlig",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #2"
+      "id": "L007",
+      "name": "L007 · Liten minnowwobbler · sølv/rosa/blå",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #3"
+      "id": "L008",
+      "name": "L008 · Liten minnowwobbler · burgunder/gull med gul/oransje hode",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #4"
+      "id": "L009",
+      "name": "L009 · Liten minnowwobbler · gull/rød slank",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #5"
+      "id": "L010",
+      "name": "L010 · Liten minnowwobbler · gull/rød/oransje",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #6"
+      "id": "L011",
+      "name": "L011 · Liten minnowwobbler · brun/naturlig ørretmønster",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #7"
+      "id": "L012",
+      "name": "L012 · Liten minnowwobbler · sølv/sort natur",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #8"
+      "id": "L013",
+      "name": "L013 · Liten minnowwobbler · sølv/rosa/prikket",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Slanke skje- og metallsluker · #9"
+      "id": "L014",
+      "name": "L014 · Liten crankbait · gull/oransje liten crank",
+      "type": "Liten crankbait"
     },
     {
-      "name": "Slanke skje- og metallsluker · #10"
+      "id": "L015",
+      "name": "L015 · Lipless/vibrasjonswobbler · grønn/gul/sort abbor-/firetiger",
+      "type": "Lipless/vibrasjonswobbler"
     },
     {
-      "name": "Fluer og streamere · #1"
+      "id": "L016",
+      "name": "L016 · Lipless/vibrasjonswobbler · mørk lilla/gull",
+      "type": "Lipless/vibrasjonswobbler"
     },
     {
-      "name": "Fluer og streamere · #2"
+      "id": "L017",
+      "name": "L017 · Liten minnowwobbler · oliven/gul med mørke abborstriper",
+      "type": "Liten minnowwobbler"
     },
     {
-      "name": "Fluer og streamere · #3"
+      "id": "L018",
+      "name": "L018 · Tasmanian Devil-type (svært sannsynlig) · hvit/rød",
+      "type": "Tasmanian Devil-type"
     },
     {
-      "name": "Kompakte skjesluker med krokdressing · #1"
+      "id": "L019",
+      "name": "L019 · Slank kyst-/metallsluk · lang sølv/holografisk",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Kompakte skjesluker med krokdressing · #2"
+      "id": "L020",
+      "name": "L020 · Slank kyst-/metallsluk · lang gull/oliven/sølv",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Kompakte skjesluker med krokdressing · #3"
+      "id": "L021",
+      "name": "L021 · Slank kyst-/metallsluk · lang sølv/grønn-gul holografisk",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Kompakte skjesluker med krokdressing · #4"
+      "id": "L022",
+      "name": "L022 · Skjesluk – fersk og sjø · gull/oransje bred med fjær",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Kompakte skjesluker med krokdressing · #5"
+      "id": "L023",
+      "name": "L023 · Skjesluk – fersk og sjø · mørk sølv/gull med rød fjær",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Kompakte skjesluker med krokdressing · #6"
+      "id": "L024",
+      "name": "L024 · Skjesluk – fersk og sjø · blå/sølv smal fiskesluk",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Spinner, shad og slanke metallsluker · #1"
+      "id": "L025",
+      "name": "L025 · Skjesluk – fersk og sjø · rød/oransje lang skjesluk",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Spinner, shad og slanke metallsluker · #2"
+      "id": "L026",
+      "name": "L026 · Skjesluk – fersk og sjø · blå/sølv holografisk med hvit dressing",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Spinner, shad og slanke metallsluker · #3"
+      "id": "L027",
+      "name": "L027 · Skjesluk – fersk og sjø · sølv/sort smal",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Slank skjesluk · sølv/blå prikket"
+      "id": "L028",
+      "name": "L028 · Skjesluk – fersk og sjø · blå/sølv liten jig-/skjesluk",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Langkastende sluk · gulgrønn/sølv"
+      "id": "L029",
+      "name": "L029 · Skjesluk – fersk og sjø · mørk sølv slank",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Langkastende sluk · sølv/rosa"
+      "id": "L030",
+      "name": "L030 · Skjesluk – fersk og sjø · sølv smal",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Små og mellomstore skjesluker · #1"
+      "id": "L031",
+      "name": "L031 · Slank kyst-/metallsluk · sølv/holografisk avlang med øye",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Små og mellomstore skjesluker · #2"
+      "id": "L032",
+      "name": "L032 · Slank kyst-/metallsluk · sort/sølv med gult øye",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Små og mellomstore skjesluker · #3"
+      "id": "L033",
+      "name": "L033 · Slank kyst-/metallsluk · sort/sølv med oransje øye",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Små og mellomstore skjesluker · #4"
+      "id": "L034",
+      "name": "L034 · Slank kyst-/metallsluk · lang hamret sølv/gull",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Små og mellomstore skjesluker · #5"
+      "id": "L035",
+      "name": "L035 · Slank kyst-/metallsluk · lang blå/holografisk",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Små og mellomstore skjesluker · #6"
+      "id": "L036",
+      "name": "L036 · Slank kyst-/metallsluk · lang mørk/holografisk",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Små og mellomstore skjesluker · #7"
+      "id": "L037",
+      "name": "L037 · Slank kyst-/metallsluk · lang sølv/rosa",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Små og mellomstore skjesluker · #8"
+      "id": "L038",
+      "name": "L038 · Slank kyst-/metallsluk · lang gull/oliven/oransje",
+      "type": "Slank kyst-/metallsluk"
     },
     {
-      "name": "Avlange skjesluker · #1"
+      "id": "L039",
+      "name": "L039 · Skjesluk for ørret · kobber/mørk med oransje-gule prikker",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Avlange skjesluker · #2"
+      "id": "L040",
+      "name": "L040 · Skjesluk for ørret · kobber/sort/rød med struktur",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Avlange skjesluker · #3"
+      "id": "L041",
+      "name": "L041 · Sølvkroken Spesial Classic 18 g (svært sannsynlig) · gull/kobber-rød, bred",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Avlange skjesluker · #4"
+      "id": "L042",
+      "name": "L042 · Sølvkroken Spesial Classic 18 g (svært sannsynlig) · gull/kobber-rød, bred",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Bombarda med flue · eget sett"
+      "id": "L043",
+      "name": "L043 · Skjesluk for ørret · rød/kobber hamret",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Egne små spinnere · gruppevalg"
+      "id": "L044",
+      "name": "L044 · Skjesluk – fersk og sjø · gull/rød lang småfiskprofil",
+      "type": "Skjesluk – fersk og sjø"
     },
     {
-      "name": "Egne kompakte wobblere · gruppevalg"
+      "id": "L045",
+      "name": "L045 · Skjesluk for ørret · gull/rød bred",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Egne små ferskvannssluker · gruppevalg"
+      "id": "L046",
+      "name": "L046 · Skjesluk for ørret · sort/gulprikket",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Egne mikro- og kontrastsluker · gruppevalg"
+      "id": "L047",
+      "name": "L047 · Skjesluk for ørret · kobber/rosa liten",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Egen shad og spinnerbait · gruppevalg"
+      "id": "L048",
+      "name": "L048 · Skjesluk for ørret · grønn/sølv holografisk",
+      "type": "Skjesluk for ørret"
     },
     {
-      "name": "Egne prikkede spinnere · gruppevalg"
+      "id": "L049",
+      "name": "L049 · Skjesluk for ørret · mørk lilla/sort",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L050",
+      "name": "L050 · Skjesluk for ørret · blå holografisk",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L051",
+      "name": "L051 · Skjesluk for ørret · grønn/sølv",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L052",
+      "name": "L052 · Skjesluk for ørret · grønn/sølv",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L053",
+      "name": "L053 · Skjesluk – fersk og sjø · sølv med røde/blå prikker, lang",
+      "type": "Skjesluk – fersk og sjø"
+    },
+    {
+      "id": "L054",
+      "name": "L054 · Skjesluk for ørret · sort/sølv med røde prikker og fjær",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L055",
+      "name": "L055 · Skjesluk for ørret · sort/gull med oransje prikker, lang",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L056",
+      "name": "L056 · Skjesluk for ørret · sølv natur med mørke striper",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L057",
+      "name": "L057 · Skjesluk for ørret · kobber/oransje hamret",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L058",
+      "name": "L058 · Skjesluk for ørret · sølv med røde/mørke prikker",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L059",
+      "name": "L059 · Skjesluk – fersk og sjø · blå/sølv lang med mørk trigger",
+      "type": "Skjesluk – fersk og sjø"
+    },
+    {
+      "id": "L060",
+      "name": "L060 · Skjesluk – fersk og sjø · sølv/blå lang med blå prikker",
+      "type": "Skjesluk – fersk og sjø"
+    },
+    {
+      "id": "L061",
+      "name": "L061 · Skjesluk for ørret · gul/oransje med sorte prikker",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L062",
+      "name": "L062 · Skjesluk for ørret · rosa/sølv prikket",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L063",
+      "name": "L063 · Skjesluk for ørret · rød med sorte prikker",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L064",
+      "name": "L064 · Skjesluk for ørret · rød med sorte prikker",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L065",
+      "name": "L065 · Skjesluk for ørret · gull/sort/røde prikker med dressing",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L066",
+      "name": "L066 · Skjesluk – fersk og sjø · gull/sort/rød lang",
+      "type": "Skjesluk – fersk og sjø"
+    },
+    {
+      "id": "L067",
+      "name": "L067 · Skjesluk – fersk og sjø · blå/sølv lang sild-/makrellmønster",
+      "type": "Skjesluk – fersk og sjø"
+    },
+    {
+      "id": "L068",
+      "name": "L068 · Skjesluk for ørret · mørk/sort liten skje",
+      "type": "Skjesluk for ørret"
+    },
+    {
+      "id": "L069",
+      "name": "L069 · Liten inline-spinner · sort/kobber med oransje prikker og dressing",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L070",
+      "name": "L070 · Liten inline-spinner · rød/gul med prikker og dressing",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L071",
+      "name": "L071 · Liten inline-spinner · sort/gulprikket",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L072",
+      "name": "L072 · Liten inline-spinner · sort/gull/rødprikket",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L073",
+      "name": "L073 · Liten inline-spinner · sort/oransje med fjær/dressing",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L074",
+      "name": "L074 · Kystspinner / langtkastende spinner · sølv/sort, tung kropp",
+      "type": "Kystspinner / langtkastende spinner"
+    },
+    {
+      "id": "L075",
+      "name": "L075 · Kystspinner / langtkastende spinner · grønn/sølv med røde prikker",
+      "type": "Kystspinner / langtkastende spinner"
+    },
+    {
+      "id": "L076",
+      "name": "L076 · Kystspinner / langtkastende spinner · gul blad/lilla kropp",
+      "type": "Kystspinner / langtkastende spinner"
+    },
+    {
+      "id": "L077",
+      "name": "L077 · Kystspinner / langtkastende spinner · sort/sølv holografisk",
+      "type": "Kystspinner / langtkastende spinner"
+    },
+    {
+      "id": "L078",
+      "name": "L078 · Kystspinner / langtkastende spinner · sølv/rødprikket tung spinner",
+      "type": "Kystspinner / langtkastende spinner"
+    },
+    {
+      "id": "L079",
+      "name": "L079 · Kystspinner / langtkastende spinner · blå/sølv tung spinner med dressing",
+      "type": "Kystspinner / langtkastende spinner"
+    },
+    {
+      "id": "L080",
+      "name": "L080 · Stor spinner · rød stor bladspinner med svart/rød dressing",
+      "type": "Stor spinner"
+    },
+    {
+      "id": "L081",
+      "name": "L081 · Stor spinner · gul/oransje firetiger stor spinner",
+      "type": "Stor spinner"
+    },
+    {
+      "id": "L082",
+      "name": "L082 · Stor spinner · gul stor spinner med rød/sølv dressing",
+      "type": "Stor spinner"
+    },
+    {
+      "id": "L083",
+      "name": "L083 · Større minnowwobbler · grønn/sort med rosa dekor",
+      "type": "Større minnowwobbler"
+    },
+    {
+      "id": "L084",
+      "name": "L084 · Større minnowwobbler · blå/sølv naturlig",
+      "type": "Større minnowwobbler"
+    },
+    {
+      "id": "L085",
+      "name": "L085 · Dykkende/synkende wobbler · blå holografisk/sort med stor leppe",
+      "type": "Dykkende/synkende wobbler"
+    },
+    {
+      "id": "L086",
+      "name": "L086 · Større minnowwobbler · sort/sølv med liten leppe",
+      "type": "Større minnowwobbler"
+    },
+    {
+      "id": "L087",
+      "name": "L087 · Dykkende/synkende wobbler · sølv stor kropp, stor leppe/tre kroker",
+      "type": "Dykkende/synkende wobbler"
+    },
+    {
+      "id": "L088",
+      "name": "L088 · Dykkende/synkende wobbler · brun/oransje ørretmønster, tre kroker",
+      "type": "Dykkende/synkende wobbler"
+    },
+    {
+      "id": "L089",
+      "name": "L089 · Skjesluk – fersk og sjø · sølv/blå lys, skje-/wobblerprofil",
+      "type": "Skjesluk – fersk og sjø"
+    },
+    {
+      "id": "L090",
+      "name": "L090 · DUO Beach Walker 85-serie (eksakt variant usikker) · sølv/gull natur",
+      "type": "DUO Beach Walker-type"
+    },
+    {
+      "id": "L091",
+      "name": "L091 · DUO Beach Walker Axcion SLIM 85S, sannsynlig · mørk UV/holografisk",
+      "type": "DUO Beach Walker-type"
+    },
+    {
+      "id": "L092",
+      "name": "L092 · Kystspinner #5 (brukers filnavn) · grønn/gul kystspinner",
+      "type": "Kystspinner / langtkastende spinner"
+    },
+    {
+      "id": "L093",
+      "name": "L093 · Prey wobbler/pencil – eksakt modell usikker · sølv/sort pencil/minnow",
+      "type": "Prey-type kyst/ferskvannswobbler"
+    },
+    {
+      "id": "L094",
+      "name": "L094 · Prey wobbler/pencil – eksakt modell usikker · kobber/rød/sort pencil/minnow",
+      "type": "Prey-type kyst/ferskvannswobbler"
+    },
+    {
+      "id": "L095",
+      "name": "L095 · Prey wobbler/pencil – eksakt modell usikker · grønn/gull/sort pencil/minnow",
+      "type": "Prey-type kyst/ferskvannswobbler"
+    },
+    {
+      "id": "L096",
+      "name": "L096 · Rapala minnow-type – eksakt modell usikker · gull/sølv naturlig med leppe",
+      "type": "Rapala-type minnowwobbler"
+    },
+    {
+      "id": "L097",
+      "name": "L097 · Flueboks – flere streamere · boks med rosa/hvit/oransje/grønn streamere",
+      "type": "Saltvannsflue"
+    },
+    {
+      "id": "L098",
+      "name": "L098 · Flueboks – flere mørke våtfluer/nymfer · boks med hovedsakelig sorte/brune våtfluer/nymfer/streamere",
+      "type": "Ferskvannsflue"
     }
   ]
 }

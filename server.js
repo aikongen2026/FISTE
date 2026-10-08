@@ -515,22 +515,18 @@ async function depthProfileAtPoint(lat,lon,coastNormal){
 
 const lureCatalog = Object.freeze(USER_LURE_DATA.lures.map(item=>Object.freeze(item)));
 
-// REV30 keeps the hard species gate from REV29:  These are the user's photographed lures
-// that were visually classified as plausible sea-trout tackle.  This intentionally
-// excludes the red/white predator plug, dressed compact freshwater spoons and the
-// broad red/copper freshwater spoon series even if future metadata is accidentally
-// widened again.
-const SJOORRET_VERIFIED_LURE_IDS = new Set([
-  'own01-01','own01-02','own01-03','own01-04',
-  'own05-01','own05-02','own05-03','own05-04','own05-05','own05-06','own05-07','own05-08','own05-09','own05-10',
-  'own06-01','own06-02','own06-03',
-  'own11-04','own11-05','own11-06',
-  'own14-01','own14-02','own14-03','own14-04',
-  'own02-01'
-]);
+// REV42: the user's lure box is rebuilt from 98 individually photographed lures.
+// Water environment is a hard gate; speciesPrior is an evidence-weighted suitability prior,
+// not a catch probability. BiteGuide is calculated independently before this matcher runs.
 function lureIsVerifiedForSpecies(item, fishType) {
-  if (fishType === 'sjoorret') return SJOORRET_VERIFIED_LURE_IDS.has(item.id);
-  return item.species.includes(fishType);
+  const freshwater=isFreshwaterFish(fishType);
+  if(freshwater && item.allowFreshwaterAuto===false) return false;
+  if(!freshwater && item.allowSaltwaterAuto===false) return false;
+  const required=freshwater?'freshwater':'saltwater';
+  if(Array.isArray(item.waterTypes)&&!item.waterTypes.includes(required)) return false;
+  const prior=Number(item.speciesPrior?.[fishType]);
+  const minPrior={orret:.42,abbor:.42,gjedde:.42,sjoorret:.42,makrell:.32,sei:.32}[fishType]??.35;
+  return Number.isFinite(prior)?prior>=minPrior:Array.isArray(item.species)&&item.species.includes(fishType);
 }
 
 function stableLureNumber(text) {
@@ -543,80 +539,110 @@ function colorTagsFromText(text='') {
   const value=String(text||'').toLocaleLowerCase('no-NO');
   const tags=new Set();
   const rules=[
-    ['silver',/(sølv|silver|holograf|perlemor|blank)/],['blue',/(blå|blue)/],['green',/(grønn|green|oliven)/],
+    ['silver',/(sølv|silver|holograf|perlemor|blank|chrome)/],['blue',/(blå|blue)/],['green',/(grønn|green|oliven)/],
     ['pink',/(rosa|pink)/],['red',/(rød|red)/],['orange',/(oransj|orange)/],['yellow',/(gul|yellow|chartreuse|lime)/],
-    ['gold',/(gull|gold)/],['copper',/(kobber|copper|bronse|brass)/],['dark',/(sort|svart|mørk|black|brown|brun|lilla)/],
-    ['natural',/(natur|ørret|tobis|sild|mort|abbor|småfisk)/],['contrast',/(kontrast|prikk|stripe|rød|rosa|oransj|sort|svart)/],
-    ['holographic',/(holograf|glitter|flash|perlemor)/],['bright',/(blank|hvit|white|sølv|gul|lime|chartreuse)/]
+    ['gold',/(gull|gold)/],['copper',/(kobber|copper|bronse|brass)/],['dark',/(sort|svart|mørk|black|brown|brun|lilla|purple)/],
+    ['natural',/(natur|ørret|tobis|sild|mort|abbor|småfisk|oliven)/],['contrast',/(kontrast|prikk|stripe|rød|rosa|oransj|sort|svart|uv)/],
+    ['holographic',/(holograf|glitter|flash|perlemor|uv)/],['bright',/(blank|hvit|white|sølv|gul|lime|chartreuse)/]
   ];
   for(const [tag,rx] of rules) if(rx.test(value)) tags.add(tag);
   return [...tags];
 }
 function effectiveLureTags(item={}) {
-  return new Set([...(item.tags||[]),...colorTagsFromText(`${item.color||''} ${item.name||''}`)]);
+  return new Set([...(item.tags||[]),...colorTagsFromText(`${item.color||''} ${item.name||''} ${item.bestConditions||''}`)]);
 }
-function selectPhotographedLures({ fishType='sjoorret', goal='numbers', hour, cloud, wind, temp, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight: lowLightOverride, lat, lon, structureLabel='', idealProfile=null }) {
+function estimatedWaterClarity({precipitation,wind,depthMeters,freshwater=false}={}){
+  const rain=Number(precipitation),w=Number(wind),depth=Number(depthMeters);
+  if(Number.isFinite(rain)&&rain>=3) return {id:'stained',label:'antatt farget',confidence:'lav',reason:'nedbør kan øke partikler og avrenning'};
+  if(freshwater&&Number.isFinite(w)&&w>=8&&Number.isFinite(depth)&&depth<=4) return {id:'stained',label:'antatt litt farget',confidence:'lav',reason:'vind over grunt vann kan redusere sikten'};
+  if(Number.isFinite(rain)&&rain<=.1&&Number.isFinite(w)&&w<=4) return {id:'clear',label:'antatt klart/normal sikt',confidence:'lav',reason:'lite nedbør og moderat vind'};
+  return {id:'normal',label:'ukjent/normal sikt',confidence:'lav',reason:'ingen direkte siktmåling'};
+}
+function lureStrategyKey(item={},tags=new Set()){
+  if(tags.has('large')||tags.has('pike-specialist')) return 'large-predator';
+  if(tags.has('spinner')||tags.has('vibration')||tags.has('lipless')) return 'vibration';
+  if(tags.has('sea-metal')) return 'casting-metal';
+  if(tags.has('minnow')||tags.has('wobbler')) return tags.has('deep')?'deep-minnow':'minnow';
+  if(tags.has('deep')||tags.has('sinking')) return 'deep';
+  if(tags.has('casting')) return 'casting';
+  if(tags.has('spoon')) return 'spoon';
+  if(tags.has('fly')) return 'fly';
+  return item.lureType||item.family||item.id;
+}
+function selectPhotographedLures({ fishType='sjoorret', goal='numbers', hour, cloud, wind, temp, waterTemp, seaTemp, precipitation, tideTrend3h, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight: lowLightOverride, lat, lon, structureLabel='', idealProfile=null }) {
   const lowLight = typeof lowLightOverride==='boolean' ? lowLightOverride : (hour <= 8 || hour >= 19);
-  const bright = !lowLight && cloud < 35;
-  const overcastOrCold = !lowLight && (cloud >= 70 || temp < 8);
-  const requiredWaterType=isFreshwaterFish(fishType)?'freshwater':'saltwater';
+  const freshwater=isFreshwaterFish(fishType),requiredWaterType=freshwater?'freshwater':'saltwater';
   const eligible=lureCatalog.filter(item=>lureIsVerifiedForSpecies(item,fishType)&&item.waterTypes.includes(requiredWaterType));
   if(!eligible.length) throw new Error(`Ingen fotograferte sluker er klassifisert for ${fishType} i ${requiredWaterType}`);
   const structure=String(structureLabel||'').toLocaleLowerCase('no-NO');
   const idealTags=new Set(idealProfile?.preferredTags||[]),idealColors=new Set(idealProfile?.colorTags||[]);
-  const siteKey = Number.isFinite(lat) && Number.isFinite(lon) ? `${lat.toFixed(4)}:${lon.toFixed(4)}` : `${Math.round(exposure*20)}:${Math.round(coastQuality*20)}:${depthMeters===null?'x':Math.round(depthMeters)}`;
+  const clarity=idealProfile?.clarity||estimatedWaterClarity({precipitation,wind,depthMeters,freshwater});
+  const siteKey=Number.isFinite(lat)&&Number.isFinite(lon)?`${lat.toFixed(4)}:${lon.toFixed(4)}`:`${Math.round(exposure*20)}:${Math.round(coastQuality*20)}:${depthMeters===null?'x':Math.round(depthMeters)}`;
+  const currentWaterTemp=Number.isFinite(Number(waterTemp))?Number(waterTemp):Number.isFinite(Number(seaTemp))?Number(seaTemp):null;
 
-  const scored = eligible.map(item => {
-    const tags=effectiveLureTags(item),has=tag=>tags.has(tag);let score=20;const reasons=[];
-    // Match the independent BiteGuide profile first. This is the core link between evidence and the user's own box.
-    let idealHits=0;for(const tag of idealTags) if(has(tag)) idealHits++;
-    let colorHits=0;for(const tag of idealColors) if(has(tag)) colorHits++;
-    if(idealHits){score+=idealHits*5;reasons.push(`${idealHits} treff på anbefalt agntype/profil`);}
-    if(colorHits){score+=colorHits*4;reasons.push(`${colorHits} fargetreff for forholdene`);}
+  const scored=eligible.map(item=>{
+    const tags=effectiveLureTags(item),has=tag=>tags.has(tag);const reasons=[];
+    const prior=clamp(Number(item.speciesPrior?.[fishType])||.35,0,1);
+    let score=32+prior*34;
+    reasons.push(`artsmatch ${Math.round(prior*100)}/100`);
 
-    if (lowLight) score += (has('warm')||has('copper')||has('gold') ? 7 : 0) + (has('contrast')||has('dark') ? 5 : 0) + (has('pink') ? 3 : 0);
-    else if (overcastOrCold) score += (has('warm')||has('copper')||has('gold') ? 5 : 0) + (has('natural') ? 4 : 0) + (has('contrast') ? 3 : 0);
-    else if (bright) score += (has('silver') ? 7 : 0) + (has('blue')||has('green') ? 5 : 0) + (has('natural') ? 4 : 0);
-    else score += (has('silver') ? 3 : 0) + (has('blue')||has('green') ? 2 : 0) + (has('pink') ? 2 : 0) + (has('natural') ? 3 : 0);
+    let typeHits=0;for(const tag of idealTags)if(has(tag))typeHits++;
+    let colorHits=0;for(const tag of idealColors)if(has(tag))colorHits++;
+    if(typeHits){score+=Math.min(18,typeHits*4.5);reasons.push(`${typeHits} treff på anbefalt agntype`);}
+    if(colorHits){score+=Math.min(14,colorHits*3.5);reasons.push(`${colorHits} treff på fargeprofil`);}
 
-    if (conservativeShallow) {score += (has('shallow') ? 8 : 0) + (has('slim') ? 4 : 0) + (has('minnow') ? 5 : 0) + (has('spoon') ? 3 : 0) - (has('deep') ? 6 : 0);reasons.push('grunt/kystnært');}
-    else if (exposed) {score += (has('casting') ? 8 : 0) + (has('compact') ? 5 : 0) + (has('sea-metal') ? 5 : 0) - (has('low-wind') ? 8 : 0);reasons.push('vind/rekkevidde');}
-    else if (sheltered) {score += (has('shallow') ? 5 : 0) + (has('spoon') ? 3 : 0) + (has('minnow') ? 5 : 0) + (has('natural') ? 3 : 0) + (has('low-wind') ? 4 : 0);reasons.push('rolig/lunt vann');}
+    if(clarity.id==='clear') score+=(has('natural')?6:0)+(has('silver')?4:0)+(has('blue')?4:0)+(has('green')?2:0)+(has('holographic')&&cloud<45?2:0)-(has('stained-water')&&cloud<35?2:0);
+    if(clarity.id==='stained') score+=(has('stained-water')?7:0)+(has('contrast')?7:0)+(has('gold')||has('copper')?5:0)+(has('orange')||has('red')||has('yellow')?3:0)+(has('bright')||has('holographic')?2:0);
+    if(lowLight){score+=(has('low-light')?7:0)+(has('dark')||has('contrast')?5:0)+(has('copper')?5:0)+(has('gold')?3:0)+(has('orange')||has('red')?4:0);}
+    else if(cloud<30) score+=(has('bright')?3:0)+(has('natural')?4:0)+(has('silver')?3:0)+(has('blue')?3:0)-(has('low-light')&&!has('natural')?2:0);
+    else if(cloud>=70) score+=(has('contrast')?4:0)+(has('copper')?4:0)+(has('gold')?3:0)+(has('orange')||has('pink')?2:0)+(has('low-light')?2:0);
 
-    if (depthMeters !== null && depthMeters > 12) {score += (has('deep') ? 8 : 0) + (has('sea-metal') ? 4 : 0) + (has('sinking') ? 4 : 0);reasons.push('dypere vann');}
-    if (depthMeters !== null && depthMeters <= 4) {score += (has('shallow') ? 7 : 0) + (has('wobbler') ? 3 : 0) - (has('deep') ? 5 : 0);reasons.push('grunn sone');}
-    if (/kant|marbakke|renne|grop|dyp/.test(structure)) {score+=(has('deep')?5:0)+(has('sinking')?5:0)+(has('shad')?4:0)+(has('casting')?2:0);reasons.push('dybdekant/renne');}
-    if (/grunne|rygg|odde|platå/.test(structure)) {score+=(has('shallow')?5:0)+(has('minnow')?4:0)+(has('spinner')?3:0)+(has('spoon')?2:0);reasons.push('grunne/rygg');}
-    if (/vegetasjon|siv/.test(structure)) {score+=(has('spinnerbait')?7:0)+(has('shad')?4:0)+(has('shallow')?4:0);reasons.push('vegetasjon');}
-    if (coastQuality >= .75) score += (has('structure') ? 3 : 0) + (has('shallow') ? 2 : 0);
-    if (isFreshwaterFish(fishType)&&has('freshwater-specialist')) score += 7;
-    if (!isFreshwaterFish(fishType)&&has('saltwater-specialist')) score += 7;
+    if(exposed||wind>=6){score+=(has('casting')?8:0)+(has('sea-metal')?4:0);if(has('casting'))reasons.push('rekkevidde i vind');}
+    if(sheltered){score+=(has('minnow')?4:0)+(has('shallow')?4:0)+(has('spinner')?2:0);}
+    if(conservativeShallow||Number.isFinite(depthMeters)&&depthMeters<=3.5){score+=(has('shallow')?7:0)+(has('minnow')?4:0)+(has('spinner')?3:0)-(has('deep')?5:0);reasons.push('grunt vann');}
+    if(Number.isFinite(depthMeters)&&depthMeters>=8){score+=(has('sinking')?7:0)+(has('deep')?6:0)+(has('sea-metal')?3:0);reasons.push('dypere vann');}
+    if(/kant|marbakke|renne|grop|dyp/.test(structure)){score+=(has('sinking')?6:0)+(has('deep')?6:0)+(has('lipless')?4:0)+(has('structure')?4:0);reasons.push('kant/renne');}
+    if(/grunne|rygg|odde|platå/.test(structure)){score+=(has('shallow')?6:0)+(has('minnow')?4:0)+(has('spinner')?3:0);reasons.push('grunne/rygg');}
+    if(/vegetasjon|siv/.test(structure)){score+=(has('spinner')?5:0)+(has('shallow')?4:0)+(has('pike-specialist')?5:0);reasons.push('vegetasjon');}
 
-    if (fishType === 'sjoorret') score += (has('spoon') ? 7 : 0) + (has('sea-metal') ? 5 : 0) + (has('minnow') ? 6 : 0) + (has('wobbler') ? 4 : 0) + (sheltered&&has('bombarda')?4:0);
-    if (fishType === 'makrell') score += (has('sea-metal') ? 10 : 0) + (has('silver') ? 7 : 0) + (has('casting') ? 6 : 0) + (has('blue') ? 3 : 0);
-    if (fishType === 'sei') score += (has('sea-metal') ? 8 : 0) + (has('shad') ? 9 : 0) + (has('silver') ? 5 : 0) + (has('deep') ? 6 : 0);
-    if (fishType === 'orret') score += (has('spinner') ? 8 : 0) + (has('spoon') ? 7 : 0) + (has('wobbler') ? 6 : 0) + (has('natural') ? 5 : 0) + (has('micro') ? 3 : 0);
-    if (fishType === 'abbor') score += (has('shad') ? 9 : 0) + (has('spinner') ? 8 : 0) + (has('crankbait') ? 8 : 0) + (has('compact') ? 6 : 0) + (has('contrast') ? 4 : 0);
-    if (fishType === 'gjedde') score += (has('spinnerbait') ? 12 : 0) + (has('shad') ? 11 : 0) + (has('wobbler') ? 8 : 0) + (has('broad') ? 7 : 0) + (has('contrast') ? 5 : 0) + (goal==='big'&&has('large')?5:0);
+    if(Number.isFinite(currentWaterTemp)){
+      if(['orret','sjoorret'].includes(fishType)&&currentWaterTemp<=7) score+=(has('pause')?4:0)+(has('warm')||has('copper')||has('gold')?3:0);
+      if(fishType==='orret'&&currentWaterTemp>=16) score+=(has('sinking')||has('deep')?5:0);
+      if(fishType==='abbor'&&currentWaterTemp>=12) score+=(has('vibration')||has('spinner')||has('lipless')?5:0);
+      if(fishType==='gjedde'&&currentWaterTemp<=12) score+=(has('large')||has('pike-specialist')?5:0);
+    }
+    if(Number.isFinite(tideTrend3h)&&fishType==='sjoorret'&&Math.abs(tideTrend3h)>=.04) score+=(has('casting')||has('minnow')?3:0);
+    if(Number.isFinite(precipitation)&&precipitation>=2) score+=(has('stained-water')?4:0)+(has('contrast')?3:0)+(has('copper')||has('orange')||has('red')?3:0);
+    if(goal==='big') score+=(has('large')?6:0)+(fishType==='gjedde'&&has('pike-specialist')?4:0);
+    const primaryCategory=String(item.primaryCategory||'').toLocaleLowerCase('no-NO');
+    if(fishType==='orret'&&/gjedde/.test(primaryCategory)){score-=10;reasons.push('stor predatorprofil nedvektet for vanlig ørretfiske');}
+    if(fishType==='orret'&&goal!=='big'&&has('large')) score-=7;
+    if(fishType==='abbor'&&/gjedde/.test(primaryCategory)) score-=7;
+    if(fishType==='gjedde'&&/ørret|sjøørret/.test(primaryCategory)&&!has('large')&&!has('pike-specialist')) score-=5;
+    if(fishType==='sjoorret'&&/saltvann.*sjøørret/.test(primaryCategory)) score+=5;
+    if(fishType==='sjoorret'&&/begge/.test(primaryCategory)) score+=3;
 
-    // Site hash is only a sub-point tie breaker (<0.4 point), never a reason to override condition fit.
-    const tie = (stableLureNumber(`${fishType}|${siteKey}|${item.id}`) % 400) / 1000;
-    return { item, score, tie, reasons:[...new Set(reasons)].slice(0,4) };
-  }).sort((a,b) => b.score-a.score || b.tie-a.tie || a.item.id.localeCompare(b.item.id));
+    const tie=(stableLureNumber(`${fishType}|${siteKey}|${item.id}`)%300)/1000; // only exact-tie breaker (<0.3)
+    return {item,score,tie,reasons:[...new Set(reasons)].slice(0,5),strategy:lureStrategyKey(item,tags)};
+  }).sort((a,b)=>b.score-a.score||b.tie-a.tie||a.item.id.localeCompare(b.item.id));
 
-  const bestScore=scored[0].score;
-  const suitabilityWindow = 10;
-  const maxChoices = Math.min(10,eligible.length);
-  const ranked=scored.filter(row=>row.score>=bestScore-suitabilityWindow).sort((a,b)=>b.score-a.score||b.tie-a.tie);
-  const primary=ranked[0],picked=[primary],usedIds=new Set([primary.item.id]),usedGroups=new Set([primary.item.groupId||primary.item.id]);
-  for(const row of ranked){const group=row.item.groupId||row.item.id;if(usedGroups.has(group))continue;picked.push(row);usedIds.add(row.item.id);usedGroups.add(group);if(picked.length>=maxChoices)break;}
-  if(picked.length<maxChoices) for(const row of ranked){if(usedIds.has(row.item.id))continue;picked.push(row);usedIds.add(row.item.id);if(picked.length>=maxChoices)break;}
-  const top=primary?.score ?? bestScore;
+  const best=scored[0],bestScore=best.score;
+  const picked=[best],used=new Set([best.item.id]),strategies=new Set([best.strategy]);
+  // Alternatives should be useful tactical alternatives, not six near-identical colours of the same lure family.
+  for(const row of scored){
+    if(used.has(row.item.id)||row.score<bestScore-22||strategies.has(row.strategy))continue;
+    picked.push(row);used.add(row.item.id);strategies.add(row.strategy);if(picked.length>=7)break;
+  }
+  for(const row of scored){if(used.has(row.item.id)||row.score<bestScore-24)continue;picked.push(row);used.add(row.item.id);if(picked.length>=10)break;}
+  if(picked.length<7) for(const row of scored){if(used.has(row.item.id))continue;picked.push(row);used.add(row.item.id);if(picked.length>=7)break;}
+
   return picked.map((row,index)=>({
     ...row.item,
-    matchScore:clamp(Math.round(100-Math.max(0,top-row.score)*2-index),65,100),
+    matchScore:clamp(Math.round(100-Math.max(0,bestScore-row.score)*2.1-index*.6),55,100),
     conditionScore:Number(row.score.toFixed(2)),
-    matchReasons:row.reasons
+    matchReasons:row.reasons,
+    strategy:row.strategy,
+    matchQuality:row.score>=bestScore-4?'Svært god':row.score>=bestScore-9?'God':'Brukbar'
   }));
 }
 function genericLureCombinations({fishType,lowLight,cloud,exposed}) {
@@ -717,41 +743,50 @@ function sourceBackedLureChoice({fishType,hour,cloud,wind,temp,tempTrend,precipi
   if(Number.isFinite(tempTrend)) conditions.push(tempTrend<=-.5?'fallende temperatur':tempTrend>=.5?'stigende temperatur':'stabil temperatur');
   const photo=OPEN_LURE_PHOTO_BY_ID[selected.photoId];
   const guidance=SOURCE_BACKED_LURE_DATA.guidanceSources?.[fishType]||null;
-  return {name:selected.name,maker:selected.maker,family:selected.family,variant,color,presentation,whyNow:`Valgt som startpunkt ved ${conditions.join(', ')}.`,documented:selected.documented,sourceLabel:selected.sourceLabel,sourceUrl:selected.sourceUrl,norwayAvailability:selected.norwayAvailability||null,norwayRetailLabel:selected.norwayRetailLabel||null,norwayRetailUrl:selected.norwayRetailUrl||null,guidanceLabel:guidance?.label||null,guidanceUrl:guidance?.url||null,guidanceKind:guidance?.kind||null,image:photo.localPath,photo:{sourcePage:photo.sourcePage,creator:photo.creator,license:photo.license,usageNote:photo.usageNote},evidenceLevel:'Produsentdata for modell og størrelse; norsk produktside bekrefter sortiment ved kontrolltidspunktet; vær-/stedsmatch er en veiledende tommelfingerregel.'};
+  return {id:selected.id,photoId:selected.photoId,name:selected.name,maker:selected.maker,family:selected.family,variant,color,presentation,whyNow:`Valgt som startpunkt ved ${conditions.join(', ')}.`,documented:selected.documented,sourceLabel:selected.sourceLabel,sourceUrl:selected.sourceUrl,norwayAvailability:selected.norwayAvailability||null,norwayRetailLabel:selected.norwayRetailLabel||null,norwayRetailUrl:selected.norwayRetailUrl||null,guidanceLabel:guidance?.label||null,guidanceUrl:guidance?.url||null,guidanceKind:guidance?.kind||null,image:photo.localPath,photo:{sourcePage:photo.sourcePage,creator:photo.creator,license:photo.license,usageNote:photo.usageNote},evidenceLevel:'Produsentdata for modell og størrelse; norsk produktside bekrefter sortiment ved kontrolltidspunktet; vær-/stedsmatch er en veiledende tommelfingerregel.'};
 }
 
-function deriveIdealLureProfile({fishType,goal='numbers',hour,cloud,wind,temp,precipitation,exposed,sheltered,depthMeters,lowLight,structureLabel='',referenceChoice=null}) {
-  const structure=String(structureLabel||'').toLocaleLowerCase('no-NO');
+function deriveIdealLureProfile({fishType,goal='numbers',hour,cloud,wind,temp,waterTemp,seaTemp,tempTrend,precipitation,tideTrend3h,tideState,exposed,sheltered,depthMeters,lowLight,structureLabel='',referenceChoice=null}) {
+  const freshwater=isFreshwaterFish(fishType),structure=String(structureLabel||'').toLocaleLowerCase('no-NO');
   const shallow=Number.isFinite(depthMeters)&&depthMeters<=4,deep=Number.isFinite(depthMeters)&&depthMeters>=10;
   const edge=/kant|marbakke|renne|grop|dyp/.test(structure),ridge=/grunne|rygg|odde|platå/.test(structure),vegetation=/vegetasjon|siv/.test(structure);
   const dark=Boolean(lowLight)||cloud>=70,bright=!lowLight&&cloud<35;
+  const clarity=estimatedWaterClarity({precipitation,wind,depthMeters,freshwater});
+  const actualWaterTemp=Number.isFinite(Number(waterTemp))?Number(waterTemp):Number.isFinite(Number(seaTemp))?Number(seaTemp):null;
   let type='Slank skjesluk / inlinesluk',size='15–22 g',color=dark?'Kobber/gull eller sølv med mørk/varm kontrast':'Sølv/blå, sølv/grønn eller naturtro småfisk',targetDepth='0,5–2 m',presentation='Jevn innsveiving med korte fartsendringer og spinnstopp.',preferredTags=['spoon','inline','casting','slim'],colorTags=dark?['copper','gold','warm','contrast','dark']:['silver','blue','green','natural'];
+  if(clarity.id==='stained'){color='Kobber/gull, mørk silhuett eller tydelig kontrast';colorTags=['copper','gold','orange','contrast','dark','bright'];}
+  if(clarity.id==='clear'&&!dark){color='Naturtro sølv/blå, sølv/grønn eller diskret småfisk';colorTags=['silver','blue','green','natural'];}
   if(fishType==='sjoorret') {
     if(shallow||ridge){type='Gruntgående kystsluk eller minnowwobbler';size='10–18 g · wobbler ca. 8–12 cm';targetDepth='0,2–1,2 m';preferredTags=['shallow','minnow','wobbler','spoon','slim'];}
     else if(exposed||wind>=7){type='Langtkastende slank kystsluk / inlinesluk';size='18–28 g';targetDepth='0,8–3 m';preferredTags=['casting','sea-metal','spoon','inline','slim'];}
     else if(edge||deep){type='Synkende inlinesluk eller slank kystsluk';size='15–25 g';targetDepth='1–4 m, søk langs kanten';preferredTags=['sinking','deep','spoon','inline','sea-metal'];}
     else if(sheltered){type='Minnowwobbler eller lett skjesluk';size='9–12 cm / 12–18 g';targetDepth='0,5–2 m';preferredTags=['minnow','wobbler','shallow','spoon','natural'];}
+    if(Number.isFinite(actualWaterTemp)&&actualWaterTemp<=6){presentation='Fisk roligere enn normalt med tydelige pauser; start grunt hvis sola varmer, ellers søk kanter.';preferredTags.push('pause');}
+    if(Number.isFinite(actualWaterTemp)&&actualWaterTemp>=15){presentation='Prioriter morgen/kveld, skygge og litt dypere vann; øk farten når fisk følger.';preferredTags.push('sinking');}
   } else if(fishType==='orret') {
-    type=(edge||deep)?'Liten synkende wobbler, skjesluk eller jigg':'Liten spinner eller skjesluk';size=(edge||deep)?'7–12 g · wobbler 5–8 cm':'4–10 g · wobbler 4–7 cm';targetDepth=(edge||deep)?'1–3 m / langs dybdekant':'0,3–1,5 m langs land, odde eller innløp';preferredTags=(edge||deep)?['sinking','wobbler','spoon','shad','structure']:['spinner','spoon','shallow','natural'];
-    color=dark?'Kobber/gull, mørk rygg eller tydelig varm detalj':'Sølv/grønn, sølv/blå eller naturtro ørret/småfisk';colorTags=dark?['copper','gold','warm','dark','contrast']:['silver','green','blue','natural'];
+    type=(edge||deep)?'Liten synkende wobbler, skjesluk eller kompakt jigg':'Liten spinner, minnow eller skjesluk';size=(edge||deep)?'7–12 g · wobbler 5–8 cm':'4–10 g · wobbler 4–7 cm';targetDepth=(edge||deep)?'1–3 m / langs dybdekant':'0,3–1,5 m langs land, odde eller innløp';preferredTags=(edge||deep)?['sinking','wobbler','spoon','structure']:['spinner','spoon','minnow','shallow','natural'];
+    if(Number.isFinite(actualWaterTemp)&&actualWaterTemp>=16){targetDepth='Søk kjøligere vann, skygge og dypere kanter';preferredTags.push('deep','sinking');}
+    if(Number.isFinite(actualWaterTemp)&&actualWaterTemp<=7){presentation='Roligere innsveiving og flere pauser; små profiler først.';preferredTags.push('pause');}
   } else if(fishType==='abbor') {
-    if(vegetation||shallow){type='Liten spinner, crankbait eller shad';size='5–10 cm / ca. 5–12 g';targetDepth='Rett over vegetasjon eller 0,5–1,5 m';preferredTags=['spinner','crankbait','shad','shallow','compact'];}
-    else {type='Shad/jigg eller synkende minnow';size=goal==='big'?'10–13 cm':'6–10 cm';targetDepth='0,5–1,5 m over bunn eller langs kant';preferredTags=['shad','sinking','deep','compact','wobbler'];}
-    color=dark?'Kobber/oransje, chartreuse eller mørk kontrast':'Naturtro grønn/perlemor, sølv eller abborfarge';colorTags=dark?['copper','orange','yellow','contrast','dark']:['green','natural','silver','holographic'];
+    if(vegetation||shallow){type='Liten spinner, crankbait eller vibrasjonsagn';size='4–8 cm / ca. 5–12 g';targetDepth='Rett over vegetasjon eller 0,5–1,5 m';preferredTags=['spinner','crankbait','vibration','shallow','compact'];}
+    else {type='Lipless/vibrasjonswobbler, shad eller synkende minnow';size=goal==='big'?'8–12 cm':'5–9 cm';targetDepth='0,5–1,5 m over bunn eller langs kant';preferredTags=['vibration','lipless','sinking','compact','wobbler'];}
+    color=dark||clarity.id==='stained'?'Kobber/oransje, chartreuse eller mørk kontrast':'Naturtro grønn/perlemor, sølv eller abborfarge';colorTags=dark||clarity.id==='stained'?['copper','orange','yellow','contrast','dark']:['green','natural','silver','holographic'];
   } else if(fishType==='gjedde') {
-    if(goal==='big'||deep||edge){type='Stor shad eller stor wobbler/jerkbait';size='15–25 cm · typisk 50–150 g';targetDepth='Over vegetasjon eller langs overgangen til dypere vann';preferredTags=['shad','wobbler','broad','deep','large'];}
-    else {type=vegetation?'Spinnerbait eller shad':'Shad, gjeddesluk eller wobbler';size='12–20 cm · ca. 20–60 g';targetDepth='0,5–2 m over vegetasjon / langs kant';preferredTags=['spinnerbait','shad','wobbler','broad','shallow'];}
-    color=dark||Number(precipitation)>=2?'Mørk rygg med chartreuse/oransje eller kobberkontrast':'Mort-/abborfarget, grønn/sølv eller hvit/sølv';colorTags=dark?['dark','yellow','orange','copper','contrast']:['natural','green','silver','bright'];
+    if(goal==='big'||deep||edge){type='Stor wobbler, spinner eller stor skjeprofil';size='12–25 cm / større profil';targetDepth='Over vegetasjon eller langs overgangen til dypere vann';preferredTags=['wobbler','large','deep','pike-specialist','spinner'];}
+    else {type=vegetation?'Stor spinner eller gruntgående wobbler':'Større wobbler, spinner eller bred skjesluk';size='10–20 cm / middels–stor profil';targetDepth='0,5–2 m over vegetasjon / langs kant';preferredTags=['spinner','wobbler','large','shallow','pike-specialist'];}
+    color=dark||clarity.id==='stained'?'Mørk rygg med chartreuse/oransje eller kobberkontrast':'Mort-/abborfarget, grønn/sølv eller hvit/sølv';colorTags=dark||clarity.id==='stained'?['dark','yellow','orange','copper','contrast']:['natural','green','silver','bright'];
   } else if(fishType==='makrell') {
-    type=(exposed||deep)?'Kompakt casting-jig / metallsluk':'Slank metallsluk';size=(exposed||deep)?'25–45 g':'18–30 g';targetDepth=deep?'Søk fra midtvann og nedover':'Start høyt og tell gradvis ned';preferredTags=['sea-metal','casting','silver','slim','deep'];color=dark?'Sølv/rosa eller sølv med mørk kontrast':'Blank/holografisk sølv/blå';colorTags=dark?['silver','pink','contrast','dark']:['silver','blue','holographic','bright'];
+    type=(exposed||deep)?'Kompakt casting-jig / metallsluk':'Slank metallsluk';size=(exposed||deep)?'25–45 g':'18–30 g';targetDepth=deep?'Søk fra midtvann og nedover':'Start høyt og tell gradvis ned';preferredTags=['sea-metal','casting','silver','slim','sinking'];color=dark?'Sølv/rosa eller sølv med mørk kontrast':'Blank/holografisk sølv/blå';colorTags=dark?['silver','pink','contrast','dark']:['silver','blue','holographic','bright'];
   } else if(fishType==='sei') {
-    type=deep?'Shad/jigg eller kompakt metallagn':'Kompakt metallagn / shad';size=deep?'30–60 g eller shad 10–15 cm':'20–40 g';targetDepth=deep?'Midtre til nedre vannlag, over bunn':'Søk trinnvis gjennom vannsøylen';preferredTags=['shad','sea-metal','sinking','deep','casting'];color=dark?'Sølv med mørk/lilla eller varm kontrast':'Blå/sølv, tobis/oliven eller holografisk sølv';colorTags=dark?['silver','dark','contrast']:['silver','blue','green','natural','holographic'];
+    type=deep?'Kompakt metallagn eller synkende småfiskprofil':'Kompakt metallagn / kystsluk';size=deep?'30–60 g':'20–40 g';targetDepth=deep?'Midtre til nedre vannlag, over bunn':'Søk trinnvis gjennom vannsøylen';preferredTags=['sea-metal','sinking','deep','casting'];color=dark?'Sølv med mørk/lilla kontrast':'Blå/sølv, tobis/oliven eller holografisk sølv';colorTags=dark?['silver','dark','contrast']:['silver','blue','green','natural','holographic'];
   }
-  const conditionBits=[lowLight?'lavt lys':bright?'klart lys':'dempet lys',`${Number(wind||0).toFixed(1)} m/s vind`];
+  const conditionBits=[lowLight?'lavt lys':bright?'klart lys':'dempet lys',`${Number(wind||0).toFixed(1)} m/s vind`,clarity.label];
+  if(Number.isFinite(actualWaterTemp))conditionBits.push(`${actualWaterTemp.toFixed(1).replace('.',',')} °C vann`);
   if(Number.isFinite(depthMeters))conditionBits.push(`${depthMeters.toFixed(1).replace('.',',')} m ved punktet`);if(structureLabel)conditionBits.push(structureLabel);
+  if(!freshwater&&tideState)conditionBits.push(`${tideState} tidevann`);
   const sources=[];const guidance=SOURCE_BACKED_LURE_DATA.guidanceSources?.[fishType];if(guidance)sources.push({label:guidance.label,url:guidance.url,kind:guidance.kind});if(referenceChoice?.sourceLabel)sources.push({label:referenceChoice.sourceLabel,url:referenceChoice.sourceUrl,kind:'Produsentdata / dokumentert modellreferanse'});
   const referenceNote=referenceChoice?` Modellreferanse brukt som kontroll: ${referenceChoice.family||referenceChoice.name}.`:'';
-  return {type,size,color,targetDepth,presentation,preferredTags,colorTags,whyNow:`Valgt ut fra ${conditionBits.join(', ')}.${referenceNote}`,basis:'Art + lys/vær + dybde/struktur + kildekontrollert sportsfiske- og produsentveiledning. Egne sluk velges først etter at denne profilen er beregnet.',sources,referenceModel:referenceChoice?{name:referenceChoice.name,family:referenceChoice.family,variant:referenceChoice.variant}:null};
+  return {type,size,color,targetDepth,presentation,preferredTags:[...new Set(preferredTags)],colorTags:[...new Set(colorTags)],clarity,waterTemp:actualWaterTemp,whyNow:`Valgt ut fra ${conditionBits.join(', ')}.${referenceNote}`,basis:'Art + vannmiljø + lys/vær + dybde/struktur + vann-/sjøtemperatur der tilgjengelig + kildekontrollert sportsfiske- og produsentveiledning. Egne sluk vurderes først etter at idealprofilen er beregnet.',sources,referenceModel:referenceChoice?{id:referenceChoice.id,name:referenceChoice.name,family:referenceChoice.family,variant:referenceChoice.variant,image:referenceChoice.image,sourceLabel:referenceChoice.sourceLabel,sourceUrl:referenceChoice.sourceUrl}:null};
 }
 
 function lurePresentationAdvice({fishType,depthMeters,lowLight,wind,exposed}) {
@@ -838,8 +873,8 @@ function recommendLure(input = {}) {
   }
 
   const referenceChoice=sourceBackedLureChoice({fishType,hour,cloud,wind,temp,tempTrend,precipitation,exposed,depthMeters,lowLight});
-  const idealProfile=deriveIdealLureProfile({fishType,goal,hour,cloud,wind,temp,precipitation,exposed,sheltered,depthMeters,lowLight,structureLabel:input.structureLabel||'',referenceChoice});
-  const choices = selectPhotographedLures({ fishType, goal, hour, cloud, wind, temp, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight, lat:input.lat, lon:input.lon, structureLabel:input.structureLabel||'', idealProfile });
+  const idealProfile=deriveIdealLureProfile({fishType,goal,hour,cloud,wind,temp,waterTemp:input.waterTemp,seaTemp:input.seaTemp,tempTrend,precipitation,tideTrend3h:input.tideTrend3h,tideState:input.tideState,exposed,sheltered,depthMeters,lowLight,structureLabel:input.structureLabel||'',referenceChoice});
+  const choices = selectPhotographedLures({ fishType, goal, hour, cloud, wind, temp, waterTemp:input.waterTemp,seaTemp:input.seaTemp,precipitation,tideTrend3h:input.tideTrend3h, exposure, coastQuality, depthMeters, conservativeShallow, exposed, sheltered, lowLight, lat:input.lat, lon:input.lon, structureLabel:input.structureLabel||'', idealProfile });
   const primary = choices[0];
   type=`${type} · ${primary.family}`;
   const solarNote=Number.isFinite(lightProfile.elevation)?` (beregnet solhøyde ${lightProfile.elevation.toFixed(1)}°)`:'';
@@ -880,15 +915,16 @@ function recommendLure(input = {}) {
     basis:'Eget bilde er klassifisert etter synlig agntype, form og farge. Ukjent modell, vekt og krokfinish behandles ikke som produsentdokumentasjon.',
     caveat:freshwater?'Kontroller lokale regler, fiskekort og tillatt krokoppsett.':'Saltvannsegnet krok og rustbeskyttelse kan ikke bekreftes fra bildet; skyll agnet i ferskvann og kontroller krok og splittring etter bruk.'
   };
-  const alternatives=choices.slice(1,7).map(choice=>({id:choice.id,name:choice.name,type:choice.family,color:choice.color,image:choice.image,inventoryNote:choice.inventoryNote,ownedPhoto:true,matchScore:choice.matchScore,conditionScore:choice.conditionScore,matchReasons:choice.matchReasons,weight}));
-  const candidates=choices.slice(0,10).map(choice=>({id:choice.id,name:choice.name,type:choice.family,color:choice.color,image:choice.image,inventoryNote:choice.inventoryNote,ownedPhoto:true,matchScore:choice.matchScore,conditionScore:choice.conditionScore,matchReasons:choice.matchReasons,weight}));
+  const alternatives=choices.slice(1,7).map(choice=>({id:choice.id,name:choice.name,type:choice.family,color:choice.color,image:choice.image,inventoryNote:choice.inventoryNote,ownedPhoto:true,matchScore:choice.matchScore,conditionScore:choice.conditionScore,matchReasons:choice.matchReasons,matchQuality:choice.matchQuality,strategy:choice.strategy,identificationConfidence:choice.identificationConfidence,modelIdentification:choice.modelIdentification,weight:choice.weightG?`${choice.weightG} g`:weight}));
+  const candidates=choices.slice(0,10).map(choice=>({id:choice.id,name:choice.name,type:choice.family,color:choice.color,image:choice.image,inventoryNote:choice.inventoryNote,ownedPhoto:true,matchScore:choice.matchScore,conditionScore:choice.conditionScore,matchReasons:choice.matchReasons,matchQuality:choice.matchQuality,strategy:choice.strategy,identificationConfidence:choice.identificationConfidence,modelIdentification:choice.modelIdentification,weight:choice.weightG?`${choice.weightG} g`:weight}));
   const genericCombinations=[];
   const researchedChoice=referenceChoice;
   const presentation=lurePresentationAdvice({fishType,depthMeters,lowLight,wind,exposed});
   const dropperFly=dropperFlyAdvice({fishType,lowLight,cloud,wind,exposed});
   const speciesReason = fishType === 'makrell' ? 'Makrell: søk i frie vannmasser og rundt strøm, odder eller stimer av småfisk' : fishType === 'sei' ? 'Sei: prioriter strøm, bratte kanter og vann med litt dybde' : fishType === 'orret' ? 'Ferskvannsørret: fisk langs vannkanter, odder, innløp og vindpåvirkede bredder' : fishType === 'abbor' ? 'Abbor: søk langs struktur, sivkanter, odder og lune bukter' : fishType === 'gjedde' ? 'Gjedde: prioriter grunne bukter, vegetasjon og kanter mot dypere vann' : null;
   const trophyNote=goal==='big'&&fishType==='gjedde'?' Stor-fisk-modus: fisk større agn sakte med tydelige pauser langs vegetasjon, odder og overgangen mot dypere vann.':'';
-  return { id:primary.id, name:primary.name, type, weight, color:primary.color, image:primary.image, inventoryNote:primary.inventoryNote, ownedPhoto:true, matchScore:primary.matchScore, conditionScore:primary.conditionScore, matchReasons:primary.matchReasons, waterEnvironment, reason: `${speciesReason ? `${speciesReason}; ` : ''}${timeReason}; ${tackleReason}.${trophyNote}`, depth, wobbler:null, alternatives, candidates, idealProfile, genericCombinations, researchedChoice, presentation, dropperFly };
+  const ownWeight=primary.weightG!==null&&primary.weightG!==undefined&&Number.isFinite(Number(primary.weightG))?`${Number(primary.weightG).toLocaleString('no-NO',{maximumFractionDigits:1})} g`:weight;
+  return { id:primary.id, name:primary.name, type, weight:ownWeight, color:primary.color, image:primary.image, inventoryNote:primary.inventoryNote, ownedPhoto:true, matchScore:primary.matchScore, matchQuality:primary.matchQuality, conditionScore:primary.conditionScore, matchReasons:primary.matchReasons, identificationConfidence:primary.identificationConfidence, modelIdentification:primary.modelIdentification, waterEnvironment, reason: `${speciesReason ? `${speciesReason}; ` : ''}${timeReason}; ${tackleReason}.${trophyNote}`, depth, wobbler:null, alternatives, candidates, idealProfile, genericCombinations, researchedChoice, presentation, dropperFly };
 }
 
 function formatReason({ breakdown = {}, weather = {}, coastQuality = 0.5, exposure = 0.5, waterType = 'saltwater' } = {}) {
@@ -1469,7 +1505,7 @@ async function generateZones({west,south,east,north,zoom}, currentWeather, selec
     zone.dataQuality={...buildDataQuality({weather:currentWeather,depth,waterType}),level:confidence.level,confidence:confidence.confidence,components:confidence.components,summary:`${confidence.confidence}% datadekning · ${confidence.level.toLowerCase()}`};
     zone.breakdown={habitat:Math.round((habitatAnalysis.score-50)/5),forhold:Math.round((liveAnalysis.score-50)/5)};
     zone.name=zone.score>=82?'Svært høy':zone.score>=68?'Høy':'Moderat';
-    zone.lure=recommendLure({...currentWeather,coastQuality:zone._coast.quality,exposure:zone._exposure,hour:zone._hour,lat:zone._point.lat,lon:zone._point.lon,depthMeters:depth?.meters,shallowRisk,fishType,goal,structureLabel:zone.structure?.label||''});
+    zone.lure=recommendLure({...currentWeather,...(marineConditions||{}),...(options.hydrology||{}),coastQuality:zone._coast.quality,exposure:zone._exposure,hour:zone._hour,lat:zone._point.lat,lon:zone._point.lon,depthMeters:depth?.meters,shallowRisk,fishType,goal,structureLabel:zone.structure?.label||''});
     zone.biteGuide=buildZoneBiteGuide({zone,currentWeather,fishType});
     const waterName=zone._freshwaterName?` i ${zone._freshwaterName}`:'';
     const depthPhrase=Number.isFinite(depth?.meters)?` NVE-dybde ved punktet er ca. ${depth.meters.toFixed(1).replace('.',',')} m${structure?.available?` og området har ${structure.label.toLowerCase()}`:''}.`:'';
@@ -1783,12 +1819,22 @@ async function freshwaterDepthOverlay({west,south,east,north,zoom=13,focusLat=nu
   });
 }
 
+function biteReferenceCards({fishType,profile,researchedChoice}){
+  const generic=genericLureCombinations({fishType,lowLight:(profile?.colorTags||[]).includes('dark'),cloud:(profile?.clarity?.id==='stained'?80:45),exposed:(profile?.preferredTags||[]).includes('casting')});
+  const cards=[];
+  if(researchedChoice) cards.push({mode:'Beste nå',title:`${researchedChoice.maker||''} ${researchedChoice.name||researchedChoice.family}`.trim(),type:researchedChoice.family,color:researchedChoice.color,size:researchedChoice.variant,image:researchedChoice.image,why:researchedChoice.whyNow,sourceLabel:researchedChoice.sourceLabel,sourceUrl:researchedChoice.sourceUrl,referenceOnly:true});
+  const natural=generic.find(x=>/natur|sølv|blå|grønn|tobis|oliven/i.test(`${x.color} ${x.type}`))||generic[0];
+  const visible=generic.find(x=>/kobber|oransje|chartreuse|kontrast|rosa|sort/i.test(`${x.color} ${x.type}`))||generic[1]||generic[0];
+  if(natural)cards.push({mode:'Mer naturlig',title:natural.type,type:natural.type,color:natural.color,size:natural.weight,image:natural.image,why:`Alternativ med mer naturtro profil. ${natural.use||''}`,sourceLabel:'Fiste referanseprofil',referenceOnly:true});
+  if(visible)cards.push({mode:'Mer synlig',title:visible.type,type:visible.type,color:visible.color,size:visible.weight,image:visible.image,why:`Alternativ med mer synlighet/kontrast. ${visible.use||''}`,sourceLabel:'Fiste referanseprofil',referenceOnly:true});
+  const seen=new Set();return cards.filter(card=>{const key=`${card.title}|${card.color}`;if(seen.has(key))return false;seen.add(key);return true;}).slice(0,3);
+}
 function buildZoneBiteGuide({zone,currentWeather,fishType}){
   const habitat=clamp(Number(zone?.analysis?.habitat)||50,0,100),hourly=Array.isArray(currentWeather?.hourly)?currentWeather.hourly:[];
   const timeline=hourly.slice(0,12).map(item=>{const live=fishingHourScore(item,fishType);const score=clamp(Math.round(habitat*.58+live.score*.42),0,100);return {time:item.time,score,label:score>=82?'Svært bra':score>=68?'Bra':score>=52?'Brukbart':'Svakt'};});
   const current=timeline[0]?.score??clamp(Math.round(Number(zone?.score)||0),0,100),best=timeline.slice().sort((a,b)=>b.score-a.score)[0]||null;
-  const profile=zone?.lure?.idealProfile||{};
-  return {score:current,label:current>=82?'Svært gode huggforhold':current>=68?'Gode huggforhold':current>=52?'Brukbare huggforhold':'Svake huggforhold',timeline,bestTime:best?.time||null,recommended:{type:profile.type||'Sluk/wobbler tilpasset forholdene',color:profile.color||'Tilpass lys og vannfarge',size:profile.size||'Middels størrelse',targetDepth:profile.targetDepth||'',method:profile.presentation||'Varier fart og korte pauser.',whyNow:profile.whyNow||'',basis:profile.basis||'',sources:profile.sources||[],referenceModel:profile.referenceModel||null},disclaimer:'BiteScore er en veiledende forholdsscore, ikke sannsynlighet eller garanti for fangst. BiteGuide-profilen beregnes uavhengig av slukene i din egen boks.'};
+  const profile=zone?.lure?.idealProfile||{},references=biteReferenceCards({fishType,profile,researchedChoice:zone?.lure?.researchedChoice||null});
+  return {score:current,label:current>=82?'Svært gode huggforhold':current>=68?'Gode huggforhold':current>=52?'Brukbare huggforhold':'Svake huggforhold',timeline,bestTime:best?.time||null,recommended:{type:profile.type||'Sluk/wobbler tilpasset forholdene',color:profile.color||'Tilpass lys og vannfarge',size:profile.size||'Middels størrelse',targetDepth:profile.targetDepth||'',method:profile.presentation||'Varier fart og korte pauser.',whyNow:profile.whyNow||'',basis:profile.basis||'',sources:profile.sources||[],referenceModel:profile.referenceModel||null,clarity:profile.clarity||null,waterTemp:profile.waterTemp??null},references,disclaimer:'BiteScore er en veiledende forholdsscore, ikke sannsynlighet eller garanti for fangst. Referanseagnene er uavhengige av din slukboks; deretter matches bare dine egne fotograferte sluker.'};
 }
 async function kartverketBathymetryGrid({west,south,east,north,zoom=13,quality='standard'}) {
   const plan=bathymetryGridPlan({west,south,east,north,zoom,quality});
@@ -1833,7 +1879,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v17-rev41',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,freshwaterDepthOverlay:true,freshwaterSpeciesDepthRanking:true,biteGuide:true,biteGuideIndependent:true,smartOwnedLureMatching:true,nveDepthMetadataCheck:true,nveLakeGeometryFallback:true,nvePagination:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v18-rev42',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,freshwaterDepthOverlay:true,freshwaterSpeciesDepthRanking:true,ownedLureInventoryV2:true,biteGuideReferenceCards:true,strictWaterEnvironmentLures:true,biteGuide:true,biteGuideIndependent:true,smartOwnedLureMatching:true,nveDepthMetadataCheck:true,nveLakeGeometryFallback:true,nvePagination:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
@@ -1891,10 +1937,11 @@ async function handleApi(req,res,url) {
       const allMode=fishSelection==='all';
       if(!allMode&&isFreshwaterFish(fishSelection)&&(input.east-input.west>0.5||input.north-input.south>0.5)) return send(res,400,{error:'Zoom nærmere vannet for ferskvannsanalyse.'});
       const lat=(input.south+input.north)/2,lon=(input.west+input.east)/2;
-      let current=null,marineConditions=null,weatherWarning=null,marineWarning=null;
+      let current=null,marineConditions=null,hydrologyConditions=null,weatherWarning=null,marineWarning=null;
       const moon=moonInfo();
       const tasks=[weather(lat,lon).then(value=>{current=value;}).catch(()=>{weatherWarning='Værdata er midlertidig utilgjengelig.';})];
       if(allMode||!isFreshwaterFish(fishSelection)) tasks.push(marine(lat,lon).then(value=>{marineConditions=value;}).catch(()=>{marineWarning='Marine modelldata er midlertidig utilgjengelig; score beregnes uten sjøtemperatur, bølger, strøm og tidevann.';}));
+      if(!allMode&&isFreshwaterFish(fishSelection)) tasks.push(hydrology(lat,lon).then(value=>{if(value?.available)hydrologyConditions={waterTemp:value.waterTemp?.value??null,waterLevel:value.stage?.value??null,discharge:value.discharge?.value??null,hydrologyStation:value.stationName||null};}).catch(()=>{}));
       await Promise.all(tasks);
       if(allMode){
         const seaTypes=['sjoorret','makrell','sei'];
@@ -1909,11 +1956,11 @@ async function handleApi(req,res,url) {
         return send(res,200,{zones,stats,fishType:'all',fishLabel:'Alle sjøarter',weather:publicWeather,marine:marineConditions,moon,bestTimes,warnings:[weatherWarning,marineWarning,...resultWarnings].filter(Boolean)});
       }
       const fishType=fishSelection;
-      const result=await generateZones(input,current,fishType,{goal,baseLat,baseLon,radiusM,marine:marineConditions,moon});
+      const result=await generateZones(input,current,fishType,{goal,baseLat,baseLon,radiusM,marine:marineConditions,hydrology:hydrologyConditions,moon});
       result.zones=result.zones.map(zone=>({...zone,fishType,fishLabel:FISH_TYPES[fishType]}));
       const bestTimes=bestFishingTimes(current?.hourly||[],fishType);
       const publicWeather=current?{...current}:null;if(publicWeather) delete publicWeather.hourly;
-      return send(res,200,{...result,fishType,fishLabel:FISH_TYPES[fishType],weather:publicWeather,marine:marineConditions,moon,bestTimes,warnings:[weatherWarning,marineWarning,result.stats.warning].filter(Boolean)});
+      return send(res,200,{...result,fishType,fishLabel:FISH_TYPES[fishType],weather:publicWeather,marine:marineConditions,hydrology:hydrologyConditions,moon,bestTimes,warnings:[weatherWarning,marineWarning,result.stats.warning].filter(Boolean)});
     }
     return send(res,404,{error:'Ukjent API'});
   } catch(error) { return send(res,500,{error:error.message||String(error)}); }

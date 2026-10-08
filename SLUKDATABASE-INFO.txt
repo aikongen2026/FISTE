@@ -1,0 +1,12 @@
+FISTE REV42 – CHRISTIAN SIN SLUKBOKS
+
+98 enkeltfotograferte agn er integrert.
+Hvert agn har eget bilde og metadata for vannmiljø, artsegnethet, type, farge/profil, identifikasjonssikkerhet og automatisk fersk/salt-gating.
+
+Viktig metodikk:
+- BiteGuide bestemmer først ideal agntype/farge/størrelse/presentasjon UTEN å se på slukboksen.
+- Deretter scores bare sluker som faktisk finnes i brukerens boks.
+- Saltvanns-only sluker får ikke automatisk anbefaling i ferskvann og omvendt.
+- SpeciesPrior er en egnethetsprior, ikke en påstått fangstsannsynlighet.
+- Vannklarhet er bare estimert når direkte måling mangler, og vises som estimat.
+- Alternative sluker forsøker å representere nyttige taktiske alternativer, ikke tilfeldig variasjon.
