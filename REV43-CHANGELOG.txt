@@ -1,0 +1,14 @@
+FISTE GUIDEN REV43 – STRATEGI-FØRST MOTOR
+
+- Ny kjede: habitat -> aktivitet -> presentasjon -> idealagn -> din slukboks.
+- 98 egne lurebilder og fersk/salt-hardfilter beholdt.
+- Absolutt slukmatch i stedet for å normalisere beste sluk til 100/100.
+- Forklarbar delscore: art, habitat, dybde, agntype, størrelse, lys/sikt, temperatur/presentasjon, vind/kast og tidspunkt/lys.
+- Datatillit vises separat fra matchscore.
+- Ørretmotor varierer med mikrohabitat: odde/grunne, bukt, vegetasjon, strand og dypkant.
+- Stor-fisk-målet gir reell vekt på større bytteprofil og demper for små agn.
+- Store minnow/wobblere behandles som minnow; størrelse er separat egenskap.
+- Fargeprofil fra faktisk foto-/fargetekst reduserer gamle superbonus-kombinasjoner.
+- Ukjent vekt/lengde vises som ukjent og blir ikke behandlet som 0.
+- Taktiske alternativer er deterministiske og begrunnet, ikke tilfeldig rotert.
+- NVE dybder, DepthScout-inspirert kartvisning, 3D, BiteGuide-referanser og AutoDeploy beholdt.

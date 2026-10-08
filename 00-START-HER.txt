@@ -1,9 +1,9 @@
-FISTE REV42 - START HER
+FISTE REV43 - START HER
 
 1. Pakk ut hele ZIP-filen.
 2. Dobbeltklikk 1-OPPDATER-OG-APNE-FISTE.bat.
 3. Første gang kan GitHub-innlogging åpnes automatisk.
 4. Scriptet pusher til aikongen2026/FISTE og venter på Render.
-5. Når REV42 er live åpnes https://fiste.onrender.com automatisk.
+5. Når REV43 er live åpnes https://fiste.onrender.com automatisk.
 
 VIKTIG: Å bare åpne nettsiden kan ikke laste opp nye kildefiler til GitHub. Kjør BAT-filen når du mottar en ny ZIP fra ChatGPT. Etter deploy vil vanlig åpning av appen alltid hente den live versjonen.

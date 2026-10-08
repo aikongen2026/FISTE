@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "18.0.0",
-  "appRevision": 42,
-  "description": "Fiste guiden REV42 – komplett BiteGuide med referanseagn, 98 analyserte egne sluker, hard fersk/salt-gating og smart forholdsmatching.",
+  "version": "19.0.0",
+  "appRevision": 43,
+  "description": "Fiste guiden REV43 – strategi-først motor: habitat, aktivitet, presentasjon og absolutt match mot 98 egne sluker.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",

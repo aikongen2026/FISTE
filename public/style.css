@@ -105,7 +105,7 @@
 @media(max-width:850px){.bathy-panel{order:2}.bathy-panel>summary{min-height:58px;padding:.8rem 1rem}.bathy-hud{align-items:stretch;padding:.65rem .75rem}.bathy-title{width:100%}.bathy-actions{width:100%}.bathy-actions button{flex:1 1 calc(50% - .35rem);min-width:120px;min-height:44px}.bathy-depth-scale{width:100%;grid-template-columns:auto 1fr auto}.bathy-depth-scale i{width:100%}.bathy-canvas-wrap{height:390px}.bathy-note{padding:.65rem .8rem .8rem}}
 @media(max-width:430px){.bathy-canvas-wrap{height:340px}.bathy-panel>summary small{max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bathy-actions button{font-size:.66rem;padding:.48rem .45rem}}
 
-/* REV42 – mobile-first shell: map is the primary surface, everything else folds away. */
+/* REV43 – mobile-first shell: map is the primary surface, everything else folds away. */
 .filter-panel{min-width:min(100%,880px);border:0;background:transparent}
 .filter-panel>summary{display:none;list-style:none}
 .filter-panel>summary::-webkit-details-marker{display:none}
@@ -157,6 +157,11 @@
 .warning{line-height:1.42}
 @media(max-width:560px){.nve-depth-label span{font-size:.54rem;padding:.1rem .24rem}.nve-depth-legend .depth-gradient{width:28px!important}}
 
-/* REV42 – BiteGuide reference bank + 98-photo owned lure box. */
+/* REV43 – BiteGuide reference bank + 98-photo owned lure box. */
 .bite-reference-wrap{margin-top:.75rem;border-top:1px solid var(--line);padding-top:.75rem}.bite-reference-head{display:flex;justify-content:space-between;gap:.6rem;align-items:end;margin-bottom:.5rem}.bite-reference-head b{font-size:.68rem;letter-spacing:.08em;color:#8fdcb8}.bite-reference-head span{font-size:.64rem;color:var(--muted);text-align:right}.bite-reference-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}.bite-reference-card{border:1px solid var(--line);border-radius:.72rem;background:#081f19;padding:.5rem;min-width:0}.bite-reference-card img{width:100%;height:82px;object-fit:contain;background:#f7f7f2;border-radius:.55rem;margin:.35rem 0}.bite-reference-card b{display:block;font-size:.75rem;line-height:1.25}.bite-reference-card small,.bite-reference-card em{display:block;color:var(--muted);font-size:.63rem;line-height:1.35}.bite-reference-card p{font-size:.66rem;line-height:1.35;margin:.38rem 0;color:#c8ddd3}.bite-ref-mode{display:inline-block;border:1px solid #2a6b55;border-radius:99px;padding:.12rem .35rem;font-size:.61rem;font-weight:850;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}.own-lure-warning{margin:.45rem 0 .65rem;padding:.55rem .65rem;border:1px solid #735f2d;border-radius:.6rem;background:#2b2411;color:#f7d88c;font-size:.7rem}.lure-detail .lean-lure>div>span{color:#8fdcb8}
 @media(max-width:760px){.bite-reference-grid{grid-template-columns:1fr}.bite-reference-card{display:grid;grid-template-columns:92px minmax(0,1fr);gap:.55rem;align-items:start}.bite-reference-card .bite-ref-mode{grid-column:1/-1;width:max-content}.bite-reference-card img{width:92px;height:72px;margin:0}.bite-reference-head{align-items:start;flex-direction:column}.bite-reference-head span{text-align:left}}
+
+/* REV43 strategy engine diagnostics */
+.lure-score-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.32rem;margin:.55rem 0}.lure-score-grid span{display:grid;gap:.08rem;place-items:center;padding:.35rem .2rem;border:1px solid #285143;border-radius:.52rem;background:#071c16}.lure-score-grid small{font-size:.54rem;color:#8fb6a4;text-transform:uppercase;letter-spacing:.03em}.lure-score-grid b{font-size:.72rem;color:#baf4d2}.strategy-confidence{margin:.35rem 0 .55rem;padding:.5rem .6rem;border:1px solid #315e4c;border-radius:.55rem;background:#081f19;color:#abc8ba;font-size:.65rem;line-height:1.38}.strategy-confidence b{color:#8ff0b8}
+@media(max-width:850px){.lure-score-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:560px){.lure-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lure-score-grid small{font-size:.5rem}}

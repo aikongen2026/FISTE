@@ -1,4 +1,4 @@
-FISTE REV42 – CHRISTIAN SIN SLUKBOKS
+FISTE REV43 – CHRISTIAN SIN SLUKBOKS
 
 98 enkeltfotograferte agn er integrert.
 Hvert agn har eget bilde og metadata for vannmiljø, artsegnethet, type, farge/profil, identifikasjonssikkerhet og automatisk fersk/salt-gating.
