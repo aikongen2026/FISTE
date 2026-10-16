@@ -29,6 +29,11 @@ const FRESHWATER_FISH_TYPES = new Set(['orret','abbor','gjedde']);
 const NATIONAL_SEATROUT_APP_ID = 'a00fe3145f324c6c9438fe6fcee7ee37';
 const NATIONAL_SEATROUT_SOURCE_URL = `https://fylkesmannen.maps.arcgis.com/apps/webappviewer/index.html?id=${NATIONAL_SEATROUT_APP_ID}`;
 const ARCGIS_PORTAL = 'https://www.arcgis.com';
+const ARCGIS_PORTALS = [
+  'https://www.arcgis.com',
+  'https://fylkesmannen.maps.arcgis.com',
+  'https://agderfk.maps.arcgis.com'
+];
 
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function angularDistance(a, b) { return Math.abs((((a - b) % 360) + 540) % 360 - 180); }
@@ -1977,7 +1982,7 @@ function classifyNationalSeaTroutLayerTitle(title=''){
   if(/naturlig.*hinder|hinder.*naturlig|foss.*hinder/.test(t)) return 'barrier-natural';
   if(/annet.*hinder|andre.*hinder|vandringshinder|hinder/.test(t)) return 'barrier-other';
   if(/observasjon|infopunkt|gytegrop|yngel|aal|orret|sjoorret.*punkt/.test(t)) return 'observation';
-  if(/bekkeforlop|bekkelop|anadrom.*strek|bekk.*linje|sjoorretbekk|sjoaurebekk/.test(t)) return 'stream';
+  if(/bekkeforlop|bekkelop|anadrom.*strek|bekk.*linje|sjoorretbekk|sjoaurebekk|sjoorret.*strek|sjoaure.*strek|vassdrag|bekk|elv/.test(t)) return 'stream';
   return null;
 }
 function flattenArcgisOperationalLayers(layers=[],parentTitle=''){
@@ -2000,12 +2005,20 @@ function arcgisGeometryToGeoJson(geometry){
   if(Array.isArray(geometry.rings)&&geometry.rings.length) return {type:'Polygon',coordinates:geometry.rings};
   return null;
 }
-async function arcgisItemMeta(itemId){
-  return fetchJson(`${ARCGIS_PORTAL}/sharing/rest/content/items/${encodeURIComponent(itemId)}?f=json`,{'User-Agent':MET_USER_AGENT},10000);
+async function fetchArcgisItemAcrossPortals(itemId,{data=false}={}){
+  let lastError=null;
+  for(const portal of ARCGIS_PORTALS){
+    try{
+      const suffix=data?'/data':'';
+      const json=await fetchJson(`${portal}/sharing/rest/content/items/${encodeURIComponent(itemId)}${suffix}?f=json`,{'User-Agent':MET_USER_AGENT},12000);
+      if(json&&json.error) throw new Error(json.error.message||'ArcGIS item-feil');
+      if(json&&Object.keys(json).length) return json;
+    }catch(error){ lastError=error; }
+  }
+  throw lastError||new Error('ArcGIS-item kunne ikke hentes');
 }
-async function arcgisItemData(itemId){
-  return fetchJson(`${ARCGIS_PORTAL}/sharing/rest/content/items/${encodeURIComponent(itemId)}/data?f=json`,{'User-Agent':MET_USER_AGENT},12000);
-}
+async function arcgisItemMeta(itemId){ return fetchArcgisItemAcrossPortals(itemId,{data:false}); }
+async function arcgisItemData(itemId){ return fetchArcgisItemAcrossPortals(itemId,{data:true}); }
 async function expandArcgisLayerDescriptor(descriptor){
   let url=String(descriptor.url||'').replace(/\/$/,'');
   let title=descriptor.title||'';
@@ -2027,26 +2040,47 @@ async function expandArcgisLayerDescriptor(descriptor){
   return [];
 }
 async function resolveNationalSeaTroutLayers(){
-  return cached('national-seatrout:layers:v2',12*60*60*1000,async()=>{
-    const appData=await arcgisItemData(NATIONAL_SEATROUT_APP_ID);
-    const direct=[appData?.map?.itemId,appData?.webmap,appData?.webMapId,appData?.map?.webmap].filter(isArcgisItemId);
-    const candidates=[...new Set([...direct,...collectArcgisItemIds(appData)])].filter(id=>id!==NATIONAL_SEATROUT_APP_ID).slice(0,80);
-    let webMapData=null,webMapId=null;
-    for(const id of candidates){
-      try{
-        const meta=await arcgisItemMeta(id);
-        if(/web map/i.test(String(meta?.type||''))){webMapData=await arcgisItemData(id);webMapId=id;break;}
-      }catch{}
+  return cached('national-seatrout:layers:v4',6*60*60*1000,async()=>{
+    const queue=[NATIONAL_SEATROUT_APP_ID];
+    const visited=new Set();
+    const descriptors=[];
+    const webMapIds=[];
+    let rounds=0;
+    while(queue.length&&visited.size<180&&rounds<220){
+      rounds++;
+      const id=queue.shift();
+      if(!isArcgisItemId(id)||visited.has(id)) continue;
+      visited.add(id);
+      let meta=null,data=null;
+      try{meta=await arcgisItemMeta(id);}catch{}
+      try{data=await arcgisItemData(id);}catch{}
+      if(meta?.url&&/(?:FeatureServer|MapServer)/i.test(String(meta.url))){
+        descriptors.push({title:meta.title||'',url:meta.url,itemId:id});
+      }
+      const type=String(meta?.type||'').toLowerCase();
+      if(type.includes('web map')||Array.isArray(data?.operationalLayers)){
+        if(type.includes('web map')) webMapIds.push(id);
+        descriptors.push(...flattenArcgisOperationalLayers(data?.operationalLayers||[]));
+      }
+      for(const nested of collectArcgisItemIds(data||{})) if(!visited.has(nested)) queue.push(nested);
+      for(const nested of collectArcgisItemIds(meta||{})) if(!visited.has(nested)) queue.push(nested);
+      const mapIds=[data?.map?.itemId,data?.webmap,data?.webMapId,data?.map?.webmap].filter(isArcgisItemId);
+      for(const nested of mapIds) if(!visited.has(nested)) queue.unshift(nested);
     }
-    if(!webMapData&&Array.isArray(appData?.operationalLayers)){webMapData=appData;webMapId=NATIONAL_SEATROUT_APP_ID;}
-    if(!webMapData) throw new Error('Fant ikke offentlig webkart bak den nasjonale sjøørretportalen.');
-    const raw=flattenArcgisOperationalLayers(webMapData.operationalLayers||[]);
     const expanded=[];
-    for(const descriptor of raw.slice(0,140)) expanded.push(...await expandArcgisLayerDescriptor(descriptor));
+    for(const descriptor of descriptors.slice(0,260)){
+      try{expanded.push(...await expandArcgisLayerDescriptor(descriptor));}catch{}
+    }
     const seen=new Set();
-    const relevant=expanded.filter(layer=>layer.category&&layer.url&&!seen.has(layer.url)&&(seen.add(layer.url),true));
-    if(!relevant.length) throw new Error('Fant ingen relevante sjøørretbekk-lag i ArcGIS-kartet.');
-    return {webMapId,layers:relevant};
+    const relevant=expanded.filter(layer=>{
+      if(!layer?.url||seen.has(layer.url)) return false;
+      seen.add(layer.url);
+      if(layer.category) return true;
+      const t=normalizeLayerWords(layer.title||'');
+      return /sjoorret|sjoaure|anadrom|vandringshinder|bekk|elv|vassdrag/.test(t);
+    }).map(layer=>({...layer,category:layer.category||classifyNationalSeaTroutLayerTitle(layer.title)||'stream'}));
+    if(!relevant.length) throw new Error('Fant ingen offentlige sjøørretbekk-lag i ArcGIS-portalen.');
+    return {webMapId:webMapIds[0]||null,layers:relevant,visitedItems:visited.size};
   });
 }
 async function queryNationalSeaTroutLayer(layer,input){
@@ -2054,7 +2088,7 @@ async function queryNationalSeaTroutLayer(layer,input){
     f:'json',where:'1=1',outFields:'*',returnGeometry:'true',outSR:'4326',
     geometry:`${input.west},${input.south},${input.east},${input.north}`,
     geometryType:'esriGeometryEnvelope',inSR:'4326',spatialRel:'esriSpatialRelIntersects',
-    resultRecordCount:'1200',geometryPrecision:'6'
+    resultRecordCount:'2000',geometryPrecision:'6',returnZ:'false',returnM:'false'
   });
   const json=await fetchJson(`${layer.url}/query?${params}`,{'User-Agent':MET_USER_AGENT},12000);
   if(json?.error) throw new Error(json.error.message||'ArcGIS-laget svarte med feil');
@@ -2073,7 +2107,7 @@ async function nationalSeaTroutFeatures(input){
     const resolved=await resolveNationalSeaTroutLayers();
     const results=await Promise.allSettled(resolved.layers.map(layer=>queryNationalSeaTroutLayer(layer,input)));
     const ok=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
-    if(!ok.length) throw new Error('Sjøørretbekk-lagene svarte ikke akkurat nå.');
+    if(!ok.length) throw new Error('Ingen av sjøørretlagene svarte. ArcGIS-kilden kan være midlertidig utilgjengelig.');
     const features=ok.flatMap(result=>result.features).slice(0,3500);
     return {available:true,inCoverage:true,source:'Nasjonal portal for sjøørretbekker',sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,appId:NATIONAL_SEATROUT_APP_ID,webMapId:resolved.webMapId,layers:ok.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit})),features,count:features.length,generatedAt:new Date().toISOString()};
   });

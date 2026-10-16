@@ -1,6 +1,6 @@
-# Fiste guiden REV44 – Strategy Engine
+# Fiste guiden REV45 – Strategy Engine
 
-REV44 bygger anbefalingen i riktig rekkefølge:
+REV45 bygger anbefalingen i riktig rekkefølge:
 
 1. **Sted og mikrohabitat** – dybde, dybdekant, grunne/odde/bukt, vegetasjon og eksponering.
 2. **Fiskens sannsynlige aktivitet** – art, vanntemperatur når tilgjengelig, lys, skydekke og vind.
@@ -24,22 +24,14 @@ REV44 bygger anbefalingen i riktig rekkefølge:
 
 ## AutoDeploy
 
-Kjør `1-OPPDATER-OG-APNE-FISTE.bat` etter at ZIP-en er pakket ut. Scriptet synkroniserer mot `aikongen2026/FISTE`, pusher automatisk, venter på Render og åpner `https://fiste.onrender.com` når **REV44** svarer fra `/api/health`.
+Kjør `1-OPPDATER-OG-APNE-FISTE.bat` etter at ZIP-en er pakket ut. Scriptet synkroniserer mot `aikongen2026/FISTE`, pusher automatisk, venter på Render og åpner `https://fiste.onrender.com` når **REV45** svarer fra `/api/health`.
 
 Første gang på en PC kan Git Credential Manager be om en engangsinnlogging til GitHub. Ingen token ligger i pakken.
 
-## Nytt i REV44 – Sjøørretbekker i Agder
+## Nytt i REV45 – nasjonal sjøørretportal
 
-Fiste kan nå hente det offentlige ArcGIS-kartet **Sjøørretbekker i Agder** direkte fra den oppgitte app-id-en. Integrasjonen finner underliggende webkart/featurelag dynamisk i stedet for å låse appen til én gammel FeatureServer-URL.
+REV44 brukte Agder-visningen som kilde. REV45 bruker den nasjonale portalen **Registrering av sjøørretbekker** (ArcGIS app-id `a00fe3145f324c6c9438fe6fcee7ee37`), som ble etablert med Agder-løsningen som modell og er laget for datafangst over hele Norge.
 
-Når Sjøørret (eller alle sjøarter) er valgt og kartet ligger i Agder, kan laget vise:
-- bekkeforløp
-- bekkeutløp
-- menneskeskapte vandringshindre
-- naturlige vandringshindre
-- andre vandringshindre
-- andre observasjoner
+Kartlaget er tilgjengelig for sjøørret/alle sjøarter i norske kartutsnitt og henter bare gjeldende kartutsnitt for å holde appen rask. Det viser relevante bekke-/anadrom-strekninger, utløp, vandringshindre og observasjoner når slike lag finnes i den nasjonale portalen.
 
-Laget ligger under **Mer → Kartlag og regler → Sjøørretbekker Agder**. Klikk på et objekt for kildeopplysninger og lenke til originalkartet.
-
-Hvis et valgt sjøørretpunkt ligger nær et kartlagt bekkeløp/utløp/hinder, vises dette som egen biologisk kontekst under punktanalysen. Fiste gir bevisst ikke automatisk poengbonus bare fordi et punkt ligger nær en gytebekk eller et utløp; slike områder kan være juridisk sensitive og lokale fredningsregler må kontrolleres.
+Dataene brukes som biologisk kontekst og regelvarsling, **ikke** som automatisk bonus til et fiskepunkt. Dekning og kvalitet kan variere mellom fylker og vassdrag.

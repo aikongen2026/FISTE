@@ -1,0 +1,10 @@
+Fiste guiden REV45 – nasjonal sjøørretportal
+
+- Byttet fra regional Agder-app til nasjonal ArcGIS-portal for registrering av sjøørretbekker.
+- Nasjonal app-id: a00fe3145f324c6c9438fe6fcee7ee37.
+- Fjernet Agder-bounding box; kartlaget kan hentes i hele Norge.
+- UI heter nå «Sjøørretbekker Norge».
+- Henter bare synlig kartutsnitt og krever zoom >= 9 for ytelse.
+- Flere ArcGIS-item/lagsbeskrivelser kan nå oppdages i nasjonale gruppe-/webkart.
+- Ingen automatisk fiskescorebonus fra bekke-/hinderdata; brukes som biologisk kontekst og regelpåminnelse.
+- REV44-localStorage for kartlaget migreres automatisk.

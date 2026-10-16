@@ -1,0 +1,10 @@
+FISTE REV45 - OSTFOLD HOTFIX 1
+
+Rettet henting av Sjoorretbekker Norge:
+- provar ArcGIS item-data via www.arcgis.com, fylkesmannen.maps.arcgis.com og agderfk.maps.arcgis.com
+- folger no alle relevante Web Map / Feature Service-referanser rekursivt i staden for berre fyrste webkart
+- utvida lagklassifisering for bekk, elv, vassdrag, anadrom strekning og vandringshinder
+- opptil 2000 objekt per lag i kartutsnitt
+- held fram med nasjonal dekning, men hotfixen er spesielt laga etter feil observert i Ostfold/Fredrikstad-omradet
+
+Revision er framleis REV45. Health-versjon: v21-rev45.
