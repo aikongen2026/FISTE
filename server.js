@@ -26,42 +26,13 @@ const FISH_TYPES = Object.freeze({
   orret:'Ørret (ferskvann)', abbor:'Abbor', gjedde:'Gjedde'
 });
 const FRESHWATER_FISH_TYPES = new Set(['orret','abbor','gjedde']);
-const NATIONAL_SEATROUT_APP_ID = 'a00fe3145f324c6c9438fe6fcee7ee37';
-const NATIONAL_SEATROUT_SOURCE_URL = `https://fylkesmannen.maps.arcgis.com/apps/webappviewer/index.html?id=${NATIONAL_SEATROUT_APP_ID}`;
+const NATIONAL_SEATROUT_APP_ID = '1523c2a68ddd446db3582aa01599aec7';
+const NATIONAL_SEATROUT_SOURCE_URL = `https://agderfk.maps.arcgis.com/apps/webappviewer/index.html?id=${NATIONAL_SEATROUT_APP_ID}`;
 const ARCGIS_PORTAL = 'https://www.arcgis.com';
 const ARCGIS_PORTALS = [
-  'https://www.arcgis.com',
-  'https://fylkesmannen.maps.arcgis.com',
-  'https://agderfk.maps.arcgis.com'
+  'https://agderfk.maps.arcgis.com',
+  'https://www.arcgis.com'
 ];
-
-// REV45 hotfix 2: use Miljødirektoratet's stable national ArcGIS REST service first.
-// The older "Registrering av sjøørretbekker" web app remains only as a fallback.
-const NATIONAL_ANADROMOUS_MAPSERVER = 'https://kart.miljodirektoratet.no/arcgis/rest/services/anadrome_laksefisk/MapServer';
-const NATIONAL_ANADROMOUS_SOURCE_URL = 'https://kartkatalog.miljodirektoratet.no/MapService/Details/anadrome_laksefisk';
-const NATIONAL_ANADROMOUS_LAYERS = Object.freeze([
-  Object.freeze({
-    url:`${NATIONAL_ANADROMOUS_MAPSERVER}/4`,
-    title:'Anadrom fiskestrekning',
-    category:'stream',
-    source:'Miljødirektoratet – Anadrome laksefisk',
-    sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL
-  }),
-  Object.freeze({
-    url:`${NATIONAL_ANADROMOUS_MAPSERVER}/3`,
-    title:'Utløpspunkt for anadromt vassdrag',
-    category:'outlet',
-    source:'Miljødirektoratet – Anadrome laksefisk',
-    sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL
-  }),
-  Object.freeze({
-    url:`${NATIONAL_ANADROMOUS_MAPSERVER}/1`,
-    title:'Vandringshinder sjøørret',
-    category:'barrier-other',
-    source:'Miljødirektoratet – Anadrome laksefisk',
-    sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL
-  })
-]);
 
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function angularDistance(a, b) { return Math.abs((((a - b) % 360) + 540) % 360 - 180); }
@@ -2005,12 +1976,13 @@ function normalizeLayerWords(value=''){
 function classifyNationalSeaTroutLayerTitle(title=''){
   const t=normalizeLayerWords(title);
   if(!t) return null;
-  if(/bekke?utlop|utlop|utos/.test(t)) return 'outlet';
+  if(/bekke?utlop|utlop|utos|munning/.test(t)) return 'outlet';
   if(/menneske.*hinder|hinder.*menneske|kulvert|ror.*hinder|dam.*hinder/.test(t)) return 'barrier-human';
   if(/naturlig.*hinder|hinder.*naturlig|foss.*hinder/.test(t)) return 'barrier-natural';
-  if(/annet.*hinder|andre.*hinder|vandringshinder|hinder/.test(t)) return 'barrier-other';
-  if(/observasjon|infopunkt|gytegrop|yngel|aal|orret|sjoorret.*punkt/.test(t)) return 'observation';
+  if(/annet.*hinder|andre.*hinder|vandringshinder|hinder|sperre/.test(t)) return 'barrier-other';
   if(/bekkeforlop|bekkelop|anadrom.*strek|bekk.*linje|sjoorretbekk|sjoaurebekk|sjoorret.*strek|sjoaure.*strek|vassdrag|bekk|elv/.test(t)) return 'stream';
+  if(/sjoorret|sjoaure|orret|laks|fisk|bestand|registrering|forekomst|yngel/.test(t)) return 'fish-presence';
+  if(/observasjon|infopunkt|gytegrop|aal/.test(t)) return 'observation';
   return null;
 }
 function flattenArcgisOperationalLayers(layers=[],parentTitle=''){
@@ -2103,11 +2075,9 @@ async function resolveNationalSeaTroutLayers(){
     const relevant=expanded.filter(layer=>{
       if(!layer?.url||seen.has(layer.url)) return false;
       seen.add(layer.url);
-      if(layer.category) return true;
-      const t=normalizeLayerWords(layer.title||'');
-      return /sjoorret|sjoaure|anadrom|vandringshinder|bekk|elv|vassdrag/.test(t);
-    }).map(layer=>({...layer,category:layer.category||classifyNationalSeaTroutLayerTitle(layer.title)||'stream'}));
-    if(!relevant.length) throw new Error('Fant ingen offentlige sjøørretbekk-lag i ArcGIS-portalen.');
+      return true;
+    }).map(layer=>({...layer,category:layer.category||classifyNationalSeaTroutLayerTitle(layer.title)||'observation'}));
+    if(!relevant.length) throw new Error('Fant ingen kartlag i det oppgitte sjøørretkartet.');
     return {webMapId:webMapIds[0]||null,layers:relevant,visitedItems:visited.size};
   });
 }
@@ -2122,173 +2092,31 @@ async function queryNationalSeaTroutLayer(layer,input){
   if(json?.error) throw new Error(json.error.message||'ArcGIS-laget svarte med feil');
   const features=(json?.features||[]).map((feature,index)=>{
     const geometry=arcgisGeometryToGeoJson(feature.geometry);if(!geometry)return null;
-    return {type:'Feature',id:`${layer.category}-${index}`,geometry,properties:{...(feature.attributes||{}),_fisteCategory:layer.category,_fisteLayerTitle:layer.title,_fisteSource:layer.source||'Nasjonal portal for sjøørretbekker',_fisteSourceUrl:layer.sourceUrl||NATIONAL_SEATROUT_SOURCE_URL}};
+    return {type:'Feature',id:`${layer.category}-${index}`,geometry,properties:{...(feature.attributes||{}),_fisteCategory:layer.category,_fisteLayerTitle:layer.title,_fisteSource:'Sjøørretbekker – ArcGIS originalkart',_fisteSourceUrl:NATIONAL_SEATROUT_SOURCE_URL}};
   }).filter(Boolean);
   return {layer,features,exceededTransferLimit:Boolean(json?.exceededTransferLimit)};
 }
 
-// Deterministisk Østfold-register: de kjente sjøørretbekkene fra offentlige Østfold-rapporter
-// geokodes mot Kartverkets åpne Stedsnavn-API og vises som grønne fiskemarkører.
-// Dette er bevisst uavhengig av ArcGIS-portalen, slik at Fredrikstad/Hvaler/Sarpsborg ikke
-// mister markører når den gamle webappen endrer interne lag eller CORS-oppsett.
-const OSTFOLD_SEATROUT_STREAMS = Object.freeze([
-  // Fredrikstad
-  ['Bjørnevågbekken','3107'],['Elingårdsbekken','3107'],['Engabekken','3107'],['Fjellebekken','3107'],
-  ['Gansrødbekken','3107'],['Gretnesbekken','3107'],['Hunnebekken','3107'],['Husebybekken','3107'],
-  ['Kallerødbekken','3107'],['Oldenborgbekken','3107'],['Rødsbekken','3107'],['Slevikbekken','3107'],
-  ['Torpebekken','3107'],['Ålebekken','3107'],['Holmebekken','3107'],['Ringstadbekken','3107'],
-  ['Laverødbekken','3107'],['Søndre Grimstadbekk','3107'],['Ødegårdsbekken','3107'],['Ulvikbekken','3107'],
-  ['Enhusbekken','3107'],['Vikenebekken','3107'],['Saltnesbekken','3107'],
-  // Hvaler
-  ['Dypedalsbekken','3110'],['Langekilbekken','3110'],['Lerdalsbekken','3110'],['Leretbekken','3110'],
-  ['Kjennvikbekken','3110'],['Tangenbekken','3110'],['Korshavnbekken','3110'],['Holtekilbekken','3110'],
-  // Råde
-  ['Akersbekken','3112'],['Krokstadbekken','3112'],['Møllebekken','3112'],['Røtnebekken','3112'],['Saltnesbekken','3112'],
-  // Sarpsborg
-  ['Stordiket','3105'],['Skjebergbekken','3105'],['Guslundbekken','3105'],['Ingedalsbekken','3105'],
-  ['Bjønnengbekken','3105'],['Solbergbekken','3105'],
-  // Moss / tidligere Rygge
-  ['Kambobekken','3103'],['Gunnarsbybekken','3103'],['Evjåa','3103'],['Støtvikbekken','3103'],
-  ['Kuråa','3103'],['Heiabekken','3103'],
-  // Halden
-  ['Folkåa','3101'],['Folkaa','3101'],['Hjelmungbekken','3101'],['Klepperbekken','3101'],['Skottene','3101'],
-  ['Remmenbekken','3101'],['Risumbekken','3101'],['Rødbekken','3101'],['Signebøbekken','3101'],
-  ['Tista','3101'],['Unnebergbekken','3101'],['Ystehedebekken','3101'],['Svalerødbekken','3101'],
-  ['Lundestadbekken','3101'],['Ørbekken','3101']
-]);
-
-function normalizeSeaTroutName(value=''){
-  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[øØ]/g,'o').replace(/[åÅ]/g,'a').replace(/[æÆ]/g,'ae').toLowerCase().replace(/[^a-z0-9]+/g,'').trim();
-}
-function kartverketPlaceHits(json){
-  if(Array.isArray(json?.navn)) return json.navn;
-  if(Array.isArray(json?.steder)) return json.steder;
-  if(Array.isArray(json?.treff)) return json.treff;
-  if(Array.isArray(json)) return json;
-  return [];
-}
-function placeDisplayNames(item){
-  const names=[];
-  if(Array.isArray(item?.stedsnavn)) for(const n of item.stedsnavn) if(n?.skrivemåte) names.push(n.skrivemåte);
-  if(item?.skrivemåte) names.push(item.skrivemåte);
-  if(item?.navn) names.push(typeof item.navn==='string'?item.navn:item.navn?.skrivemåte||'');
-  return names.filter(Boolean);
-}
-function placePoint(item){
-  const p=item?.representasjonspunkt||item?.representasjonsPunkt||item?.punkt||{};
-  const lat=Number(p.nord??p.lat??p.latitude);
-  const lon=Number(p['øst']??p.ost??p.lon??p.lng??p.longitude);
-  return Number.isFinite(lat)&&Number.isFinite(lon)?{lat,lon}:null;
-}
-async function geocodeOstfoldSeaTroutStream(name,knr){
-  const key=\`ostfold-seatrout-geocode:\${knr}:\${normalizeSeaTroutName(name)}\`;
-  return cached(key,7*24*60*60*1000,async()=>{
-    const variants=[name];
-    if(/bekken$/i.test(name)) variants.push(name.replace(/bekken$/i,'bekk'));
-    if(/bekk$/i.test(name)) variants.push(name+'en');
-    let best=null;
-    for(const variant of [...new Set(variants)]){
-      const params=new URLSearchParams({knr:String(knr),sok:\`\${variant}*\`,treffPerSide:'20',side:'1'});
-      let json;
-      try{json=await fetchJson(\`https://ws.geonorge.no/stedsnavn/v1/navn?\${params}\`,{'User-Agent':MET_USER_AGENT,'Accept':'application/json'},9000);}
-      catch{continue;}
-      for(const item of kartverketPlaceHits(json)){
-        const point=placePoint(item); if(!point) continue;
-        const type=String(item.navneobjekttype||item.navneobjekttypekode||'').toLowerCase();
-        const names=placeDisplayNames(item);
-        const target=normalizeSeaTroutName(name);
-        const exact=names.some(n=>normalizeSeaTroutName(n)===target);
-        const prefix=names.some(n=>normalizeSeaTroutName(n).startsWith(target.slice(0,Math.max(4,target.length-3))));
-        const hydro=/bekk|elv|vassdrag|grøft|kanal|å$|aa$/.test(type);
-        const score=(exact?100:prefix?60:20)+(hydro?25:0);
-        if(!best||score>best.score) best={score,point,type,names};
-      }
-      if(best?.score>=100) break;
-    }
-    return best?.point||null;
-  });
-}
-async function mapLimit(items,limit,worker){
-  const out=new Array(items.length);let next=0;
-  const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(true){const i=next++;if(i>=items.length)return;try{out[i]=await worker(items[i],i);}catch{out[i]=null;}}});
-  await Promise.all(runners);return out;
-}
-async function ostfoldSeaTroutFeatures(input){
-  const intersects=input.east>=10.20&&input.west<=11.85&&input.north>=58.80&&input.south<=59.75;
-  if(!intersects) return [];
-  const resolved=await mapLimit(OSTFOLD_SEATROUT_STREAMS,10,async([name,knr])=>{
-    const point=await geocodeOstfoldSeaTroutStream(name,knr);
-    if(!point) return null;
-    if(point.lon<input.west||point.lon>input.east||point.lat<input.south||point.lat>input.north) return null;
-    return {type:'Feature',id:\`ostfold-\${knr}-\${normalizeSeaTroutName(name)}\`,geometry:{type:'Point',coordinates:[point.lon,point.lat]},properties:{
-      navn:name,_fisteCategory:'fish-presence',_fisteLayerTitle:\`\${name} · registrert sjøørretbekk\`,
-      _fisteSource:'Offentlig Østfold-register + Kartverket Stedsnavn',_fisteSourceUrl:'https://www.njff.no/ostfold/fiske',
-      _fisteOstfoldRegistry:true
-    }};
-  });
-  const seen=new Set(),features=[];
-  for(const feature of resolved.filter(Boolean)){
-    const key=\`\${feature.geometry.coordinates[0].toFixed(5)},\${feature.geometry.coordinates[1].toFixed(5)}\`;
-    if(seen.has(key))continue;seen.add(key);features.push(feature);
-  }
-  return features;
-}
 async function nationalSeaTroutFeatures(input){
-  // Hent bare kartutsnittet brukeren ser.
   const intersectsNorway=input.east>=3.0&&input.west<=32.0&&input.north>=57.0&&input.south<=72.5;
-  if(!intersectsNorway) return {available:true,inCoverage:false,source:'Miljødirektoratet – Anadrome laksefisk',sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL,layers:[],features:[],count:0};
-
-  const key=`national-seatrout:official-v1:${input.west.toFixed(3)},${input.south.toFixed(3)},${input.east.toFixed(3)},${input.north.toFixed(3)}:${input.zoom}`;
+  if(!intersectsNorway) return {available:true,inCoverage:false,source:'Sjøørretbekker – ArcGIS originalkart',sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,layers:[],features:[],count:0};
+  const key=`agder-arcgis-seatrout:v6:${input.west.toFixed(3)},${input.south.toFixed(3)},${input.east.toFixed(3)},${input.north.toFixed(3)}:${input.zoom}`;
   return cached(key,10*60*1000,async()=>{
-    // Primærkilde: fast, offentlig nasjonal REST-tjeneste fra Miljødirektoratet.
-    // Dette unngår den tunge og ustabile rekursive oppløsningen av ArcGIS-webappen.
-    const [directResults,ostfoldRegistry]=await Promise.all([
-      Promise.allSettled(NATIONAL_ANADROMOUS_LAYERS.map(layer=>queryNationalSeaTroutLayer(layer,input))),
-      ostfoldSeaTroutFeatures(input).catch(()=>[])
-    ]);
-    const directOk=directResults.filter(result=>result.status==='fulfilled').map(result=>result.value);
-    if(directOk.length||ostfoldRegistry.length){
-      const merged=[...ostfoldRegistry,...directOk.flatMap(result=>result.features)];
-      const dedupe=new Set(),features=merged.filter(feature=>{
-        const g=feature?.geometry;
-        const key=g?.type==='Point'?`p:${Number(g.coordinates?.[0]).toFixed(5)}:${Number(g.coordinates?.[1]).toFixed(5)}`:`${g?.type}:${JSON.stringify(g?.coordinates?.[0]||[])}`;
-        if(dedupe.has(key))return false;dedupe.add(key);return true;
-      }).slice(0,3500);
-      return {
-        available:true,
-        inCoverage:true,
-        source:'Miljødirektoratet – Anadrome laksefisk',
-        sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL,
-        appId:NATIONAL_SEATROUT_APP_ID,
-        webMapId:null,
-        layers:[...(ostfoldRegistry.length?[{title:'Østfold sjøørretbekker',category:'fish-presence',count:ostfoldRegistry.length,truncated:false}]:[]),...directOk.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit}))],
-        features,
-        count:features.length,
-        partial:directOk.length<NATIONAL_ANADROMOUS_LAYERS.length,
-        generatedAt:new Date().toISOString()
-      };
-    }
-
-    // Fallback: behold tidligere nasjonale registreringsportal hvis primærkilden skulle være nede.
     const resolved=await resolveNationalSeaTroutLayers();
-    const [fallbackResults,ostfoldRegistry]=await Promise.all([
-      Promise.allSettled(resolved.layers.map(layer=>queryNationalSeaTroutLayer(layer,input))),
-      ostfoldSeaTroutFeatures(input).catch(()=>[])
-    ]);
-    const fallbackOk=fallbackResults.filter(result=>result.status==='fulfilled').map(result=>result.value);
-    if(!fallbackOk.length&&!ostfoldRegistry.length) throw new Error('Ingen nasjonale sjøørret-/anadromlag svarte akkurat nå.');
-    const features=[...ostfoldRegistry,...fallbackOk.flatMap(result=>result.features)].slice(0,3500);
+    const results=await Promise.allSettled(resolved.layers.map(layer=>queryNationalSeaTroutLayer(layer,input)));
+    const ok=results.filter(result=>result.status==='fulfilled').map(result=>result.value);
+    if(!ok.length) throw new Error('Kartlagene bak det oppgitte ArcGIS-kartet svarte ikke.');
+    const features=ok.flatMap(result=>result.features).slice(0,5000);
     return {
       available:true,
       inCoverage:true,
-      source:'Nasjonal portal for sjøørretbekker',
+      source:'Sjøørretbekker – ArcGIS originalkart',
       sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,
       appId:NATIONAL_SEATROUT_APP_ID,
       webMapId:resolved.webMapId,
-      layers:[...(ostfoldRegistry.length?[{title:'Østfold sjøørretbekker',category:'fish-presence',count:ostfoldRegistry.length,truncated:false}]:[]),...fallbackOk.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit}))],
+      layers:ok.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit})),
       features,
       count:features.length,
-      fallback:true,
       generatedAt:new Date().toISOString()
     };
   });
@@ -2319,7 +2147,7 @@ async function handleApi(req,res,url) {
     }
     if(url.pathname==='/api/national-seatrout') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'12');}catch(error){return send(res,400,{error:error.message});}
-      if(input.zoom<9) return send(res,200,{available:true,inCoverage:true,zoomRequired:9,source:'Nasjonal portal for sjøørretbekker',sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,layers:[],features:[],count:0});
+      if(input.zoom<9) return send(res,200,{available:true,inCoverage:true,zoomRequired:9,source:'Sjøørretbekker – ArcGIS originalkart',sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,layers:[],features:[],count:0});
       try{return send(res,200,await nationalSeaTroutFeatures(input),'application/json; charset=utf-8',{'Cache-Control':'public, max-age=600'});}catch(error){return send(res,502,{available:false,error:error.message,source:'Nasjonal portal for sjøørretbekker',sourceUrl:NATIONAL_SEATROUT_SOURCE_URL});}
     }
     if(url.pathname==='/api/ramps') {
