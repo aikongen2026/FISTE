@@ -966,7 +966,9 @@ async function loadNationalSeaTrout({force=false}={}){
     const data=mergeNationalSeaTroutData(primary,portal);
     nationalSeaTroutKey=key;renderNationalSeaTroutFeatures(data);
     const portalText=portal.count?` · ${portal.count} fra originalportalen`:'';
-    if(status){status.hidden=false;status.innerHTML=`<strong>Sjøørretbekker Norge:</strong> ${data.count} objekter i utsnittet${portalText}.`;}
+    const registryCount=(primary.layers||[]).filter(layer=>layer.category==='fish-presence').reduce((sum,layer)=>sum+(Number(layer.count)||0),0);
+    const registryText=registryCount?` · ${registryCount} registrerte Østfold-bekker`:'';
+    if(status){status.hidden=false;status.innerHTML=`<strong>Sjøørretbekker Norge:</strong> ${data.count} objekter i utsnittet${registryText}${portalText}.`;}
     const selected=latestZones.find(zone=>zone.id===selectedZoneId);if(selected)renderSelectedZone(selected);
   }catch(error){
     if(error?.name==='AbortError')return;
