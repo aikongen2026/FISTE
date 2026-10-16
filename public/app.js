@@ -769,19 +769,28 @@ function nationalSeaTroutRelevant(){
   if(!showNationalSeaTrout||!['sjoorret','all'].includes(fish)) return false;
   const b=map.getBounds();return b.getEast()>=3.0&&b.getWest()<=32.0&&b.getNorth()>=57.0&&b.getSouth()<=72.5;
 }
+const ORIGINAL_SEATROUT_APP_ID='a00fe3145f324c6c9438fe6fcee7ee37';
+const ORIGINAL_SEATROUT_SOURCE_URL=`https://fylkesmannen.maps.arcgis.com/apps/webappviewer/index.html?id=${ORIGINAL_SEATROUT_APP_ID}`;
+const ORIGINAL_ARCGIS_PORTALS=['https://fylkesmannen.maps.arcgis.com','https://www.arcgis.com'];
+let originalSeaTroutLayerCache=null;
+let originalSeaTroutLayerCacheAt=0;
+
 function nationalSafeProperties(properties={}){
   const skip=/^(_|objectid$|shape|globalid|created_|creator|edited_|editor)/i;
-  return Object.entries(properties).filter(([key,value])=>!skip.test(key)&&value!==null&&value!==''&&typeof value!=='object').slice(0,8);
+  return Object.entries(properties).filter(([key,value])=>!skip.test(key)&&value!==null&&value!==''&&typeof value!=='object').slice(0,10);
 }
 function nationalPopupHtml(feature){
   const p=feature?.properties||{}, rows=nationalSafeProperties(p).map(([key,value])=>`<tr><td>${escapeHtml(String(key).replace(/_/g,' '))}</td><td>${escapeHtml(String(value))}</td></tr>`).join('');
-  const label=p._fisteLayerTitle||'Sjøørretbekk';
-  return `<div class="national-stream-popup"><b>${escapeHtml(label)}</b>${rows?`<table>${rows}</table>`:''}<small>Kilde: nasjonal portal for registrering av sjøørretbekker.</small><br><a href="https://fylkesmannen.maps.arcgis.com/apps/webappviewer/index.html?id=a00fe3145f324c6c9438fe6fcee7ee37" target="_blank" rel="noopener">Åpne originalkartet</a></div>`;
+  const label=p._fisteLayerTitle||'Sjøørretregistrering';
+  const source=p._fisteSource||'Nasjonal portal for registrering av sjøørretbekker';
+  const sourceUrl=p._fisteSourceUrl||ORIGINAL_SEATROUT_SOURCE_URL;
+  return `<div class="national-stream-popup"><b>${escapeHtml(label)}</b>${rows?`<table>${rows}</table>`:''}<small>Kilde: ${escapeHtml(source)}.</small><br><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Åpne kilden</a></div>`;
 }
 function nationalMarkerForFeature(feature,latlng){
   const category=feature?.properties?._fisteCategory||'observation';
-  const symbols={outlet:'↘','barrier-human':'!','barrier-natural':'▲','barrier-other':'◆',observation:'•'};
-  return L.marker(latlng,{icon:L.divIcon({className:'',html:`<span class="national-marker national-marker-${category}">${symbols[category]||'•'}</span>`,iconSize:[20,20],iconAnchor:[10,10]})});
+  const symbols={outlet:'↘','barrier-human':'×','barrier-natural':'▲','barrier-other':'◆',observation:'•','fish-presence':'➜'};
+  const fish=category==='fish-presence';
+  return L.marker(latlng,{icon:L.divIcon({className:'',html:`<span class="national-marker national-marker-${category}">${fish?'🐟':(symbols[category]||'•')}</span>`,iconSize:fish?[26,20]:[20,20],iconAnchor:fish?[13,10]:[10,10]})});
 }
 function renderNationalSeaTroutFeatures(data){
   nationalSeaTroutLayer.clearLayers();nationalSeaTroutFeatures=Array.isArray(data?.features)?data.features:[];
@@ -792,6 +801,150 @@ function renderNationalSeaTroutFeatures(data){
     onEachFeature(feature,layer){layer.bindPopup(nationalPopupHtml(feature),{maxWidth:390,className:'source-leaflet-popup'});}
   }).addTo(nationalSeaTroutLayer);
 }
+function originalNormalize(value=''){
+  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[øØ]/g,'o').replace(/[åÅ]/g,'a').replace(/[æÆ]/g,'ae').toLowerCase();
+}
+function originalCollectItemIds(value,out=new Set()){
+  if(typeof value==='string'){if(/^[0-9a-f]{32}$/i.test(value.trim()))out.add(value.trim());return out;}
+  if(Array.isArray(value)){for(const item of value)originalCollectItemIds(item,out);return out;}
+  if(value&&typeof value==='object')for(const item of Object.values(value))originalCollectItemIds(item,out);
+  return out;
+}
+function originalFlattenLayers(layers=[],parentTitle=''){
+  const out=[];
+  for(const layer of Array.isArray(layers)?layers:[]){
+    if(!layer||typeof layer!=='object')continue;
+    const title=[parentTitle,layer.title||layer.name||''].filter(Boolean).join(' / ');
+    if(layer.url||layer.itemId)out.push({title,url:layer.url||null,itemId:layer.itemId||null,layerId:Number.isInteger(layer.layerId)?layer.layerId:null});
+    if(Array.isArray(layer.layers))out.push(...originalFlattenLayers(layer.layers,title));
+    if(Array.isArray(layer.featureCollection?.layers))out.push(...originalFlattenLayers(layer.featureCollection.layers,title));
+  }
+  return out;
+}
+async function originalFetchItem(itemId,{data=false,signal}={}){
+  let lastError=null;
+  for(const portal of ORIGINAL_ARCGIS_PORTALS){
+    try{
+      const suffix=data?'/data':'';
+      const response=await fetch(`${portal}/sharing/rest/content/items/${encodeURIComponent(itemId)}${suffix}?f=json`,{cache:'no-store',signal});
+      if(!response.ok)throw new Error(`ArcGIS ${response.status}`);
+      const json=await response.json();
+      if(json?.error)throw new Error(json.error.message||'ArcGIS item-feil');
+      if(json&&Object.keys(json).length)return json;
+    }catch(error){if(error?.name==='AbortError')throw error;lastError=error;}
+  }
+  throw lastError||new Error('ArcGIS-item kunne ikke hentes');
+}
+async function originalMapLimit(items,limit,worker){
+  const results=new Array(items.length);let next=0;
+  const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(true){const i=next++;if(i>=items.length)return;try{results[i]=await worker(items[i],i);}catch(error){results[i]={__error:error};}}});
+  await Promise.all(runners);return results;
+}
+async function originalExpandDescriptor(descriptor,signal){
+  let url=String(descriptor?.url||'').replace(/\/$/,'');
+  let title=descriptor?.title||'';
+  if(!url&&descriptor?.itemId){
+    try{const meta=await originalFetchItem(descriptor.itemId,{signal});url=String(meta?.url||'').replace(/\/$/,'');title=[title,meta?.title].filter(Boolean).join(' / ');}catch{}
+  }
+  if(!url)return [];
+  if(Number.isInteger(descriptor.layerId)&&!/\/(?:FeatureServer|MapServer)\/\d+$/i.test(url))url+=`/${descriptor.layerId}`;
+  if(/\/(?:FeatureServer|MapServer)\/\d+$/i.test(url))return [{url,title}];
+  if(/\/(?:FeatureServer|MapServer)$/i.test(url)){
+    try{
+      const response=await fetch(`${url}?f=json`,{cache:'no-store',signal});if(!response.ok)return[];
+      const meta=await response.json();
+      return (meta?.layers||[]).map(layer=>({url:`${url}/${layer.id}`,title:[title,layer.name].filter(Boolean).join(' / ')}));
+    }catch(error){if(error?.name==='AbortError')throw error;return[];}
+  }
+  return [];
+}
+async function resolveOriginalSeaTroutLayers(signal){
+  if(originalSeaTroutLayerCache&&Date.now()-originalSeaTroutLayerCacheAt<6*60*60*1000)return originalSeaTroutLayerCache;
+  const appData=await originalFetchItem(ORIGINAL_SEATROUT_APP_ID,{data:true,signal});
+  const descriptors=[];
+  if(Array.isArray(appData?.operationalLayers))descriptors.push(...originalFlattenLayers(appData.operationalLayers));
+  const directIds=[appData?.map?.itemId,appData?.webmap,appData?.webMapId,appData?.map?.webmap].filter(id=>/^[0-9a-f]{32}$/i.test(String(id||'')));
+  const ids=[...new Set([...directIds,...originalCollectItemIds(appData)])].filter(id=>id!==ORIGINAL_SEATROUT_APP_ID).slice(0,100);
+  const metas=await originalMapLimit(ids,10,async id=>({id,meta:await originalFetchItem(id,{signal})}));
+  const webMapIds=[];
+  for(const entry of metas){
+    if(!entry||entry.__error)continue;
+    const {id,meta}=entry;
+    const type=String(meta?.type||'').toLowerCase();
+    if(type.includes('web map'))webMapIds.push(id);
+    if(meta?.url&&/(FeatureServer|MapServer)/i.test(String(meta.url)))descriptors.push({title:meta.title||'',url:meta.url,itemId:id});
+  }
+  const webMaps=await originalMapLimit(webMapIds.slice(0,24),8,async id=>originalFetchItem(id,{data:true,signal}));
+  for(const data of webMaps)if(data&&!data.__error&&Array.isArray(data.operationalLayers))descriptors.push(...originalFlattenLayers(data.operationalLayers));
+  const expanded=await originalMapLimit(descriptors.slice(0,180),10,descriptor=>originalExpandDescriptor(descriptor,signal));
+  const unique=[],seen=new Set();
+  for(const group of expanded)for(const layer of Array.isArray(group)?group:[]){
+    if(!layer?.url||seen.has(layer.url))continue;seen.add(layer.url);unique.push(layer);
+  }
+  if(!unique.length)throw new Error('Fant ingen kartlag bak originalportalen');
+  originalSeaTroutLayerCache=unique.slice(0,120);originalSeaTroutLayerCacheAt=Date.now();
+  return originalSeaTroutLayerCache;
+}
+function originalCategory(title,attributes={},geometry=null){
+  const text=originalNormalize([title,...Object.keys(attributes),...Object.values(attributes).filter(v=>typeof v==='string'||typeof v==='number')].join(' '));
+  if(/menneske.*hinder|kulvert|stikkrenne|ror.*hinder|dam.*hinder/.test(text))return'barrier-human';
+  if(/naturlig.*hinder|foss.*hinder/.test(text))return'barrier-natural';
+  if(/vandringshinder|hinder|sperre/.test(text))return'barrier-other';
+  if(/bekke?utlop|utlop|munning/.test(text))return'outlet';
+  const type=geometry?.type||'';
+  if(type.includes('Line')||type.includes('Polygon'))return'stream';
+  if(/fisk|orret|sjoorret|sjoaure|laks|yngel|bekk|vassdrag|anadrom/.test(text))return'fish-presence';
+  return type==='Point'||type==='MultiPoint'?'fish-presence':'observation';
+}
+function originalArcgisGeometry(geometry){
+  if(!geometry||typeof geometry!=='object')return null;
+  if(Number.isFinite(geometry.x)&&Number.isFinite(geometry.y))return{type:'Point',coordinates:[geometry.x,geometry.y]};
+  if(Array.isArray(geometry.points)&&geometry.points.length)return{type:'MultiPoint',coordinates:geometry.points};
+  if(Array.isArray(geometry.paths)&&geometry.paths.length)return geometry.paths.length===1?{type:'LineString',coordinates:geometry.paths[0]}:{type:'MultiLineString',coordinates:geometry.paths};
+  if(Array.isArray(geometry.rings)&&geometry.rings.length)return{type:'Polygon',coordinates:geometry.rings};
+  return null;
+}
+async function queryOriginalSeaTroutLayer(layer,bounds,signal){
+  const params=new URLSearchParams({
+    f:'json',where:'1=1',outFields:'*',returnGeometry:'true',outSR:'4326',
+    geometry:`${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`,
+    geometryType:'esriGeometryEnvelope',inSR:'4326',spatialRel:'esriSpatialRelIntersects',
+    resultRecordCount:'2000',geometryPrecision:'6',returnZ:'false',returnM:'false'
+  });
+  const response=await fetch(`${layer.url}/query?${params}`,{cache:'no-store',signal});
+  if(!response.ok)throw new Error(`Lag ${response.status}`);
+  const json=await response.json();if(json?.error)throw new Error(json.error.message||'Lagfeil');
+  const features=(json?.features||[]).map((item,index)=>{
+    const geometry=originalArcgisGeometry(item.geometry);if(!geometry)return null;
+    const attributes=item.attributes||{};
+    const category=originalCategory(layer.title,attributes,geometry);
+    return{type:'Feature',id:`original-${index}-${Math.random().toString(36).slice(2,8)}`,geometry,properties:{...attributes,_fisteCategory:category,_fisteLayerTitle:layer.title||'Registrering av sjøørretbekker',_fisteSource:'Originalportalen – Registrering av sjøørretbekker',_fisteSourceUrl:ORIGINAL_SEATROUT_SOURCE_URL,_fisteOriginalPortal:true}};
+  }).filter(Boolean);
+  return{title:layer.title||'Originalportal',features,count:features.length};
+}
+async function loadOriginalSeaTroutPortal(bounds,signal){
+  const layers=await resolveOriginalSeaTroutLayers(signal);
+  const queried=await originalMapLimit(layers,8,layer=>queryOriginalSeaTroutLayer(layer,bounds,signal));
+  const ok=queried.filter(x=>x&&!x.__error);
+  const features=ok.flatMap(x=>x.features).slice(0,5000);
+  return{available:true,source:'Originalportalen – Registrering av sjøørretbekker',features,count:features.length,layers:ok.filter(x=>x.count).map(x=>({title:x.title,category:'portal',count:x.count}))};
+}
+function nationalFeatureKey(feature){
+  const g=feature?.geometry;if(!g)return'';
+  if(g.type==='Point')return`p:${Number(g.coordinates?.[0]).toFixed(5)}:${Number(g.coordinates?.[1]).toFixed(5)}`;
+  if(g.type==='MultiPoint')return`mp:${JSON.stringify(g.coordinates?.slice(0,3)||[])}`;
+  const coords=g.type==='LineString'?g.coordinates:g.type==='MultiLineString'?g.coordinates?.[0]:g.type==='Polygon'?g.coordinates?.[0]:[];
+  const first=coords?.[0],last=coords?.[coords.length-1];
+  return`${g.type}:${JSON.stringify(first||[])}:${JSON.stringify(last||[])}:${coords?.length||0}`;
+}
+function mergeNationalSeaTroutData(primary={},portal={}){
+  const features=[],seen=new Set();
+  for(const feature of [...(portal.features||[]),...(primary.features||[])]){
+    const key=nationalFeatureKey(feature)||`id:${feature?.id||Math.random()}`;
+    if(seen.has(key))continue;seen.add(key);features.push(feature);
+  }
+  return{...primary,features,count:features.length,portalCount:Number(portal.count)||0,featuresFromPortal:Number(portal.count)||0,layers:[...(portal.layers||[]),...(primary.layers||[])]};
+}
 async function loadNationalSeaTrout({force=false}={}){
   const status=$('nationalSeaTroutStatus');
   if(!nationalSeaTroutRelevant()){nationalSeaTroutController?.abort();nationalSeaTroutController=null;nationalSeaTroutLayer.clearLayers();nationalSeaTroutFeatures=[];if(status)status.hidden=true;return;}
@@ -799,15 +952,27 @@ async function loadNationalSeaTrout({force=false}={}){
   const b=map.getBounds(),key=[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].map(v=>v.toFixed(3)).join(',')+':'+map.getZoom();
   if(!force&&key===nationalSeaTroutKey&&nationalSeaTroutFeatures.length)return;
   nationalSeaTroutController?.abort();nationalSeaTroutController=new AbortController();
-  if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Norge:</strong> henter bekker, utløp og vandringshindre …';}
+  const signal=nationalSeaTroutController.signal;
+  if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Norge:</strong> henter originalportal + nasjonale kartlag …';}
+  let primary={features:[],layers:[],count:0},portal={features:[],layers:[],count:0};
   try{
-    const response=await fetch(`/api/national-seatrout?bbox=${encodeURIComponent([b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(','))}&zoom=${map.getZoom()}`,{cache:'no-store',signal:nationalSeaTroutController.signal});
-    const data=await response.json();if(!response.ok)throw new Error(data.error||'Kartlaget svarte ikke');nationalSeaTroutKey=key;renderNationalSeaTroutFeatures(data);
-    const names={'stream':'bekkeløp','outlet':'utløp','barrier-human':'menneskeskapte hinder','barrier-natural':'naturlige hinder','barrier-other':'andre hinder','observation':'observasjoner'};
-    const counts=(data.layers||[]).filter(x=>x.count).map(x=>`${x.count} ${names[x.category]||x.category}`);
-    if(status){status.hidden=false;status.innerHTML=`<strong>Sjøørretbekker Norge:</strong> ${data.count||0} objekt${data.count===1?'':'er'} i utsnittet${counts.length?' · '+escapeHtml(counts.slice(0,4).join(' · ')):''}.`;}
+    const [primaryResult,portalResult]=await Promise.allSettled([
+      fetch(`/api/national-seatrout?bbox=${encodeURIComponent([b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(','))}&zoom=${map.getZoom()}`,{cache:'no-store',signal}).then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Nasjonalt kartlag svarte ikke');return data;}),
+      loadOriginalSeaTroutPortal(b,signal)
+    ]);
+    if(primaryResult.status==='fulfilled')primary=primaryResult.value;
+    if(portalResult.status==='fulfilled')portal=portalResult.value;
+    if(!primary.count&&!portal.count)throw new Error('Ingen sjøørretdata svarte');
+    const data=mergeNationalSeaTroutData(primary,portal);
+    nationalSeaTroutKey=key;renderNationalSeaTroutFeatures(data);
+    const portalText=portal.count?` · ${portal.count} fra originalportalen`:'';
+    if(status){status.hidden=false;status.innerHTML=`<strong>Sjøørretbekker Norge:</strong> ${data.count} objekter i utsnittet${portalText}.`;}
     const selected=latestZones.find(zone=>zone.id===selectedZoneId);if(selected)renderSelectedZone(selected);
-  }catch(error){if(error?.name==='AbortError')return;nationalSeaTroutLayer.clearLayers();nationalSeaTroutFeatures=[];if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Norge:</strong> kunne ikke hente laget akkurat nå. Resten av Fiste fungerer normalt.';}}
+  }catch(error){
+    if(error?.name==='AbortError')return;
+    nationalSeaTroutLayer.clearLayers();nationalSeaTroutFeatures=[];
+    if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Norge:</strong> kartlaget svarte ikke akkurat nå. Prøv å panorere eller zoome én gang.';}
+  }
 }
 function geometryDistanceMetersToZone(geometry,zone){
   if(!geometry||!zone?.marker)return Infinity;const target={lat:zone.marker.lat,lon:zone.marker.lon};
