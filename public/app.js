@@ -1,6 +1,6 @@
 const uiStateKey='fiste-guiden-ui-state-v3';
 function readUiState(){try{return JSON.parse(localStorage.getItem(uiStateKey)||'{}')||{};}catch{return {};}}
-function saveUiState(){try{const c=map.getCenter();localStorage.setItem(uiStateKey,JSON.stringify({fishType:$('fishType')?.value||'',fishGoal:$('fishGoal')?.value||'numbers',baseRadius:$('baseRadius')?.value||'500',mapStyle:$('mapStyle')?.value||'topo',center:[c.lat,c.lng],zoom:map.getZoom(),basePoint}));}catch{}}
+function saveUiState(){try{const c=map.getCenter();localStorage.setItem(uiStateKey,JSON.stringify({fishType:$('fishType')?.value||'',fishGoal:$('fishGoal')?.value||'numbers',baseRadius:$('baseRadius')?.value||'500',mapStyle:$('mapStyle')?.value||'topo',center:[c.lat,c.lng],zoom:map.getZoom(),basePoint,agderSeaTrout:showAgderSeaTrout}));}catch{}}
 const savedUiState=readUiState();
 const initialCenter=Array.isArray(savedUiState.center)&&savedUiState.center.length===2?savedUiState.center:[59.21,10.93];
 const initialZoom=Number.isFinite(savedUiState.zoom)?savedUiState.zoom:12;
@@ -27,6 +27,7 @@ const sourceSpotLayer = L.layerGroup().addTo(map);
 const restrictionLayer = L.layerGroup().addTo(map);
 const conditionLayer = L.layerGroup().addTo(map);
 const boatRampLayer = L.layerGroup().addTo(map);
+const agderSeaTroutLayer = L.layerGroup().addTo(map);
 // REV43: freshwater depth overlay comes from the same NVE REST layers used by 3D.
 // This avoids relying on a separate WMS toggle and lets the app say clearly when a lake has no surveyed depths.
 const freshwaterDepthLayer=L.layerGroup();
@@ -585,6 +586,10 @@ let sourceSpotData=null;
 let restrictionData=null;
 let showSourceSpots=true;
 let showRestrictions=true;
+let showAgderSeaTrout=savedUiState.agderSeaTrout!==false;
+let agderSeaTroutController=null;
+let agderSeaTroutKey='';
+let agderSeaTroutFeatures=[];
 const lureViewer = $('lureViewer');
 const lureViewerImage = $('lureViewerImage');
 const lureViewerCaption = $('lureViewerCaption');
@@ -758,6 +763,71 @@ function renderHydrology(data) {
   ].map(([label,value])=>`<div class="weather-item"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
   $('hydrologyCaveat').innerHTML=`<b>Kilde:</b> NVE HydAPI. ${escapeHtml(data.caveat||'Bruk målestasjonen som referanse og kontroller lokalt vassdrag.')}`;
 }
+
+function agderSeaTroutRelevant(){
+  const fish=$('fishType')?.value;
+  if(!showAgderSeaTrout||!['sjoorret','all'].includes(fish)) return false;
+  const b=map.getBounds();return b.getEast()>=5.9&&b.getWest()<=9.7&&b.getNorth()>=57.4&&b.getSouth()<=59.8;
+}
+function agderSafeProperties(properties={}){
+  const skip=/^(_|objectid$|shape|globalid|created_|creator|edited_|editor)/i;
+  return Object.entries(properties).filter(([key,value])=>!skip.test(key)&&value!==null&&value!==''&&typeof value!=='object').slice(0,8);
+}
+function agderPopupHtml(feature){
+  const p=feature?.properties||{}, rows=agderSafeProperties(p).map(([key,value])=>`<tr><td>${escapeHtml(String(key).replace(/_/g,' '))}</td><td>${escapeHtml(String(value))}</td></tr>`).join('');
+  const label=p._fisteLayerTitle||'Sjøørretbekk';
+  return `<div class="agder-stream-popup"><b>${escapeHtml(label)}</b>${rows?`<table>${rows}</table>`:''}<small>Kilde: offentlig kart «Sjøørretbekker i Agder».</small><br><a href="https://agderfk.maps.arcgis.com/apps/webappviewer/index.html?id=1523c2a68ddd446db3582aa01599aec7" target="_blank" rel="noopener">Åpne originalkartet</a></div>`;
+}
+function agderMarkerForFeature(feature,latlng){
+  const category=feature?.properties?._fisteCategory||'observation';
+  const symbols={outlet:'↘','barrier-human':'!','barrier-natural':'▲','barrier-other':'◆',observation:'•'};
+  return L.marker(latlng,{icon:L.divIcon({className:'',html:`<span class="agder-marker agder-marker-${category}">${symbols[category]||'•'}</span>`,iconSize:[20,20],iconAnchor:[10,10]})});
+}
+function renderAgderSeaTroutFeatures(data){
+  agderSeaTroutLayer.clearLayers();agderSeaTroutFeatures=Array.isArray(data?.features)?data.features:[];
+  if(!agderSeaTroutRelevant()||!agderSeaTroutFeatures.length)return;
+  L.geoJSON({type:'FeatureCollection',features:agderSeaTroutFeatures},{
+    style(feature){const c=feature?.properties?._fisteCategory;return c==='stream'?{color:'#22c9d6',weight:3,opacity:.9}:{color:'#79d9ea',weight:2,opacity:.75,fillOpacity:.12};},
+    pointToLayer:agderMarkerForFeature,
+    onEachFeature(feature,layer){layer.bindPopup(agderPopupHtml(feature),{maxWidth:390,className:'source-leaflet-popup'});}
+  }).addTo(agderSeaTroutLayer);
+}
+async function loadAgderSeaTrout({force=false}={}){
+  const status=$('agderSeaTroutStatus');
+  if(!agderSeaTroutRelevant()){agderSeaTroutController?.abort();agderSeaTroutController=null;agderSeaTroutLayer.clearLayers();agderSeaTroutFeatures=[];if(status)status.hidden=true;return;}
+  if(map.getZoom()<9){agderSeaTroutLayer.clearLayers();if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Agder:</strong> zoom nærmere for detaljer.';}return;}
+  const b=map.getBounds(),key=[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].map(v=>v.toFixed(3)).join(',')+':'+map.getZoom();
+  if(!force&&key===agderSeaTroutKey&&agderSeaTroutFeatures.length)return;
+  agderSeaTroutController?.abort();agderSeaTroutController=new AbortController();
+  if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Agder:</strong> henter bekker, utløp og vandringshindre …';}
+  try{
+    const response=await fetch(`/api/agder-seatrout?bbox=${encodeURIComponent([b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(','))}&zoom=${map.getZoom()}`,{cache:'no-store',signal:agderSeaTroutController.signal});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||'Kartlaget svarte ikke');agderSeaTroutKey=key;renderAgderSeaTroutFeatures(data);
+    const names={'stream':'bekkeløp','outlet':'utløp','barrier-human':'menneskeskapte hinder','barrier-natural':'naturlige hinder','barrier-other':'andre hinder','observation':'observasjoner'};
+    const counts=(data.layers||[]).filter(x=>x.count).map(x=>`${x.count} ${names[x.category]||x.category}`);
+    if(status){status.hidden=false;status.innerHTML=`<strong>Sjøørretbekker Agder:</strong> ${data.count||0} objekt${data.count===1?'':'er'} i utsnittet${counts.length?' · '+escapeHtml(counts.slice(0,4).join(' · ')):''}.`;}
+    const selected=latestZones.find(zone=>zone.id===selectedZoneId);if(selected)renderSelectedZone(selected);
+  }catch(error){if(error?.name==='AbortError')return;agderSeaTroutLayer.clearLayers();agderSeaTroutFeatures=[];if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Agder:</strong> kunne ikke hente laget akkurat nå. Resten av Fiste fungerer normalt.';}}
+}
+function geometryDistanceMetersToZone(geometry,zone){
+  if(!geometry||!zone?.marker)return Infinity;const target={lat:zone.marker.lat,lon:zone.marker.lon};
+  const pointDist=coord=>Array.isArray(coord)&&coord.length>=2?distanceKm(target,{lat:Number(coord[1]),lon:Number(coord[0])})*1000:Infinity;
+  if(geometry.type==='Point')return pointDist(geometry.coordinates);
+  const coords=geometry.type==='LineString'?geometry.coordinates:geometry.type==='MultiLineString'?geometry.coordinates.flat():geometry.type==='Polygon'?geometry.coordinates.flat():geometry.type==='MultiPoint'?geometry.coordinates:[];
+  return coords.reduce((best,coord)=>Math.min(best,pointDist(coord)),Infinity);
+}
+function nearestAgderSeaTroutContext(zone){
+  if(!['sjoorret','all'].includes($('fishType')?.value)||!agderSeaTroutFeatures.length)return null;
+  let best=null;
+  for(const feature of agderSeaTroutFeatures){const category=feature?.properties?._fisteCategory;if(!['stream','outlet','barrier-human','barrier-natural','barrier-other'].includes(category))continue;const distanceM=geometryDistanceMetersToZone(feature.geometry,zone);if(!best||distanceM<best.distanceM)best={distanceM,category,title:feature.properties?._fisteLayerTitle||'Sjøørretbekk'};}
+  return best&&best.distanceM<=1500?best:null;
+}
+function agderContextHtml(zone){
+  const ctx=nearestAgderSeaTroutContext(zone);if(!ctx)return '';
+  const label={'stream':'kartlagt sjøørretbekk','outlet':'kartlagt bekkeutløp','barrier-human':'menneskeskapt vandringshinder','barrier-natural':'naturlig vandringshinder','barrier-other':'vandringshinder'}[ctx.category]||'sjøørretdata';
+  return `<details class="zone-detail agder-context"><summary><span>🐟 Sjøørretbekk-data</span><small>${Math.round(ctx.distanceM)} m</small></summary><p>Nærmeste ${escapeHtml(label)} ligger ca. <b>${Math.round(ctx.distanceM)} m</b> fra punktet. Dette brukes som biologisk kontekst, ikke som automatisk fisketips.</p><p><strong>Viktig:</strong> gytebekker og utløp kan ha særskilte fredningsregler. Kontroller «Fredningsgrenser» og lokale regler før fiske.</p></details>`;
+}
+
 function renderConditionVectors() {
   conditionLayer.clearLayers();
   if(!showConditionVectors||freshwaterFishTypes.has($('fishType').value)||!latestWeather) return;
@@ -1334,7 +1404,7 @@ function lureDetailsHtml(lure={},presentation={},fly={}){
 }
 function analysisDetailsHtml(zone={}){
   const analysis=zone.analysis||{},habitat=zone.habitat||{},legal=zone.legal||{};
-  return `<div class="selected-detail-stack"><details class="zone-detail"><summary><span>📍 Hvorfor akkurat her</span><small>kort analyse</small></summary><div class="detail-columns"><section><b>Habitat/struktur</b>${factorRowsHtml(analysis.habitatFactors||[])}</section><section><b>Forhold nå</b>${factorRowsHtml(analysis.liveFactors||[])}</section></div></details><details class="zone-detail depth-detail"><summary><span>🌊 Dybde og struktur</span><small>${escapeHtml(zone.structure?.label||'profil')}</small></summary>${quickStructureHtml(zone)}</details><details class="zone-detail"><summary><span>⚠️ Regler</span><small>${legal.blocked?'SPERRET':'kontroll'}</small></summary>${legalDetailHtml(legal)}</details><details class="zone-detail"><summary><span>ℹ️ Mer analyse</span><small>${Math.round(zone.dataQuality?.confidence??analysis.confidence??0)} % data</small></summary><div class="detail-columns"><section><b>Habitatdata</b>${habitatDetailHtml(habitat)}</section><section><b>Datagrunnlag</b>${confidenceDetailHtml(zone)}</section></div></details></div>`;
+  return `<div class="selected-detail-stack">${agderContextHtml(zone)}<details class="zone-detail"><summary><span>📍 Hvorfor akkurat her</span><small>kort analyse</small></summary><div class="detail-columns"><section><b>Habitat/struktur</b>${factorRowsHtml(analysis.habitatFactors||[])}</section><section><b>Forhold nå</b>${factorRowsHtml(analysis.liveFactors||[])}</section></div></details><details class="zone-detail depth-detail"><summary><span>🌊 Dybde og struktur</span><small>${escapeHtml(zone.structure?.label||'profil')}</small></summary>${quickStructureHtml(zone)}</details><details class="zone-detail"><summary><span>⚠️ Regler</span><small>${legal.blocked?'SPERRET':'kontroll'}</small></summary>${legalDetailHtml(legal)}</details><details class="zone-detail"><summary><span>ℹ️ Mer analyse</span><small>${Math.round(zone.dataQuality?.confidence??analysis.confidence??0)} % data</small></summary><div class="detail-columns"><section><b>Habitatdata</b>${habitatDetailHtml(habitat)}</section><section><b>Datagrunnlag</b>${confidenceDetailHtml(zone)}</section></div></details></div>`;
 }
 function renderSelectedZone(zone){
   const holder=$('selectedZone');if(!holder)return;
@@ -1424,11 +1494,11 @@ function configureMobilePanels(){
 // ResizeObserver/invalidateSize can emit moveend without user interaction.
 // Listening to dragend instead prevents a render → resize → reload feedback loop.
 map.on('click',event=>{setBasePoint(event.latlng,{label:'Kartklikk',focus:false});setState('ready','Kartklikk satt som referansepunkt. Oppdaterer 10 beste soner …');if(freshwaterFishTypes.has($('fishType').value)&&$('mapStyle').value==='fishing')loadFreshwaterDepthOverlay({force:true});});
-map.on('dragend zoomend', () => {if(threeDSyncing)return;saveUiState();renderConditionVectors();if(showBoatRamps)loadBoatRamps();if(freshwaterFishTypes.has($('fishType').value)&&$('mapStyle').value==='fishing')loadFreshwaterDepthOverlay();loadZones();scheduleBathyRefresh(750);scheduleNative3DRefresh(750);});
+map.on('dragend zoomend', () => {if(threeDSyncing)return;saveUiState();renderConditionVectors();if(showBoatRamps)loadBoatRamps();if(showAgderSeaTrout)loadAgderSeaTrout();if(freshwaterFishTypes.has($('fishType').value)&&$('mapStyle').value==='fishing')loadFreshwaterDepthOverlay();loadZones();scheduleBathyRefresh(750);scheduleNative3DRefresh(750);});
 $('locate').addEventListener('click', () => { setState('locating','Finner posisjonen din …'); map.locate({ setView:true, maxZoom:14, enableHighAccuracy:true }); });
 $('live').addEventListener('click',startLiveMode);
 $('retry').addEventListener('click', () => loadZones({immediate:true}));
-$('fishType').addEventListener('change', () => { if($('fishType').value!=='all') $('catchFish').value=$('fishType').value; $('mapStyle').value='fishing'; updateFilterSummary(); renderFishingInsights(); updateWaterModeUI(); saveUiState(); loadZones({immediate:true}); });
+$('fishType').addEventListener('change', () => { if($('fishType').value!=='all') $('catchFish').value=$('fishType').value; $('mapStyle').value='fishing'; updateFilterSummary(); renderFishingInsights(); updateWaterModeUI(); loadAgderSeaTrout({force:true}); saveUiState(); loadZones({immediate:true}); });
 $('fishGoal').addEventListener('change',()=>{saveUiState();loadZones({immediate:true});});
 $('baseRadius').addEventListener('change',()=>{saveUiState();updateBaseRadiusCircle();if(basePoint&&Number($('baseRadius').value)>0)focusBaseRadius();loadZones({immediate:true});});
 $('setBase').addEventListener('click',()=>{if(basePoint)clearBasePoint();else setBasePoint(map.getCenter(),{label:'Valgt base'});});
@@ -1444,6 +1514,7 @@ $('sourceSpotToggle').addEventListener('click',()=>{showSourceSpots=!showSourceS
 $('restrictionToggle').addEventListener('click',()=>{showRestrictions=!showRestrictions;$('restrictionToggle').setAttribute('aria-pressed',String(showRestrictions));$('restrictionToggle').classList.toggle('restriction-active',showRestrictions);$('restrictionToggle').textContent=showRestrictions?'Fredningsgrenser':'Vis fredningsgrenser';renderReferenceLayers();});
 $('conditionToggle').addEventListener('click',()=>{showConditionVectors=!showConditionVectors;$('conditionToggle').setAttribute('aria-pressed',String(showConditionVectors));$('conditionToggle').classList.toggle('layer-active',showConditionVectors);$('conditionToggle').textContent=showConditionVectors?'Skjul vind/strøm':'Vind/strøm';renderConditionVectors();});
 $('boatRampToggle').addEventListener('click',()=>{showBoatRamps=!showBoatRamps;$('boatRampToggle').setAttribute('aria-pressed',String(showBoatRamps));$('boatRampToggle').classList.toggle('layer-active',showBoatRamps);$('boatRampToggle').textContent=showBoatRamps?'Skjul båtramper':'Båtramper';if(showBoatRamps)loadBoatRamps();else{boatRampLayer.clearLayers();clearWarning('ramps');}});
+$('agderSeaTroutToggle')?.addEventListener('click',()=>{showAgderSeaTrout=!showAgderSeaTrout;$('agderSeaTroutToggle').setAttribute('aria-pressed',String(showAgderSeaTrout));$('agderSeaTroutToggle').classList.toggle('layer-active',showAgderSeaTrout);$('agderSeaTroutToggle').textContent=showAgderSeaTrout?'Sjøørretbekker Agder':'Vis sjøørretbekker Agder';saveUiState();if(showAgderSeaTrout)loadAgderSeaTrout({force:true});else{agderSeaTroutController?.abort();agderSeaTroutLayer.clearLayers();agderSeaTroutFeatures=[];if($('agderSeaTroutStatus'))$('agderSeaTroutStatus').hidden=true;}});
 $('closeLureViewer').addEventListener('click', () => { lureViewer.close(); if(lureViewerHistoryActive){lureViewerHistoryActive=false;history.back();} });
 lureViewer.addEventListener('click', event => { if (event.target === lureViewer){ lureViewer.close(); if(lureViewerHistoryActive){lureViewerHistoryActive=false;history.back();} } });
 window.addEventListener('popstate',()=>{ if(lureViewer.open){lureViewerHistoryActive=false;lureViewer.close();} });
@@ -1457,8 +1528,9 @@ window.addEventListener('offline', () => {const cached=readCachedAnalysis();setS
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&liveActive) acquireLiveWakeLock();});
 window.addEventListener('pagehide',()=>{if(liveWatchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(liveWatchId); releaseLiveWakeLock();});
 async function loadOwnedLureNames(){try{const response=await fetch('/data/owned-lure-names.json',{cache:'force-cache'});const data=await response.json();$('ownedLures').innerHTML=(data.lures||[]).map(item=>`<option value="${escapeHtml(item.name||item.type||'')}"></option>`).join('');}catch{}}
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=43.0', { updateViaCache: 'none' }).catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=44.0', { updateViaCache: 'none' }).catch(() => {}));
 loadOwnedLureNames();
+setTimeout(()=>loadAgderSeaTrout({force:true}),250);
 if(savedUiState.fishType&&Object.hasOwn(fishLabels,savedUiState.fishType)) $('fishType').value=savedUiState.fishType;
 if(['numbers','big'].includes(savedUiState.fishGoal)) $('fishGoal').value=savedUiState.fishGoal;
 if(['0','250','500','1000','2000'].includes(String(savedUiState.baseRadius))) $('baseRadius').value=String(savedUiState.baseRadius);
@@ -1468,6 +1540,9 @@ else if(legacyBathyMapStyle) $('mapStyle').value='3d';
 else if(['topo','satellite','fishing','chart','3d'].includes(savedUiState.mapStyle)) $('mapStyle').value=savedUiState.mapStyle;
 else if(['standard','toporaster','terrain','hybrid'].includes(savedUiState.mapStyle)) $('mapStyle').value='fishing';
 if(freshwaterFishTypes.has($('fishType').value)&&$('mapStyle').value==='chart')$('mapStyle').value='fishing';
+$('agderSeaTroutToggle')?.setAttribute('aria-pressed',String(showAgderSeaTrout));
+$('agderSeaTroutToggle')?.classList.toggle('layer-active',showAgderSeaTrout);
+if($('agderSeaTroutToggle'))$('agderSeaTroutToggle').textContent=showAgderSeaTrout?'Sjøørretbekker Agder':'Vis sjøørretbekker Agder';
 configureMobilePanels();
 if(basePoint){baseMarker=L.circleMarker([basePoint.lat,basePoint.lon],{radius:7,color:'#fff',weight:2,fillColor:'#f2c94c',fillOpacity:.95}).addTo(map).bindTooltip('Lagret referansepunkt',{direction:'top'});$('setBase').textContent='✓ Base satt · fjern';$('setBase').classList.add('base-active');$('setBase').setAttribute('aria-pressed','true');updateBaseRadiusCircle();}
 initCatchLog();

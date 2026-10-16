@@ -1,0 +1,9 @@
+Fiste guiden REV44 – Sjøørretbekker i Agder
+
+- Offentlig ArcGIS-kart integrert via app-id 1523c2a68ddd446db3582aa01599aec7.
+- Fiste finner underliggende offentlige webkart/featurelag dynamisk via ArcGIS REST.
+- Viser bekkeforløp, bekkeutløp, menneskeskapte/naturlige/andre vandringshindre og observasjoner når de finnes.
+- Eget lag under Mer > Kartlag og regler; aktivt for Sjøørret/Alle sjøarter i Agder.
+- Popup viser kildedata og lenke til originalkartet.
+- Valgt sone viser nærmeste bekk/utløp/hinder som biologisk kontekst innen 1,5 km. Ingen automatisk scorebonus, siden gytebekker/utløp kan være juridisk sensitive.
+- ArcGIS-feil vises lokalt i kartlagstatus og stopper ikke resten av Fiste.

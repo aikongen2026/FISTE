@@ -165,3 +165,18 @@
 .lure-score-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.32rem;margin:.55rem 0}.lure-score-grid span{display:grid;gap:.08rem;place-items:center;padding:.35rem .2rem;border:1px solid #285143;border-radius:.52rem;background:#071c16}.lure-score-grid small{font-size:.54rem;color:#8fb6a4;text-transform:uppercase;letter-spacing:.03em}.lure-score-grid b{font-size:.72rem;color:#baf4d2}.strategy-confidence{margin:.35rem 0 .55rem;padding:.5rem .6rem;border:1px solid #315e4c;border-radius:.55rem;background:#081f19;color:#abc8ba;font-size:.65rem;line-height:1.38}.strategy-confidence b{color:#8ff0b8}
 @media(max-width:850px){.lure-score-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:560px){.lure-score-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lure-score-grid small{font-size:.5rem}}
+
+
+/* REV44 – offentlig kartlag: Sjøørretbekker i Agder */
+.agder-seatrout-status{margin:.5rem 0 0;font-size:.76rem;line-height:1.35;color:#9fc8bb}
+.agder-seatrout-status strong{color:#d8f5ec}
+.agder-stream-popup{font-size:.82rem;line-height:1.35;min-width:210px}
+.agder-stream-popup b{color:#d7fff3}
+.agder-stream-popup table{border-collapse:collapse;width:100%;margin:.35rem 0}
+.agder-stream-popup td{padding:.12rem .25rem;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.08)}
+.agder-stream-popup td:first-child{color:#9fc8bb;width:42%}
+.agder-stream-popup a{color:#72d7ff}
+.agder-marker{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:2px solid #071b16;color:#fff;font-size:11px;font-weight:900;box-shadow:0 1px 5px rgba(0,0,0,.5)}
+.agder-marker-outlet{background:#22c9d6}.agder-marker-barrier-human{background:#e85b58}.agder-marker-barrier-natural{background:#f59f42}.agder-marker-barrier-other{background:#e5c84b;color:#172019}.agder-marker-observation{background:#a778e8}
+.agder-context{border-color:rgba(34,201,214,.35)}
+.agder-context p{margin:.45rem 0;color:#c8ddd6}

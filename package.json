@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "19.0.0",
-  "appRevision": 43,
-  "description": "Fiste guiden REV43 – strategi-først motor: habitat, aktivitet, presentasjon og absolutt match mot 98 egne sluker.",
+  "version": "20.0.0",
+  "appRevision": 44,
+  "description": "Fiste guiden REV44 – REV43 strategimotor + offentlig Sjøørretbekker i Agder-kartlag.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",

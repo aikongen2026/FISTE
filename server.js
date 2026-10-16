@@ -26,6 +26,9 @@ const FISH_TYPES = Object.freeze({
   orret:'Ørret (ferskvann)', abbor:'Abbor', gjedde:'Gjedde'
 });
 const FRESHWATER_FISH_TYPES = new Set(['orret','abbor','gjedde']);
+const AGDER_SEATROUT_APP_ID = '1523c2a68ddd446db3582aa01599aec7';
+const AGDER_SEATROUT_SOURCE_URL = `https://agderfk.maps.arcgis.com/apps/webappviewer/index.html?id=${AGDER_SEATROUT_APP_ID}`;
+const ARCGIS_PORTAL = 'https://www.arcgis.com';
 
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function angularDistance(a, b) { return Math.abs((((a - b) % 360) + 540) % 360 - 180); }
@@ -1955,6 +1958,127 @@ async function kartverketBathymetryGrid({west,south,east,north,zoom=13,quality='
   });
 }
 
+
+function isArcgisItemId(value){ return /^[0-9a-f]{32}$/i.test(String(value||'').trim()); }
+function collectArcgisItemIds(value,out=new Set()){
+  if(typeof value==='string'){ if(isArcgisItemId(value)) out.add(value); return out; }
+  if(Array.isArray(value)){ value.forEach(item=>collectArcgisItemIds(item,out)); return out; }
+  if(value&&typeof value==='object') Object.values(value).forEach(item=>collectArcgisItemIds(item,out));
+  return out;
+}
+function normalizeLayerWords(value=''){
+  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[øØ]/g,'o').replace(/[åÅ]/g,'a').replace(/[æÆ]/g,'ae').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+function classifyAgderSeaTroutLayerTitle(title=''){
+  const t=normalizeLayerWords(title);
+  if(!t) return null;
+  if(/bekke?utlop|utlop|utos/.test(t)) return 'outlet';
+  if(/menneske.*hinder|hinder.*menneske|kulvert|ror.*hinder|dam.*hinder/.test(t)) return 'barrier-human';
+  if(/naturlig.*hinder|hinder.*naturlig|foss.*hinder/.test(t)) return 'barrier-natural';
+  if(/annet.*hinder|andre.*hinder|vandringshinder|hinder/.test(t)) return 'barrier-other';
+  if(/observasjon|infopunkt|gytegrop|yngel|aal|orret|sjoorret.*punkt/.test(t)) return 'observation';
+  if(/bekkeforlop|bekkelop|anadrom.*strek|bekk.*linje|sjoorretbekk|sjoaurebekk/.test(t)) return 'stream';
+  return null;
+}
+function flattenArcgisOperationalLayers(layers=[],parentTitle=''){
+  const result=[];
+  for(const layer of Array.isArray(layers)?layers:[]){
+    if(!layer||typeof layer!=='object') continue;
+    const title=[parentTitle,layer.title||layer.name||''].filter(Boolean).join(' / ');
+    const descriptor={title,url:layer.url||null,itemId:layer.itemId||null,layerId:Number.isInteger(layer.layerId)?layer.layerId:null};
+    if(descriptor.url||descriptor.itemId) result.push(descriptor);
+    if(Array.isArray(layer.layers)) result.push(...flattenArcgisOperationalLayers(layer.layers,title));
+    if(Array.isArray(layer.featureCollection?.layers)) result.push(...flattenArcgisOperationalLayers(layer.featureCollection.layers,title));
+  }
+  return result;
+}
+function arcgisGeometryToGeoJson(geometry){
+  if(!geometry||typeof geometry!=='object') return null;
+  if(Number.isFinite(geometry.x)&&Number.isFinite(geometry.y)) return {type:'Point',coordinates:[geometry.x,geometry.y]};
+  if(Array.isArray(geometry.points)&&geometry.points.length) return {type:'MultiPoint',coordinates:geometry.points};
+  if(Array.isArray(geometry.paths)&&geometry.paths.length){ return geometry.paths.length===1?{type:'LineString',coordinates:geometry.paths[0]}:{type:'MultiLineString',coordinates:geometry.paths}; }
+  if(Array.isArray(geometry.rings)&&geometry.rings.length) return {type:'Polygon',coordinates:geometry.rings};
+  return null;
+}
+async function arcgisItemMeta(itemId){
+  return fetchJson(`${ARCGIS_PORTAL}/sharing/rest/content/items/${encodeURIComponent(itemId)}?f=json`,{'User-Agent':MET_USER_AGENT},10000);
+}
+async function arcgisItemData(itemId){
+  return fetchJson(`${ARCGIS_PORTAL}/sharing/rest/content/items/${encodeURIComponent(itemId)}/data?f=json`,{'User-Agent':MET_USER_AGENT},12000);
+}
+async function expandArcgisLayerDescriptor(descriptor){
+  let url=String(descriptor.url||'').replace(/\/$/,'');
+  let title=descriptor.title||'';
+  if(!url&&isArcgisItemId(descriptor.itemId)){
+    try{const meta=await arcgisItemMeta(descriptor.itemId);url=String(meta?.url||'').replace(/\/$/,'');title=[title,meta?.title].filter(Boolean).join(' / ');}catch{}
+  }
+  if(!url) return [];
+  if(Number.isInteger(descriptor.layerId)&&!/\/(?:FeatureServer|MapServer)\/\d+$/i.test(url)) url+=`/${descriptor.layerId}`;
+  if(/\/(?:FeatureServer|MapServer)\/\d+$/i.test(url)){
+    try{const meta=await fetchJson(`${url}?f=json`,{'User-Agent':MET_USER_AGENT},8000);title=[title,meta?.name].filter(Boolean).join(' / ');}catch{}
+    return [{url,title,category:classifyAgderSeaTroutLayerTitle(title)}];
+  }
+  if(/\/(?:FeatureServer|MapServer)$/i.test(url)){
+    try{
+      const meta=await fetchJson(`${url}?f=json`,{'User-Agent':MET_USER_AGENT},10000);
+      return (meta?.layers||[]).map(layer=>({url:`${url}/${layer.id}`,title:[title,layer.name].filter(Boolean).join(' / '),category:classifyAgderSeaTroutLayerTitle([title,layer.name].join(' / '))}));
+    }catch{return [];}
+  }
+  return [];
+}
+async function resolveAgderSeaTroutLayers(){
+  return cached('agder-seatrout:layers:v1',12*60*60*1000,async()=>{
+    const appData=await arcgisItemData(AGDER_SEATROUT_APP_ID);
+    const direct=[appData?.map?.itemId,appData?.webmap,appData?.webMapId,appData?.map?.webmap].filter(isArcgisItemId);
+    const candidates=[...new Set([...direct,...collectArcgisItemIds(appData)])].filter(id=>id!==AGDER_SEATROUT_APP_ID).slice(0,20);
+    let webMapData=null,webMapId=null;
+    for(const id of candidates){
+      try{
+        const meta=await arcgisItemMeta(id);
+        if(/web map/i.test(String(meta?.type||''))){webMapData=await arcgisItemData(id);webMapId=id;break;}
+      }catch{}
+    }
+    if(!webMapData&&Array.isArray(appData?.operationalLayers)){webMapData=appData;webMapId=AGDER_SEATROUT_APP_ID;}
+    if(!webMapData) throw new Error('Fant ikke offentlig webkart bak Sjøørretbekker i Agder.');
+    const raw=flattenArcgisOperationalLayers(webMapData.operationalLayers||[]);
+    const expanded=[];
+    for(const descriptor of raw.slice(0,40)) expanded.push(...await expandArcgisLayerDescriptor(descriptor));
+    const seen=new Set();
+    const relevant=expanded.filter(layer=>layer.category&&layer.url&&!seen.has(layer.url)&&(seen.add(layer.url),true));
+    if(!relevant.length) throw new Error('Fant ingen relevante sjøørretbekk-lag i ArcGIS-kartet.');
+    return {webMapId,layers:relevant};
+  });
+}
+async function queryAgderSeaTroutLayer(layer,input){
+  const params=new URLSearchParams({
+    f:'json',where:'1=1',outFields:'*',returnGeometry:'true',outSR:'4326',
+    geometry:`${input.west},${input.south},${input.east},${input.north}`,
+    geometryType:'esriGeometryEnvelope',inSR:'4326',spatialRel:'esriSpatialRelIntersects',
+    resultRecordCount:'1200',geometryPrecision:'6'
+  });
+  const json=await fetchJson(`${layer.url}/query?${params}`,{'User-Agent':MET_USER_AGENT},12000);
+  if(json?.error) throw new Error(json.error.message||'ArcGIS-laget svarte med feil');
+  const features=(json?.features||[]).map((feature,index)=>{
+    const geometry=arcgisGeometryToGeoJson(feature.geometry);if(!geometry)return null;
+    return {type:'Feature',id:`${layer.category}-${index}`,geometry,properties:{...(feature.attributes||{}),_fisteCategory:layer.category,_fisteLayerTitle:layer.title,_fisteSource:'Sjøørretbekker i Agder'}};
+  }).filter(Boolean);
+  return {layer,features,exceededTransferLimit:Boolean(json?.exceededTransferLimit)};
+}
+async function agderSeaTroutFeatures(input){
+  // The source is regional. Outside a generous Agder envelope we return quickly without external calls.
+  const intersectsAgder=input.east>=5.9&&input.west<=9.7&&input.north>=57.4&&input.south<=59.8;
+  if(!intersectsAgder) return {available:true,inCoverage:false,source:'Sjøørretbekker i Agder',sourceUrl:AGDER_SEATROUT_SOURCE_URL,layers:[],features:[],count:0};
+  const key=`agder-seatrout:${input.west.toFixed(3)},${input.south.toFixed(3)},${input.east.toFixed(3)},${input.north.toFixed(3)}:${input.zoom}`;
+  return cached(key,10*60*1000,async()=>{
+    const resolved=await resolveAgderSeaTroutLayers();
+    const results=await Promise.allSettled(resolved.layers.map(layer=>queryAgderSeaTroutLayer(layer,input)));
+    const ok=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
+    if(!ok.length) throw new Error('Sjøørretbekk-lagene svarte ikke akkurat nå.');
+    const features=ok.flatMap(result=>result.features).slice(0,3500);
+    return {available:true,inCoverage:true,source:'Sjøørretbekker i Agder',sourceUrl:AGDER_SEATROUT_SOURCE_URL,appId:AGDER_SEATROUT_APP_ID,webMapId:resolved.webMapId,layers:ok.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit})),features,count:features.length,generatedAt:new Date().toISOString()};
+  });
+}
+
 function send(res, code, data, type='application/json; charset=utf-8', extraHeaders={}) {
   res.writeHead(code, {'Content-Type':type,'Access-Control-Allow-Origin':'*','Cache-Control':type.startsWith('application/json')?'no-store':'public, max-age=3600', ...extraHeaders});
   const body=type.startsWith('application/json')&&!Buffer.isBuffer(data)&&typeof data!=='string'?JSON.stringify(data):data;
@@ -1962,7 +2086,7 @@ function send(res, code, data, type='application/json; charset=utf-8', extraHead
 }
 async function handleApi(req,res,url) {
   try {
-    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v19-rev43',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,freshwaterDepthOverlay:true,freshwaterSpeciesDepthRanking:true,ownedLureInventoryV2:true,biteGuideReferenceCards:true,strictWaterEnvironmentLures:true,biteGuide:true,biteGuideIndependent:true,smartOwnedLureMatching:true,strategyEngineV3:true,absoluteOwnedLureMatch:true,explainableLureScore:true,shorelineMicrohabitat:true,nveDepthMetadataCheck:true,nveLakeGeometryFallback:true,nvePagination:true,nveHydApiConfigured:Boolean(NVE_API_KEY)});
+    if(url.pathname==='/api/health') return send(res,200,{ok:true,version:'v20-rev44',revision:APP_REVISION,marine:true,hsiSplit:true,habitatLayers:true,depthProfiles:true,hardRestrictionFilter:true,terrain3d:true,bathymetry3d:true,bathymetrySource:'kartverket-hoydedata+nve-dybdekart',freshwaterBathymetry3d:true,freshwaterDepthOverlay:true,freshwaterSpeciesDepthRanking:true,ownedLureInventoryV2:true,biteGuideReferenceCards:true,strictWaterEnvironmentLures:true,biteGuide:true,biteGuideIndependent:true,smartOwnedLureMatching:true,strategyEngineV3:true,absoluteOwnedLureMatch:true,explainableLureScore:true,shorelineMicrohabitat:true,nveDepthMetadataCheck:true,nveLakeGeometryFallback:true,nvePagination:true,agderSeaTroutLayers:true,agderSeaTroutAppId:AGDER_SEATROUT_APP_ID,nveHydApiConfigured:Boolean(NVE_API_KEY)});
     if(url.pathname==='/api/weather') {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
@@ -1977,6 +2101,11 @@ async function handleApi(req,res,url) {
       const lat=Number(url.searchParams.get('lat')),lon=Number(url.searchParams.get('lon'));
       if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<57||lat>72||lon<3||lon>32) return send(res,400,{error:'Ugyldig lat/lon for Norge'});
       return send(res,200,await hydrology(lat,lon));
+    }
+    if(url.pathname==='/api/agder-seatrout') {
+      let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'12');}catch(error){return send(res,400,{error:error.message});}
+      if(input.zoom<9) return send(res,200,{available:true,inCoverage:true,zoomRequired:9,source:'Sjøørretbekker i Agder',sourceUrl:AGDER_SEATROUT_SOURCE_URL,layers:[],features:[],count:0});
+      try{return send(res,200,await agderSeaTroutFeatures(input),'application/json; charset=utf-8',{'Cache-Control':'public, max-age=600'});}catch(error){return send(res,502,{available:false,error:error.message,source:'Sjøørretbekker i Agder',sourceUrl:AGDER_SEATROUT_SOURCE_URL});}
     }
     if(url.pathname==='/api/ramps') {
       let input;try{input=validateZoneRequest(url.searchParams.get('bbox'),url.searchParams.get('zoom')||'12');}catch(error){return send(res,400,{error:error.message});}
@@ -2054,4 +2183,4 @@ function createServer() {
 }
 function startServer(port=PORT) { const server=createServer(); return server.listen(port,()=>{ let ip='localhost'; for(const list of Object.values(os.networkInterfaces())) for(const item of list||[]) if(item.family==='IPv4'&&!item.internal) ip=item.address; console.log(`Fiste guiden kjører på http://${ip}:${port}`); }); }
 if(require.main===module) startServer();
-module.exports={deriveStrategyProfile,lurePhysicalProfile,absoluteLureMatch,freshwaterRingMetrics,nveLakeQuery,nveLakeQueryAll,nveSurveyQuality,resolveNveDepthContext,nveFeaturesToFreshwaterAreas,fetchNveFreshwaterAreas,deriveIdealLureProfile,colorTagsFromText,selectPhotographedLures,sourceBackedLureChoice,kartverketBathymetryGrid,nveFreshwaterBathymetryGrid,freshwaterDepthOverlay,sampleBathymetryGridDepth,freshwaterStructureFromGrid,geoJsonContainsPoint,inverseDistanceDepth,buildZoneBiteGuide,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};
+module.exports={classifyAgderSeaTroutLayerTitle,flattenArcgisOperationalLayers,arcgisGeometryToGeoJson,agderSeaTroutFeatures,deriveStrategyProfile,lurePhysicalProfile,absoluteLureMatch,freshwaterRingMetrics,nveLakeQuery,nveLakeQueryAll,nveSurveyQuality,resolveNveDepthContext,nveFeaturesToFreshwaterAreas,fetchNveFreshwaterAreas,deriveIdealLureProfile,colorTagsFromText,selectPhotographedLures,sourceBackedLureChoice,kartverketBathymetryGrid,nveFreshwaterBathymetryGrid,freshwaterDepthOverlay,sampleBathymetryGridDepth,freshwaterStructureFromGrid,geoJsonContainsPoint,inverseDistanceDepth,buildZoneBiteGuide,bathymetryGridPlan,classifyKartverketHeight,lonLatToUtm33,bathymetryRaster,computeScore,computeLiveScore,computeHabitatScore,buildAnalysisConfidence,classifyQuickStructure,classifyDepthProfile,depthProfileAtPoint,fetchMarineHabitatContext,marineHabitatAtPoint,legalStatusForPoint,environmentalScoreAdjustments,moonInfo,deriveMarineSummary,marine,hydrology,boatRamps,validateZoneRequest,createBoundedCache,windExposure,formatReason,recommendLure,lureCatalog,parseDepthFeatureInfo,depthAtPoint,norwegianHour,buildDataQuality,normalizeFishType,normalizeFishSelection,searchBoundsForBase,isFreshwaterFish,isNearOfficialNoFishingZone,parseFreshwaterAreas,freshwaterAtPoint,freshwaterCandidateGrid,freshwaterCoastInfo,polygonMostlyInFreshwater,parseNominatimWater,fetchNominatimWater,fetchFreshwaterAreas,bestFishingTimes,MAX_ZONE_COUNT,MAX_ZONE_CANDIDATES,FISH_TYPES,createServer,startServer,weather,generateZones};
