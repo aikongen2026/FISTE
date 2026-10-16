@@ -1,8 +1,8 @@
 {
   "name": "sjoorret-live-kart-v11",
-  "version": "20.0.0",
-  "appRevision": 44,
-  "description": "Fiste guiden REV44 – REV43 strategimotor + offentlig Sjøørretbekker i Agder-kartlag.",
+  "version": "21.0.0",
+  "appRevision": 45,
+  "description": "Fiste guiden REV45 – REV43 strategimotor + nasjonal portal for sjøørretbekker i hele Norge.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/verify-layout.js && node server.js",
