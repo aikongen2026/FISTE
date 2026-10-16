@@ -35,6 +35,34 @@ const ARCGIS_PORTALS = [
   'https://agderfk.maps.arcgis.com'
 ];
 
+// REV45 hotfix 2: use Miljødirektoratet's stable national ArcGIS REST service first.
+// The older "Registrering av sjøørretbekker" web app remains only as a fallback.
+const NATIONAL_ANADROMOUS_MAPSERVER = 'https://kart.miljodirektoratet.no/arcgis/rest/services/anadrome_laksefisk/MapServer';
+const NATIONAL_ANADROMOUS_SOURCE_URL = 'https://kartkatalog.miljodirektoratet.no/MapService/Details/anadrome_laksefisk';
+const NATIONAL_ANADROMOUS_LAYERS = Object.freeze([
+  Object.freeze({
+    url:`${NATIONAL_ANADROMOUS_MAPSERVER}/4`,
+    title:'Anadrom fiskestrekning',
+    category:'stream',
+    source:'Miljødirektoratet – Anadrome laksefisk',
+    sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL
+  }),
+  Object.freeze({
+    url:`${NATIONAL_ANADROMOUS_MAPSERVER}/3`,
+    title:'Utløpspunkt for anadromt vassdrag',
+    category:'outlet',
+    source:'Miljødirektoratet – Anadrome laksefisk',
+    sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL
+  }),
+  Object.freeze({
+    url:`${NATIONAL_ANADROMOUS_MAPSERVER}/1`,
+    title:'Vandringshinder sjøørret',
+    category:'barrier-other',
+    source:'Miljødirektoratet – Anadrome laksefisk',
+    sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL
+  })
+]);
+
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function angularDistance(a, b) { return Math.abs((((a - b) % 360) + 540) % 360 - 180); }
 function normalizeFishType(value = 'sjoorret') {
@@ -2088,28 +2116,63 @@ async function queryNationalSeaTroutLayer(layer,input){
     f:'json',where:'1=1',outFields:'*',returnGeometry:'true',outSR:'4326',
     geometry:`${input.west},${input.south},${input.east},${input.north}`,
     geometryType:'esriGeometryEnvelope',inSR:'4326',spatialRel:'esriSpatialRelIntersects',
-    resultRecordCount:'2000',geometryPrecision:'6',returnZ:'false',returnM:'false'
+    resultRecordCount:'1000',geometryPrecision:'6',returnZ:'false',returnM:'false'
   });
-  const json=await fetchJson(`${layer.url}/query?${params}`,{'User-Agent':MET_USER_AGENT},12000);
+  const json=await fetchJson(`${layer.url}/query?${params}`,{'User-Agent':MET_USER_AGENT,'Accept':'application/json'},10000);
   if(json?.error) throw new Error(json.error.message||'ArcGIS-laget svarte med feil');
   const features=(json?.features||[]).map((feature,index)=>{
     const geometry=arcgisGeometryToGeoJson(feature.geometry);if(!geometry)return null;
-    return {type:'Feature',id:`${layer.category}-${index}`,geometry,properties:{...(feature.attributes||{}),_fisteCategory:layer.category,_fisteLayerTitle:layer.title,_fisteSource:'Nasjonal portal for sjøørretbekker'}};
+    return {type:'Feature',id:`${layer.category}-${index}`,geometry,properties:{...(feature.attributes||{}),_fisteCategory:layer.category,_fisteLayerTitle:layer.title,_fisteSource:layer.source||'Nasjonal portal for sjøørretbekker',_fisteSourceUrl:layer.sourceUrl||NATIONAL_SEATROUT_SOURCE_URL}};
   }).filter(Boolean);
   return {layer,features,exceededTransferLimit:Boolean(json?.exceededTransferLimit)};
 }
 async function nationalSeaTroutFeatures(input){
-  // Nasjonal portal: hent bare kartutsnittet brukeren ser, slik at vi ikke laster hele Norge.
+  // Hent bare kartutsnittet brukeren ser.
   const intersectsNorway=input.east>=3.0&&input.west<=32.0&&input.north>=57.0&&input.south<=72.5;
-  if(!intersectsNorway) return {available:true,inCoverage:false,source:'Nasjonal portal for sjøørretbekker',sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,layers:[],features:[],count:0};
-  const key=`national-seatrout:${input.west.toFixed(3)},${input.south.toFixed(3)},${input.east.toFixed(3)},${input.north.toFixed(3)}:${input.zoom}`;
+  if(!intersectsNorway) return {available:true,inCoverage:false,source:'Miljødirektoratet – Anadrome laksefisk',sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL,layers:[],features:[],count:0};
+
+  const key=`national-seatrout:official-v1:${input.west.toFixed(3)},${input.south.toFixed(3)},${input.east.toFixed(3)},${input.north.toFixed(3)}:${input.zoom}`;
   return cached(key,10*60*1000,async()=>{
+    // Primærkilde: fast, offentlig nasjonal REST-tjeneste fra Miljødirektoratet.
+    // Dette unngår den tunge og ustabile rekursive oppløsningen av ArcGIS-webappen.
+    const directResults=await Promise.allSettled(NATIONAL_ANADROMOUS_LAYERS.map(layer=>queryNationalSeaTroutLayer(layer,input)));
+    const directOk=directResults.filter(result=>result.status==='fulfilled').map(result=>result.value);
+    if(directOk.length){
+      const features=directOk.flatMap(result=>result.features).slice(0,3500);
+      return {
+        available:true,
+        inCoverage:true,
+        source:'Miljødirektoratet – Anadrome laksefisk',
+        sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL,
+        appId:NATIONAL_SEATROUT_APP_ID,
+        webMapId:null,
+        layers:directOk.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit})),
+        features,
+        count:features.length,
+        partial:directOk.length<NATIONAL_ANADROMOUS_LAYERS.length,
+        generatedAt:new Date().toISOString()
+      };
+    }
+
+    // Fallback: behold tidligere nasjonale registreringsportal hvis primærkilden skulle være nede.
     const resolved=await resolveNationalSeaTroutLayers();
-    const results=await Promise.allSettled(resolved.layers.map(layer=>queryNationalSeaTroutLayer(layer,input)));
-    const ok=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
-    if(!ok.length) throw new Error('Ingen av sjøørretlagene svarte. ArcGIS-kilden kan være midlertidig utilgjengelig.');
-    const features=ok.flatMap(result=>result.features).slice(0,3500);
-    return {available:true,inCoverage:true,source:'Nasjonal portal for sjøørretbekker',sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,appId:NATIONAL_SEATROUT_APP_ID,webMapId:resolved.webMapId,layers:ok.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit})),features,count:features.length,generatedAt:new Date().toISOString()};
+    const fallbackResults=await Promise.allSettled(resolved.layers.map(layer=>queryNationalSeaTroutLayer(layer,input)));
+    const fallbackOk=fallbackResults.filter(result=>result.status==='fulfilled').map(result=>result.value);
+    if(!fallbackOk.length) throw new Error('Ingen nasjonale sjøørret-/anadromlag svarte akkurat nå.');
+    const features=fallbackOk.flatMap(result=>result.features).slice(0,3500);
+    return {
+      available:true,
+      inCoverage:true,
+      source:'Nasjonal portal for sjøørretbekker',
+      sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,
+      appId:NATIONAL_SEATROUT_APP_ID,
+      webMapId:resolved.webMapId,
+      layers:fallbackOk.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit})),
+      features,
+      count:features.length,
+      fallback:true,
+      generatedAt:new Date().toISOString()
+    };
   });
 }
 
