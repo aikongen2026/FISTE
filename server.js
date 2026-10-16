@@ -2126,6 +2126,113 @@ async function queryNationalSeaTroutLayer(layer,input){
   }).filter(Boolean);
   return {layer,features,exceededTransferLimit:Boolean(json?.exceededTransferLimit)};
 }
+
+// Deterministisk Østfold-register: de kjente sjøørretbekkene fra offentlige Østfold-rapporter
+// geokodes mot Kartverkets åpne Stedsnavn-API og vises som grønne fiskemarkører.
+// Dette er bevisst uavhengig av ArcGIS-portalen, slik at Fredrikstad/Hvaler/Sarpsborg ikke
+// mister markører når den gamle webappen endrer interne lag eller CORS-oppsett.
+const OSTFOLD_SEATROUT_STREAMS = Object.freeze([
+  // Fredrikstad
+  ['Bjørnevågbekken','3107'],['Elingårdsbekken','3107'],['Engabekken','3107'],['Fjellebekken','3107'],
+  ['Gansrødbekken','3107'],['Gretnesbekken','3107'],['Hunnebekken','3107'],['Husebybekken','3107'],
+  ['Kallerødbekken','3107'],['Oldenborgbekken','3107'],['Rødsbekken','3107'],['Slevikbekken','3107'],
+  ['Torpebekken','3107'],['Ålebekken','3107'],['Holmebekken','3107'],['Ringstadbekken','3107'],
+  ['Laverødbekken','3107'],['Søndre Grimstadbekk','3107'],['Ødegårdsbekken','3107'],['Ulvikbekken','3107'],
+  ['Enhusbekken','3107'],['Vikenebekken','3107'],['Saltnesbekken','3107'],
+  // Hvaler
+  ['Dypedalsbekken','3110'],['Langekilbekken','3110'],['Lerdalsbekken','3110'],['Leretbekken','3110'],
+  ['Kjennvikbekken','3110'],['Tangenbekken','3110'],['Korshavnbekken','3110'],['Holtekilbekken','3110'],
+  // Råde
+  ['Akersbekken','3112'],['Krokstadbekken','3112'],['Møllebekken','3112'],['Røtnebekken','3112'],['Saltnesbekken','3112'],
+  // Sarpsborg
+  ['Stordiket','3105'],['Skjebergbekken','3105'],['Guslundbekken','3105'],['Ingedalsbekken','3105'],
+  ['Bjønnengbekken','3105'],['Solbergbekken','3105'],
+  // Moss / tidligere Rygge
+  ['Kambobekken','3103'],['Gunnarsbybekken','3103'],['Evjåa','3103'],['Støtvikbekken','3103'],
+  ['Kuråa','3103'],['Heiabekken','3103'],
+  // Halden
+  ['Folkåa','3101'],['Folkaa','3101'],['Hjelmungbekken','3101'],['Klepperbekken','3101'],['Skottene','3101'],
+  ['Remmenbekken','3101'],['Risumbekken','3101'],['Rødbekken','3101'],['Signebøbekken','3101'],
+  ['Tista','3101'],['Unnebergbekken','3101'],['Ystehedebekken','3101'],['Svalerødbekken','3101'],
+  ['Lundestadbekken','3101'],['Ørbekken','3101']
+]);
+
+function normalizeSeaTroutName(value=''){
+  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[øØ]/g,'o').replace(/[åÅ]/g,'a').replace(/[æÆ]/g,'ae').toLowerCase().replace(/[^a-z0-9]+/g,'').trim();
+}
+function kartverketPlaceHits(json){
+  if(Array.isArray(json?.navn)) return json.navn;
+  if(Array.isArray(json?.steder)) return json.steder;
+  if(Array.isArray(json?.treff)) return json.treff;
+  if(Array.isArray(json)) return json;
+  return [];
+}
+function placeDisplayNames(item){
+  const names=[];
+  if(Array.isArray(item?.stedsnavn)) for(const n of item.stedsnavn) if(n?.skrivemåte) names.push(n.skrivemåte);
+  if(item?.skrivemåte) names.push(item.skrivemåte);
+  if(item?.navn) names.push(typeof item.navn==='string'?item.navn:item.navn?.skrivemåte||'');
+  return names.filter(Boolean);
+}
+function placePoint(item){
+  const p=item?.representasjonspunkt||item?.representasjonsPunkt||item?.punkt||{};
+  const lat=Number(p.nord??p.lat??p.latitude);
+  const lon=Number(p['øst']??p.ost??p.lon??p.lng??p.longitude);
+  return Number.isFinite(lat)&&Number.isFinite(lon)?{lat,lon}:null;
+}
+async function geocodeOstfoldSeaTroutStream(name,knr){
+  const key=\`ostfold-seatrout-geocode:\${knr}:\${normalizeSeaTroutName(name)}\`;
+  return cached(key,7*24*60*60*1000,async()=>{
+    const variants=[name];
+    if(/bekken$/i.test(name)) variants.push(name.replace(/bekken$/i,'bekk'));
+    if(/bekk$/i.test(name)) variants.push(name+'en');
+    let best=null;
+    for(const variant of [...new Set(variants)]){
+      const params=new URLSearchParams({knr:String(knr),sok:\`\${variant}*\`,treffPerSide:'20',side:'1'});
+      let json;
+      try{json=await fetchJson(\`https://ws.geonorge.no/stedsnavn/v1/navn?\${params}\`,{'User-Agent':MET_USER_AGENT,'Accept':'application/json'},9000);}
+      catch{continue;}
+      for(const item of kartverketPlaceHits(json)){
+        const point=placePoint(item); if(!point) continue;
+        const type=String(item.navneobjekttype||item.navneobjekttypekode||'').toLowerCase();
+        const names=placeDisplayNames(item);
+        const target=normalizeSeaTroutName(name);
+        const exact=names.some(n=>normalizeSeaTroutName(n)===target);
+        const prefix=names.some(n=>normalizeSeaTroutName(n).startsWith(target.slice(0,Math.max(4,target.length-3))));
+        const hydro=/bekk|elv|vassdrag|grøft|kanal|å$|aa$/.test(type);
+        const score=(exact?100:prefix?60:20)+(hydro?25:0);
+        if(!best||score>best.score) best={score,point,type,names};
+      }
+      if(best?.score>=100) break;
+    }
+    return best?.point||null;
+  });
+}
+async function mapLimit(items,limit,worker){
+  const out=new Array(items.length);let next=0;
+  const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(true){const i=next++;if(i>=items.length)return;try{out[i]=await worker(items[i],i);}catch{out[i]=null;}}});
+  await Promise.all(runners);return out;
+}
+async function ostfoldSeaTroutFeatures(input){
+  const intersects=input.east>=10.20&&input.west<=11.85&&input.north>=58.80&&input.south<=59.75;
+  if(!intersects) return [];
+  const resolved=await mapLimit(OSTFOLD_SEATROUT_STREAMS,10,async([name,knr])=>{
+    const point=await geocodeOstfoldSeaTroutStream(name,knr);
+    if(!point) return null;
+    if(point.lon<input.west||point.lon>input.east||point.lat<input.south||point.lat>input.north) return null;
+    return {type:'Feature',id:\`ostfold-\${knr}-\${normalizeSeaTroutName(name)}\`,geometry:{type:'Point',coordinates:[point.lon,point.lat]},properties:{
+      navn:name,_fisteCategory:'fish-presence',_fisteLayerTitle:\`\${name} · registrert sjøørretbekk\`,
+      _fisteSource:'Offentlig Østfold-register + Kartverket Stedsnavn',_fisteSourceUrl:'https://www.njff.no/ostfold/fiske',
+      _fisteOstfoldRegistry:true
+    }};
+  });
+  const seen=new Set(),features=[];
+  for(const feature of resolved.filter(Boolean)){
+    const key=\`\${feature.geometry.coordinates[0].toFixed(5)},\${feature.geometry.coordinates[1].toFixed(5)}\`;
+    if(seen.has(key))continue;seen.add(key);features.push(feature);
+  }
+  return features;
+}
 async function nationalSeaTroutFeatures(input){
   // Hent bare kartutsnittet brukeren ser.
   const intersectsNorway=input.east>=3.0&&input.west<=32.0&&input.north>=57.0&&input.south<=72.5;
@@ -2135,10 +2242,18 @@ async function nationalSeaTroutFeatures(input){
   return cached(key,10*60*1000,async()=>{
     // Primærkilde: fast, offentlig nasjonal REST-tjeneste fra Miljødirektoratet.
     // Dette unngår den tunge og ustabile rekursive oppløsningen av ArcGIS-webappen.
-    const directResults=await Promise.allSettled(NATIONAL_ANADROMOUS_LAYERS.map(layer=>queryNationalSeaTroutLayer(layer,input)));
+    const [directResults,ostfoldRegistry]=await Promise.all([
+      Promise.allSettled(NATIONAL_ANADROMOUS_LAYERS.map(layer=>queryNationalSeaTroutLayer(layer,input))),
+      ostfoldSeaTroutFeatures(input).catch(()=>[])
+    ]);
     const directOk=directResults.filter(result=>result.status==='fulfilled').map(result=>result.value);
-    if(directOk.length){
-      const features=directOk.flatMap(result=>result.features).slice(0,3500);
+    if(directOk.length||ostfoldRegistry.length){
+      const merged=[...ostfoldRegistry,...directOk.flatMap(result=>result.features)];
+      const dedupe=new Set(),features=merged.filter(feature=>{
+        const g=feature?.geometry;
+        const key=g?.type==='Point'?`p:${Number(g.coordinates?.[0]).toFixed(5)}:${Number(g.coordinates?.[1]).toFixed(5)}`:`${g?.type}:${JSON.stringify(g?.coordinates?.[0]||[])}`;
+        if(dedupe.has(key))return false;dedupe.add(key);return true;
+      }).slice(0,3500);
       return {
         available:true,
         inCoverage:true,
@@ -2146,7 +2261,7 @@ async function nationalSeaTroutFeatures(input){
         sourceUrl:NATIONAL_ANADROMOUS_SOURCE_URL,
         appId:NATIONAL_SEATROUT_APP_ID,
         webMapId:null,
-        layers:directOk.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit})),
+        layers:[...(ostfoldRegistry.length?[{title:'Østfold sjøørretbekker',category:'fish-presence',count:ostfoldRegistry.length,truncated:false}]:[]),...directOk.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit}))],
         features,
         count:features.length,
         partial:directOk.length<NATIONAL_ANADROMOUS_LAYERS.length,
@@ -2156,10 +2271,13 @@ async function nationalSeaTroutFeatures(input){
 
     // Fallback: behold tidligere nasjonale registreringsportal hvis primærkilden skulle være nede.
     const resolved=await resolveNationalSeaTroutLayers();
-    const fallbackResults=await Promise.allSettled(resolved.layers.map(layer=>queryNationalSeaTroutLayer(layer,input)));
+    const [fallbackResults,ostfoldRegistry]=await Promise.all([
+      Promise.allSettled(resolved.layers.map(layer=>queryNationalSeaTroutLayer(layer,input))),
+      ostfoldSeaTroutFeatures(input).catch(()=>[])
+    ]);
     const fallbackOk=fallbackResults.filter(result=>result.status==='fulfilled').map(result=>result.value);
-    if(!fallbackOk.length) throw new Error('Ingen nasjonale sjøørret-/anadromlag svarte akkurat nå.');
-    const features=fallbackOk.flatMap(result=>result.features).slice(0,3500);
+    if(!fallbackOk.length&&!ostfoldRegistry.length) throw new Error('Ingen nasjonale sjøørret-/anadromlag svarte akkurat nå.');
+    const features=[...ostfoldRegistry,...fallbackOk.flatMap(result=>result.features)].slice(0,3500);
     return {
       available:true,
       inCoverage:true,
@@ -2167,7 +2285,7 @@ async function nationalSeaTroutFeatures(input){
       sourceUrl:NATIONAL_SEATROUT_SOURCE_URL,
       appId:NATIONAL_SEATROUT_APP_ID,
       webMapId:resolved.webMapId,
-      layers:fallbackOk.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit})),
+      layers:[...(ostfoldRegistry.length?[{title:'Østfold sjøørretbekker',category:'fish-presence',count:ostfoldRegistry.length,truncated:false}]:[]),...fallbackOk.map(result=>({title:result.layer.title,category:result.layer.category,count:result.features.length,truncated:result.exceededTransferLimit}))],
       features,
       count:features.length,
       fallback:true,
