@@ -769,9 +769,9 @@ function nationalSeaTroutRelevant(){
   if(!showNationalSeaTrout||!['sjoorret','all'].includes(fish)) return false;
   const b=map.getBounds();return b.getEast()>=3.0&&b.getWest()<=32.0&&b.getNorth()>=57.0&&b.getSouth()<=72.5;
 }
-const ORIGINAL_SEATROUT_APP_ID='a00fe3145f324c6c9438fe6fcee7ee37';
-const ORIGINAL_SEATROUT_SOURCE_URL=`https://fylkesmannen.maps.arcgis.com/apps/webappviewer/index.html?id=${ORIGINAL_SEATROUT_APP_ID}`;
-const ORIGINAL_ARCGIS_PORTALS=['https://fylkesmannen.maps.arcgis.com','https://www.arcgis.com'];
+const ORIGINAL_SEATROUT_APP_ID='1523c2a68ddd446db3582aa01599aec7';
+const ORIGINAL_SEATROUT_SOURCE_URL=`https://agderfk.maps.arcgis.com/apps/webappviewer/index.html?id=${ORIGINAL_SEATROUT_APP_ID}`;
+const ORIGINAL_ARCGIS_PORTALS=['https://agderfk.maps.arcgis.com','https://www.arcgis.com'];
 let originalSeaTroutLayerCache=null;
 let originalSeaTroutLayerCacheAt=0;
 
@@ -782,7 +782,7 @@ function nationalSafeProperties(properties={}){
 function nationalPopupHtml(feature){
   const p=feature?.properties||{}, rows=nationalSafeProperties(p).map(([key,value])=>`<tr><td>${escapeHtml(String(key).replace(/_/g,' '))}</td><td>${escapeHtml(String(value))}</td></tr>`).join('');
   const label=p._fisteLayerTitle||'Sjøørretregistrering';
-  const source=p._fisteSource||'Nasjonal portal for registrering av sjøørretbekker';
+  const source=p._fisteSource||'Sjøørretbekker – ArcGIS originalkart';
   const sourceUrl=p._fisteSourceUrl||ORIGINAL_SEATROUT_SOURCE_URL;
   return `<div class="national-stream-popup"><b>${escapeHtml(label)}</b>${rows?`<table>${rows}</table>`:''}<small>Kilde: ${escapeHtml(source)}.</small><br><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Åpne kilden</a></div>`;
 }
@@ -918,7 +918,7 @@ async function queryOriginalSeaTroutLayer(layer,bounds,signal){
     const geometry=originalArcgisGeometry(item.geometry);if(!geometry)return null;
     const attributes=item.attributes||{};
     const category=originalCategory(layer.title,attributes,geometry);
-    return{type:'Feature',id:`original-${index}-${Math.random().toString(36).slice(2,8)}`,geometry,properties:{...attributes,_fisteCategory:category,_fisteLayerTitle:layer.title||'Registrering av sjøørretbekker',_fisteSource:'Originalportalen – Registrering av sjøørretbekker',_fisteSourceUrl:ORIGINAL_SEATROUT_SOURCE_URL,_fisteOriginalPortal:true}};
+    return{type:'Feature',id:`original-${index}-${Math.random().toString(36).slice(2,8)}`,geometry,properties:{...attributes,_fisteCategory:category,_fisteLayerTitle:layer.title||'Registrering av sjøørretbekker',_fisteSource:'Sjøørretbekker – ArcGIS originalkart',_fisteSourceUrl:ORIGINAL_SEATROUT_SOURCE_URL,_fisteOriginalPortal:true}};
   }).filter(Boolean);
   return{title:layer.title||'Originalportal',features,count:features.length};
 }
@@ -927,7 +927,7 @@ async function loadOriginalSeaTroutPortal(bounds,signal){
   const queried=await originalMapLimit(layers,8,layer=>queryOriginalSeaTroutLayer(layer,bounds,signal));
   const ok=queried.filter(x=>x&&!x.__error);
   const features=ok.flatMap(x=>x.features).slice(0,5000);
-  return{available:true,source:'Originalportalen – Registrering av sjøørretbekker',features,count:features.length,layers:ok.filter(x=>x.count).map(x=>({title:x.title,category:'portal',count:x.count}))};
+  return{available:true,source:'Sjøørretbekker – ArcGIS originalkart',features,count:features.length,layers:ok.filter(x=>x.count).map(x=>({title:x.title,category:'portal',count:x.count}))};
 }
 function nationalFeatureKey(feature){
   const g=feature?.geometry;if(!g)return'';
@@ -948,34 +948,28 @@ function mergeNationalSeaTroutData(primary={},portal={}){
 async function loadNationalSeaTrout({force=false}={}){
   const status=$('nationalSeaTroutStatus');
   if(!nationalSeaTroutRelevant()){nationalSeaTroutController?.abort();nationalSeaTroutController=null;nationalSeaTroutLayer.clearLayers();nationalSeaTroutFeatures=[];if(status)status.hidden=true;return;}
-  if(map.getZoom()<9){nationalSeaTroutLayer.clearLayers();if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Norge:</strong> zoom nærmere for detaljer.';}return;}
+  if(map.getZoom()<9){nationalSeaTroutLayer.clearLayers();if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker:</strong> zoom nærmere for detaljer.';}return;}
   const b=map.getBounds(),key=[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].map(v=>v.toFixed(3)).join(',')+':'+map.getZoom();
   if(!force&&key===nationalSeaTroutKey&&nationalSeaTroutFeatures.length)return;
   nationalSeaTroutController?.abort();nationalSeaTroutController=new AbortController();
   const signal=nationalSeaTroutController.signal;
-  if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Norge:</strong> henter originalportal + nasjonale kartlag …';}
-  let primary={features:[],layers:[],count:0},portal={features:[],layers:[],count:0};
+  if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker:</strong> henter data fra ArcGIS-kartet …';}
   try{
-    const [primaryResult,portalResult]=await Promise.allSettled([
-      fetch(`/api/national-seatrout?bbox=${encodeURIComponent([b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(','))}&zoom=${map.getZoom()}`,{cache:'no-store',signal}).then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||'Nasjonalt kartlag svarte ikke');return data;}),
-      loadOriginalSeaTroutPortal(b,signal)
-    ]);
-    if(primaryResult.status==='fulfilled')primary=primaryResult.value;
-    if(portalResult.status==='fulfilled')portal=portalResult.value;
-    if(!primary.count&&!portal.count)throw new Error('Ingen sjøørretdata svarte');
-    const data=mergeNationalSeaTroutData(primary,portal);
-    nationalSeaTroutKey=key;renderNationalSeaTroutFeatures(data);
-    const portalText=portal.count?` · ${portal.count} fra originalportalen`:'';
-    const registryCount=(primary.layers||[]).filter(layer=>layer.category==='fish-presence').reduce((sum,layer)=>sum+(Number(layer.count)||0),0);
-    const registryText=registryCount?` · ${registryCount} registrerte Østfold-bekker`:'';
-    if(status){status.hidden=false;status.innerHTML=`<strong>Sjøørretbekker Norge:</strong> ${data.count} objekter i utsnittet${registryText}${portalText}.`;}
+    const response=await fetch(`/api/national-seatrout?bbox=${encodeURIComponent([b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].join(','))}&zoom=${map.getZoom()}`,{cache:'no-store',signal});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||'ArcGIS-kartet svarte ikke');
+    nationalSeaTroutKey=key;
+    renderNationalSeaTroutFeatures(data);
+    const counts=(data.layers||[]).filter(layer=>Number(layer.count)>0).slice(0,6).map(layer=>`${layer.count} ${escapeHtml(layer.title||layer.category||'objekter')}`);
+    if(status){status.hidden=false;status.innerHTML=`<strong>Sjøørretbekker:</strong> ${data.count||0} objekter i utsnittet${counts.length?' · '+counts.join(' · '):''}.`;}
     const selected=latestZones.find(zone=>zone.id===selectedZoneId);if(selected)renderSelectedZone(selected);
   }catch(error){
     if(error?.name==='AbortError')return;
     nationalSeaTroutLayer.clearLayers();nationalSeaTroutFeatures=[];
-    if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker Norge:</strong> kartlaget svarte ikke akkurat nå. Prøv å panorere eller zoome én gang.';}
+    if(status){status.hidden=false;status.innerHTML='<strong>Sjøørretbekker:</strong> klarte ikke hente ArcGIS-kartet akkurat nå.';}
   }
 }
+
 function geometryDistanceMetersToZone(geometry,zone){
   if(!geometry||!zone?.marker)return Infinity;const target={lat:zone.marker.lat,lon:zone.marker.lon};
   const pointDist=coord=>Array.isArray(coord)&&coord.length>=2?distanceKm(target,{lat:Number(coord[1]),lon:Number(coord[0])})*1000:Infinity;
