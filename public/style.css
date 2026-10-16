@@ -177,6 +177,6 @@
 .national-stream-popup td:first-child{color:#9fc8bb;width:42%}
 .national-stream-popup a{color:#72d7ff}
 .national-marker{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:2px solid #071b16;color:#fff;font-size:11px;font-weight:900;box-shadow:0 1px 5px rgba(0,0,0,.5)}
-.national-marker-outlet{background:#22c9d6}.national-marker-barrier-human{background:#e85b58}.national-marker-barrier-natural{background:#f59f42}.national-marker-barrier-other{background:#e5c84b;color:#172019}.national-marker-observation{background:#a778e8}
+.national-marker-outlet{background:#22c9d6}.national-marker-barrier-human{background:#e85b58}.national-marker-barrier-natural{background:#f59f42}.national-marker-barrier-other{background:#e5c84b;color:#172019}.national-marker-observation{background:#a778e8}.national-marker-fish-presence{background:#9be600;color:#06120d;border-color:#071b16;border-radius:9px;width:26px;font-size:12px}
 .national-context{border-color:rgba(34,201,214,.35)}
 .national-context p{margin:.45rem 0;color:#c8ddd6}
