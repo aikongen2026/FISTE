@@ -1,8 +1,8 @@
 {
-  "name": "Christian sin analyserte slukboks – REV43",
-  "version": "rev42-owned-v2",
-  "count": 98,
-  "method": "98 enkeltbilder analysert og klassifisert før appintegrasjon. Artspoeng er egnethetspriorer, ikke fangstsannsynlighet. Salt/fersk-gating er hard i automatisk anbefaling.",
+  "name": "Christian sin analyserte slukboks – REV45",
+  "version": "rev45-owned-v3",
+  "count": 121,
+  "method": "121 individuelt registrerte sluker/agn og tilbehør. Nye abbor-/gjeddeagn L099–L121 er lagt til som enkeltbilder; løse jighoder er registrert, men sperret fra automatisk anbefaling alene. Artspoeng er egnethetspriorer, ikke fangstsannsynlighet. Salt/fersk-gating er hard i automatisk anbefaling.",
   "lures": [
     {
       "id": "L001",
@@ -50,7 +50,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Slank gruntgående minnow; sterk ørretprofil, også abbor.",
@@ -111,7 +111,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Naturtro minnow; klart til normalt vann.",
@@ -172,7 +172,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Attraktor-/ørretmønster; god ved lavt lys eller litt farget vann.",
@@ -229,7 +229,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast",
       "notes": "Perch/brown-trout-lignende mønster; ørret og abbor.",
@@ -289,7 +289,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Ørret-/regnbuemønster; naturtro med ekstra trigger.",
@@ -348,7 +348,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk, klart vann, presset fisk, naturlig imitasjon",
       "notes": "Litt fyldigere minnow; stor ørret og abbor.",
@@ -407,7 +407,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Flash + rosa trigger; ørret først, abbor sekundært.",
@@ -466,7 +466,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Kontrast/attraktor; passer mørkere eller farget vann.",
@@ -525,7 +525,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Liten slank wobbler; ørret, særlig når varme toner fungerer.",
@@ -585,7 +585,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Liten minnow; ørret og abbor, synlig farge.",
@@ -638,7 +638,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, presset fisk, naturlig imitasjon",
       "notes": "Naturtro brunørret-/småfiskmønster.",
@@ -695,7 +695,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast",
       "notes": "Klassisk småfiskprofil, klarvann/allround.",
@@ -753,7 +753,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Ørret-/regnbuemønster.",
@@ -814,7 +814,7 @@
         "gjedde": 0.62,
         "laks": 0.1,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Kort/fyldig crankbait; abbor svært relevant, ørret sekundært.",
@@ -877,7 +877,7 @@
         "gjedde": 0.78,
         "laks": 0.1,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk, klart vann, presset fisk, naturlig imitasjon",
       "notes": "Lipless/vibe-profil; abbor og gjedde før ørret.",
@@ -938,7 +938,7 @@
         "gjedde": 0.78,
         "laks": 0.1,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Lipless/vibe-profil; dypere/aktivt fiske etter abbor og gjedde.",
@@ -999,7 +999,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk, klart vann, presset fisk, naturlig imitasjon",
       "notes": "Abborimitasjon; abbor og stor ørret, gjedde sekundært.",
@@ -2332,7 +2332,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Kompakt ørretskje; høy kontrast og varme toner.",
@@ -2391,7 +2391,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Kompakt skje; ørret/abbor.",
@@ -2451,7 +2451,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Sølvkroken-markering og 18 g er synlig. Spesial Classic finnes i 18 g og er dokumentert ørretfavoritt.",
@@ -2511,7 +2511,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Nær identisk Sølvkroken 18 g. Primært ørret, også annen edelfisk.",
@@ -2568,7 +2568,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Smalere skje; ørret og abbor.",
@@ -2689,7 +2689,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Klassisk bred skje; ørret, gjedde sekundært.",
@@ -2748,7 +2748,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Sterk kontrast; overskyet/skumring/farget vann.",
@@ -2805,7 +2805,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Kompakt ørretskje med rosa trigger.",
@@ -2864,7 +2864,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Flash + grønn; ørret/abbor.",
@@ -2919,7 +2919,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast",
       "notes": "Mørk silhuett; lavt lys.",
@@ -2975,7 +2975,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash",
       "notes": "Sterk flash; klart vann/dagslys, også abbor.",
@@ -3033,7 +3033,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Naturlig grønn-sølv; klart vann.",
@@ -3091,7 +3091,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Naturlig grønn-sølv; ørret/abbor.",
@@ -3214,7 +3214,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Dressed skje; ørret/abbor, ekstra puls ved lav fart.",
@@ -3275,7 +3275,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Lang ørretskje; lavt lys/farget vann.",
@@ -3333,7 +3333,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast",
       "notes": "Småfiskprofil; ørret/abbor.",
@@ -3389,7 +3389,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann",
       "notes": "Varm farge; overskyet/torv-/farget vann.",
@@ -3450,7 +3450,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Klassisk ørretmønster.",
@@ -3629,7 +3629,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Sterk attraktor; kaldt/farget vann.",
@@ -3688,7 +3688,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Rosa attraktor; ørret.",
@@ -3746,7 +3746,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Sterk kontrast; ørret i kaldt/lavt lys.",
@@ -3804,7 +3804,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Sterk kontrast; ørret i kaldt/lavt lys.",
@@ -3865,7 +3865,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Skje/spinner-hybrid med dressing; ørret/abbor, gjedde sekundært.",
@@ -4041,7 +4041,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast",
       "notes": "Mørk silhuett; skumring/overskyet, ørret/abbor.",
@@ -4099,7 +4099,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast",
       "notes": "Mepps/Black-Fury-lignende profil; ørret og abbor.",
@@ -4157,7 +4157,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "attraktor, farget vann eller aktiv fisk",
       "notes": "Høy synlighet; ørret/abbor i farget vann.",
@@ -4216,7 +4216,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Black-Fury-lignende; ørret/abbor, lavt lys.",
@@ -4277,7 +4277,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Klassisk spinner; ørret/abbor, pike sekundært hvis stor.",
@@ -4334,7 +4334,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast",
       "notes": "Dressed spinner; ørret/abbor.",
@@ -4757,7 +4757,7 @@
         "gjedde": 0.96,
         "laks": 0.7,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Stor profil/dressing; typisk gjedde først, stor ørret/laks sekundært.",
@@ -4816,7 +4816,7 @@
         "gjedde": 0.96,
         "laks": 0.7,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Stor attraktorprofil; gjedde først.",
@@ -4877,7 +4877,7 @@
         "gjedde": 0.96,
         "laks": 0.7,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Stor spinner; gjedde først, stor laksefisk sekundært.",
@@ -4939,7 +4939,7 @@
         "gjedde": 0.82,
         "laks": 0.52,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Større minnow/deep-runner; gjedde og stor ørret, abbor sekundært.",
@@ -5058,7 +5058,7 @@
         "gjedde": 0.88,
         "laks": 0.4,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast",
       "notes": "Dypgående wobbler; gjedde/stor ørret/abbor, ikke typisk kyst-sjøørret.",
@@ -5175,7 +5175,7 @@
         "gjedde": 0.88,
         "laks": 0.4,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash",
       "notes": "Trolling-/deep-diver-profil; gjedde og stor innsjøørret.",
@@ -5234,7 +5234,7 @@
         "gjedde": 0.88,
         "laks": 0.4,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, klart vann, presset fisk, naturlig imitasjon",
       "notes": "Stor dypgående predatorwobbler; gjedde/stor ørret.",
@@ -5707,7 +5707,7 @@
         "gjedde": 0.74,
         "laks": 0.42,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk, presset fisk, naturlig imitasjon",
       "notes": "Rapala minnow-design er dokumentert allround for salmonider, abbor og gjedde avhengig av størrelse. Standardmodellens saltvannshardware er ukjent.",
@@ -5817,7 +5817,7 @@
         "gjedde": 0.08,
         "laks": 0.42,
         "makrell": 0.02,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast",
       "notes": "Primært ferskvannsørret; mørke streamere kan også brukes sjøørret/elv.",
@@ -5827,6 +5827,1197 @@
       "saltwaterHardware": "ukjent",
       "groupId": "L098",
       "groupName": "Ferskvannsflue",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L099",
+      "slug": "sluk-l099",
+      "name": "L099 · Inline-spinner · sort/gulprikket",
+      "family": "Liten inline-spinner",
+      "color": "sort med gule prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "black",
+        "yellow",
+        "low-light",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgwKCA0MCwwPDg0QFCIWFBISFCkdHxgiMSszMjArLy42PE1CNjlJOi4vQ1xESVBSV1dXNEFfZl5UZU1VV1P/2wBDAQ4PDxQSFCcWFidTNy83U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1P/wgARCADwAPADASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAIEBQMBBv/EABcBAQEBAQAAAAAAAAAAAAAAAAABAgP/2gAMAwEAAhADEAAAAfpwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACJJATQE0BNATQE0BNATQE0BNATQE0BNATRkOPanB89HF+jYHSttijaYyNpi+G2x5Lre5Ppqsn01WV6moyy6bKWa3mV4azIib3anc1FO5UPn/XHnqxHnInKv0O7hGW5PP5Z62qNHrvje7ZsDanhdDaZ2hL0lFUodInicU5x7QNe3Ut9MqluoYMXDnp7ZkU/LsSp07ylpUN7PazesO1xztz487V0J1qr87PLc2rGLskOycufY6Tsjz6eGpbq2umVO5VPm523PVRa9Kvtn0ry7F5c7XqfO9tevFfjfli05TnVCvoXNyF73mc5JEUvCEZwrZt1Le8qlvkYcN1m4ktkZHusMlrDI82Bmc9cYHn0A+flvDCntDJlqDNaQzWkMxpiNnl11HnqopCKQikIpCKQikIpCKQikIpCKQikIpDz0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/xAAmEAABBAIBBAIDAQEAAAAAAAAAAQIDERITEAQhMjMiMTBAgBQg/9oACAEBAAEFAv4Psssssssssssssssssssssssssssvly0bWG1htYbGGxhsYbGGxhsYbGGbTNpm0zaZtM2mbTNpm0zaZtM2mbTNpm0zaNW+Z/W5tPpw1K47HY7fqQevjqPWq/L7Mf8AtqK4mmSJd0rxI5HCQIhgiFFKWJxXNqLxB6+J/XIlmaxjeptXSIbBr7Ek770Mx/UOYhnRuU2vNrxOokQb1YyRsgqF8UIgoiWKnyg9fE/reJVK1FNamEhjIJaLsjQRHYu7vVSKLYsset0ELXMemL06ZNSMtqKqLDNsjUtWiWZPpjrRfFEIPDif1yrQxObLEKvjqmo1GMV6/Pp3tZuJEdCN6dtOc9qsRzSTz6X2OQtqpfYx7YcQ+HE/rm+/wTs2QxvWJ631El6B2U678R8FoxVcL8l6eLBF7H2vKlkHhxN4LifEppi0xaYtMWmKGKCUiTRMmGQNjdLCkixRJGj+mzcsL1Z/kUjgRh9IrbMFMVMVMVFapitw+HE3gv4kHNFQ7nc7lCJ+GLx4X7/aT74ooooooooooooooooooooooooooor+EP/EABsRAQEAAgMBAAAAAAAAAAAAABEAAQIgMGBA/9oACAEDAQE/AfGERERERERHPOmMY79tn6mZmZmZmZnxv//EAB4RAAMAAgIDAQAAAAAAAAAAAAABERIgEEEhMWBR/9oACAECAQE/Afi2UpSlMjIyMilKXh619cQmyHqhvpDbal8mV9C1Q9muyd9mP5suIQhCEIQhCEJ8b//EACsQAAIABgECBQMFAAAAAAAAAAABAhARITEyIiBREjBBcZETgOFAYYGhsf/aAAgBAQAGPwL7Las3RujdG6N0bI2RsjZGyNkbI2RsjZGyNkbI2RsjZGyNkbI2Rsi04qjNmdzBgwz1PXrz5kM4ikWf98mxTMXY42OUZuZ8yGcRcvdGroWTLowx1ojDk1DllXKxk2MnJfBZyv03lDOKXLBxhfuevyfk/JyRi/sVpPNChWIa7Fa8itSqKPKnWxYo9i2ZQzilV9WJKhRS8cf8I4RWZyuz6VT9ujkvgolRSuj1lDOIh8lULr3Rax4YrrucVZFIoeSHHXlkrFHjvK+fIhnEXhRqYMGOmgq2fdFVGy8ZTxVHF4/6PD9W3sbqVurBghnF+rX2mf/EACYQAAIBAwQCAgMBAQAAAAAAAAABESExURBBYfFxoYGRIIDBsVD/2gAIAQEAAT8h/Q9omRIkSJEiRIkSJEiRIkSJEiRIkSJEiRIiRvVU2JJbsTbfadqdqd6d6d+d2dmdmdmd4d4d4dododododododod4d4d4d4d4d4Kg2laxoJVJ+yQ1TnZkz2OTk+TJXc8v3oPAUD4nRFMi4ZRXaJT2fZHJBBAyGQyujY2erqkr4KCwswk9CBIgS0TS3JFrMD49DZsbck4K77y8egs78DxaIrNksEHuR5PI+WVycg0iPU19QS8YCQmiKA/FGK+G0JIciEgp6IWWSuCTTIxCNzAlW42IXtPsfE+BL3GwX5Q7+4RXP8ASP8AjKf6LoqdChoWwUmSPQ19Qv8AgR5skm7GVvlQwVjmHGFZc/lCSdKwDSNeSY2VKMc9UFdjKyU7Mual5sR+5TDkjSU8FqFeFmBSa01uQ9yqJKNhHyMjlQk7SJ8kphoodEt7PwSVnyHNT+C9QjzvFCHdbFpBDkSmSLS0+jYe24/36KgcOV8M4BZA0UiPczbuR8SasiqZ1WzGlnCXzIjbxgZRzDTlTYUpE7Q1BzgPaxldwmWRYuR4VvwnqFWkqbnyQLRaTy5Dl4WDpJIpbidFVLIbFZynOsUHPXp8CTpNjDtcLhI50uMkljdT60uTSJGoJpPS/CK0SCMA36wOD2eY855SauTyTBYfmEmc5QhOCLJIYKJ1sTItRRkHVFbUN5ZHIG3OWJONB4Dh0KmqFjxfhkeGKcMrhinBXBDIZDHOCoyahowjFkXkfIhtmJuRvIk+RTpLK8lRt8il/wDCNNGQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQX6If/9oADAMBAAIAAwAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQwwwwwwwwwwwwwgY8nXc9q44sr12kpEVGlNEte16xhuMMAGmWqpxXh6tgMaJINtuxele0LOfcypZ489+/36558766oDDDDDDDDDDDDDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/8QAHhEAAgIBBQEAAAAAAAAAAAAAAAERIEEQITFRYGH/2gAIAQMBAT8Q8WrgRI3AuaLcnTJJRJNWKrVSYvokk5wRHOioxWXROME92fmwAH//xAAdEQADAQACAwEAAAAAAAAAAAAAARExICEQMGBR/9oACAECAQE/EPi2ipZZZZZRRRRZZZYsMC8sp0JEUURrjgxxSMdG3sisBtKfNGrg1DevODHJGNE6XQWo+v6JR03hgee7/wDr4z//xAAqEAEAAgEDAwQCAgIDAAAAAAABABEhMUFhUZHwEHGhsYHxweEggDBA0f/aAAgBAQABPxD/AEPUCOJxM4mcTOJnEziZxM4mcTOJnEziZxM4mcTOJnEziZxM4mcTOJnEziZxM4mCAHPq9rbJQTUj7Fn6XP0ufqc/U5+i/wDM3MMe8aUpSlCrX/NGEITvJmLojh9WUDRHcpC1BaUKLwEsFtFUrgjME6qRhX035IP6sOn4TRgvchd5HtK7qfiV+uAdz8RdBe7B2O2mWgl+pBcS3ECx6E4GJ0MpvRlEsnzn2+oIaIPklejFdBt+YpUub5mDEgr9KmYxS9IbRVTmqYNTqkx7mWM66D7ZSUTotmhS8f3j2AotDtMTHfwGyU4Q+xFo5mpHn3RQXbvFb/kg9TvAOo6MuKFcTVPkvt9fgvshULMh3My5+wUz/cE+pMFjjx2RLxRl11lO0e5Eu90Y33giE6JAK2WePYjEtaq85bi5LXBrK1Zerv4IvQ+wTQu0RoaPQYRO6fwy9n1mg9yKxTUsN4LHT4zL5BgqBbrREblZ3ekFNMxFiaAJ8T5r7fX4L7Jo+dYhT2cnY3Z+R2FvYhXaHIR2LhFW59gylFrS238ESUY1ZPsxzgG6M1DhgHfYjrsTrAVR3RcGoksCrjMVoAUwh2AAMHF0fRi6jpcagdC3O0ypWA5mN5X5WanaBkaJlmDhYRqLSKDNUb8wE8uolxbv58RQ0i2+668P4l5gZjYQK6rdHWfAft9fgvsh7/AOrHZvq3aOyxgx3lxdHoDai9URUVdIQlaVlbiwtVQEaQ2K8EoioixqiCWCKvRijhF4eZk7I9ZR0LiaskmplrGzkiNIasPsm3Au94oMYIXbk6S7XdG3tj+Y5EVKXdGlsoMygCaJYxIE9Muoqo6GAIKDh+31+O+yUE6ZmNKllikV5QsZgCDFzLxG1ZY95c48AkE8tqujdlz1pLp1Ela7EXVrBpr8EUsAy0BooujeEGu5Quse25fWW82hYtfzuxLgObj0IlUD7lNgBoNpm9ZRqai9QhoSrUwRL1it3q+31pkBKMP4l2qdLNJbr2ZsD8XA9vdnI7w62ODugP8AacndAUvVEDInDQR0esEFJVAidIqknA19wnW1LpTKcC9DQdNZkirWck6XcL9l1pRW33s/1DAA8mBWHVZ/eIHsd5bxh7zyMUOUy2AYwEpFj8vrtC8H2RlfRAf/AAYfrRdftAW7tOB7Tge04HtBTV2lB0e0uI7S3Nu0aquyUGnZAtp2Sh/BOj7GdB2QW3ZANntBTZ7Tge0vo7JfQ9oAwdkbb9pvOj/Prq/9vR9ULTM8zPMzzM8zPMzzM8zPMzzM8zPMzzM8zPMzzM8zPMzzM8zPMzzM8zPMzzM8zPMwRYZ/0Q//2Q==",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.88,
+        "sjoorret": 0.02,
+        "abbor": 0.93,
+        "gjedde": 0.42,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "lavt lys og svakt farget vann",
+      "notes": "Kontrastspinner med gule prikker; fin til abbor og ørret.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L099",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L100",
+      "slug": "sluk-l100",
+      "name": "L100 · Inline-spinner · sort/rødprikket med mørk kropp",
+      "family": "Liten inline-spinner",
+      "color": "sort med røde prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "black",
+        "red",
+        "contrast",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.86,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.45,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "aktiv fisk og litt mørkere vann",
+      "notes": "Mørk spinner med røde prikker og ekstra kropp.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L100",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L101",
+      "slug": "sluk-l101",
+      "name": "L101 · Inline-spinner · hvit/gulprikket",
+      "family": "Liten inline-spinner",
+      "color": "hvit med gule prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "white",
+        "yellow",
+        "bright",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.88,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.42,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart til moderat farget vann",
+      "notes": "Lys spinner med gule prikker.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L101",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L102",
+      "slug": "sluk-l102",
+      "name": "L102 · Inline-spinner · hvit/rosa-prikket",
+      "family": "Liten inline-spinner",
+      "color": "hvit med rosa prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "white",
+        "pink",
+        "bright",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.87,
+        "sjoorret": 0.02,
+        "abbor": 0.91,
+        "gjedde": 0.4,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart vann og nøytral presentasjon",
+      "notes": "Lys spinner med rosa prikker.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L102",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L103",
+      "slug": "sluk-l103",
+      "name": "L103 · Inline-spinner · sort/rosa-prikket",
+      "family": "Liten inline-spinner",
+      "color": "sort med rosa prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "black",
+        "pink",
+        "low-light",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.84,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.42,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "lavt lys og kontrastbehov",
+      "notes": "Mørk kontrastspinner med rosa prikker.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L103",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L104",
+      "slug": "sluk-l104",
+      "name": "L104 · Bell-spinner · rosa/sølv med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "rosa/sølv med mørke prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "pink",
+        "silver",
+        "bright",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.9,
+        "sjoorret": 0.02,
+        "abbor": 0.9,
+        "gjedde": 0.44,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart vann og aktiv fisk",
+      "notes": "Bell-spinner med rosa/sølv-blad.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L104",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L105",
+      "slug": "sluk-l105",
+      "name": "L105 · Bell-spinner · sort/sølv med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "sort/sølv med mørke prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "black",
+        "silver",
+        "low-light",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.88,
+        "sjoorret": 0.02,
+        "abbor": 0.91,
+        "gjedde": 0.44,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "skumring og kontrast",
+      "notes": "Mørk/sølv bell-spinner.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L105",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L106",
+      "slug": "sluk-l106",
+      "name": "L106 · Bell-spinner · grønn/sølv med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "grønn/sølv med mørke prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "green",
+        "silver",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.89,
+        "sjoorret": 0.02,
+        "abbor": 0.9,
+        "gjedde": 0.46,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "normalt klart vann",
+      "notes": "Grønn/sølv bell-spinner.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L106",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L107",
+      "slug": "sluk-l107",
+      "name": "L107 · Bell-spinner · blå/sølv med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "blå/sølv med mørke prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "blue",
+        "silver",
+        "bright",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.89,
+        "sjoorret": 0.02,
+        "abbor": 0.9,
+        "gjedde": 0.46,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart vann og dagslys",
+      "notes": "Blå/sølv bell-spinner.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L107",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L108",
+      "slug": "sluk-l108",
+      "name": "L108 · Bell-spinner · gull/sort med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "gull/sort med mørke prikker",
+      "species": [
+        "abbor",
+        "orret",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "gold",
+        "black",
+        "stained-water",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.87,
+        "sjoorret": 0.02,
+        "abbor": 0.91,
+        "gjedde": 0.58,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "svakt farget vann og når gulltoner fisker godt",
+      "notes": "Gull/sort bell-spinner; også aktuell til mindre gjedde.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L108",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L109",
+      "slug": "sluk-l109",
+      "name": "L109 · Soft shad · oransje med abborstriper",
+      "family": "Soft shad / jigg",
+      "color": "oransje med mørke abborstriper",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "orange",
+        "dark",
+        "perch-specialist",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.35,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.84,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "svakt farget vann, aktiv fisk og struktur",
+      "notes": "Liten/middels shad med abborstriper.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L109",
+      "groupName": "Soft shad / jigg",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L110",
+      "slug": "sluk-l110",
+      "name": "L110 · Jighode · liten rund blyjigg",
+      "family": "Jighode",
+      "color": "matt bly",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "jighead",
+        "terminal",
+        "freshwater"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "jig_head",
+      "primaryCategory": "Tilbehør – jighode",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": false,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.05,
+        "sjoorret": 0.02,
+        "abbor": 0.2,
+        "gjedde": 0.2,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "brukes sammen med softbait",
+      "notes": "Løst jighode. Registrert i boksen, men anbefales ikke alene.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L110",
+      "groupName": "Jighode",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L111",
+      "slug": "sluk-l111",
+      "name": "L111 · Jighode · liten rund blyjigg nr. 2",
+      "family": "Jighode",
+      "color": "matt bly",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "jighead",
+        "terminal",
+        "freshwater"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "jig_head",
+      "primaryCategory": "Tilbehør – jighode",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": false,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.05,
+        "sjoorret": 0.02,
+        "abbor": 0.2,
+        "gjedde": 0.2,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "brukes sammen med softbait",
+      "notes": "Løst jighode. Registrert i boksen, men anbefales ikke alene.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L111",
+      "groupName": "Jighode",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L112",
+      "slug": "sluk-l112",
+      "name": "L112 · Ribbet softbait · brun/oransje glitter",
+      "family": "Softbait / paddle tail",
+      "color": "brun/oransje med glitter",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "glitter",
+        "brown",
+        "orange",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.12,
+        "sjoorret": 0.02,
+        "abbor": 0.93,
+        "gjedde": 0.82,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "normalt til svakt farget vann, langs bunn og kanter",
+      "notes": "Ribbet shad med padletail; sterk abborprofil.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L112",
+      "groupName": "Softbait / paddle tail",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L113",
+      "slug": "sluk-l113",
+      "name": "L113 · Soft shad · chartreuse/perch-striper",
+      "family": "Soft shad / jigg",
+      "color": "chartreuse/gulgrønn med mørke striper",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "chartreuse",
+        "green",
+        "yellow",
+        "perch-specialist",
+        "stained-water"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Gjedde",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.08,
+        "sjoorret": 0.02,
+        "abbor": 0.9,
+        "gjedde": 0.95,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "farget vann og aktiv fisk",
+      "notes": "Sterk signalfarge; svært aktuell til gjedde og aktiv abbor.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L113",
+      "groupName": "Soft shad / jigg",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L114",
+      "slug": "sluk-l114",
+      "name": "L114 · Slim softbait · hvit/sølv natur",
+      "family": "Soft shad / jigg",
+      "color": "hvit/sølv naturlig",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "white",
+        "silver",
+        "natural"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.42,
+        "sjoorret": 0.02,
+        "abbor": 0.89,
+        "gjedde": 0.75,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart vann og naturtro byttefisk",
+      "notes": "Naturtro lys softbait.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L114",
+      "groupName": "Soft shad / jigg",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L115",
+      "slug": "sluk-l115",
+      "name": "L115 · Ribbet softbait · hvit/rød glitter",
+      "family": "Softbait / paddle tail",
+      "color": "hvit/rød med glitter",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "glitter",
+        "white",
+        "red",
+        "stained-water"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.15,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.8,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "farget vann, overskyet vær og aktiv fisk",
+      "notes": "Ribbet softbait med tydelig kontrast.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L115",
+      "groupName": "Softbait / paddle tail",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L116",
+      "slug": "sluk-l116",
+      "name": "L116 · Ribbet softbait · mørk blå/sort glitter",
+      "family": "Softbait / paddle tail",
+      "color": "mørk blå/sort med glitter",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "dark",
+        "blue",
+        "black",
+        "glitter",
+        "low-light"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.1,
+        "sjoorret": 0.02,
+        "abbor": 0.91,
+        "gjedde": 0.78,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "lavt lys, skumring og mørkere vann",
+      "notes": "Mørk softbait med glitter.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L116",
+      "groupName": "Softbait / paddle tail",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L117",
+      "slug": "sluk-l117",
+      "name": "L117 · Jighode · middels rund blyjigg",
+      "family": "Jighode",
+      "color": "matt bly",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "jighead",
+        "terminal",
+        "freshwater"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "jig_head",
+      "primaryCategory": "Tilbehør – jighode",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": false,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.05,
+        "sjoorret": 0.02,
+        "abbor": 0.2,
+        "gjedde": 0.25,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "brukes sammen med større softbait",
+      "notes": "Løst jighode. Registrert i boksen, men anbefales ikke alene.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L117",
+      "groupName": "Jighode",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L118",
+      "slug": "sluk-l118",
+      "name": "L118 · Inline-spinner med dressing · gul/oransje tiger",
+      "family": "Inline-spinner med dressing",
+      "color": "gul/oransje tiger",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "yellow",
+        "orange",
+        "tiger",
+        "dressing",
+        "stained-water",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046977.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.52,
+        "sjoorret": 0.02,
+        "abbor": 0.94,
+        "gjedde": 0.83,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "grumsete/farget vann og aktiv fisk",
+      "notes": "Fjærkledd spinner med sterk attraktorprofil.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L118",
+      "groupName": "Inline-spinner med dressing",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L119",
+      "slug": "sluk-l119",
+      "name": "L119 · Inline-spinner med dressing · kobber/natur og hvit kropp",
+      "family": "Inline-spinner med dressing",
+      "color": "kobber/natur med hvit kropp",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "copper",
+        "white",
+        "natural",
+        "dressing",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046977.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.56,
+        "sjoorret": 0.02,
+        "abbor": 0.93,
+        "gjedde": 0.82,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart til moderat farget vann",
+      "notes": "Allround spinner med naturtro kobberblad.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L119",
+      "groupName": "Inline-spinner med dressing",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L120",
+      "slug": "sluk-l120",
+      "name": "L120 · Inline-spinner med dressing · sort/sølv med prikker",
+      "family": "Inline-spinner med dressing",
+      "color": "sort/sølv med lyse prikker",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "black",
+        "silver",
+        "dressing",
+        "low-light",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,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",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046977.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.48,
+        "sjoorret": 0.02,
+        "abbor": 0.93,
+        "gjedde": 0.8,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "lavt lys og mørkere vann",
+      "notes": "Mørkere spinner med punktmønstret blad.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L120",
+      "groupName": "Inline-spinner med dressing",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L121",
+      "slug": "sluk-l121",
+      "name": "L121 · Inline-spinner med dressing · grønn/oransje tiger",
+      "family": "Inline-spinner med dressing",
+      "color": "grønn/oransje tiger",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "green",
+        "orange",
+        "tiger",
+        "dressing",
+        "perch-specialist",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgwKCA0MCwwPDg0QFCIWFBISFCkdHxgiMSszMjArLy42PE1CNjlJOi4vQ1xESVBSV1dXNEFfZl5UZU1VV1P/2wBDAQ4PDxQSFCcWFidTNy83U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1P/wgARCADwAPADASIAAhEBAxEB/8QAGgABAAIDAQAAAAAAAAAAAAAAAAECAwUGBP/EABcBAQEBAQAAAAAAAAAAAAAAAAABAgP/2gAMAwEAAhADEAAAAenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANQbdorZu7aFW+c/Jv2mJuWng3LTybdqam4acbhpPOdG56xv2imN40sVu2iG9ara05Tq+Ljz3xue6sWVukTXU99vPdjM9DLyX9F5fNGbDqWhgs8eXJ6csd7xz3FZjcrFqbzSYg2PVcp1eo4zs+NPJKvPc3jNp4/Q9CxF8bN74yZqktJmLL1gTSaZ1a3ntqXqiyazBM1yR7On5rpdRyHX8ga+aM6zZsNTLkwWM8UumSK5SkWgTNjHXNUxLjDYpFpMcZMZGSsxsOl5jp9RyHX8geDFn9Mvgn0DDktITaLZMYy1mC0KiJkrE0LJkxxStZMc4zLWo2fVcp1djkut5A1sEszFyZhDLhg9bDmMl4sRFhjlQqrkLwqYJsrHjz4SxMbHqeX6jUajbq56egRz7oBoY340EdAOfvvRprbcaidsNRj3Y0l9wNPG5GmbkaXHvhop3g1e0AKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8QAKhAAAgAEBQMEAgMAAAAAAAAAAAECBBAREhQVMTQDICEFEyRBMIAiIzL/2gAIAQEAAQUC/Q/rzvs9aH1HEOfsaiaiamL1K5nhTzM8Z7znTOmdM8Z0zpF6hhNUNTF6jc1A1Az5nzUTUDoTnu9Sk8vlwbxF6NidiGK6uYh3vfzcxV+oniiUBDD4w275Lk0nn8//ACo9vvCxwtCFA7e2dPpzKTcynjePwOCAatSK8SUKNi/c6SPKpO8+LdkO7Y0QrwqJtGOK6jaHE2eWWN6eDxe6v22uYCUhtN0ned97kJDAbxwoe1HvYsX779yZKP5NJ3mREIjEJly/hUiRf8t6IlOTSd5j3RvS1PrEXpZfkaLVk+TSe5bV1VMVVRqty5c89jdGzEXLklyaTvMgjwRRx9GI/rP4F4DFCYkK/dcTo6WpGQkXZI8qk7yn3wxVVbFrUYqM+yLskuTSe5f4FELz2sdFRlhEW1ZPk068l7vV0w0w0w000400000000Xp5kTJGSMkZI0808yJkTImRMiZA04Xpxp50ZT2up+h/wD/xAAcEQADAAEFAAAAAAAAAAAAAAAAARECMEBQUWD/2gAIAQMBAT8B52EZHtYLEb61aX3v/8QAHhEAAgICAgMAAAAAAAAAAAAAABEBEAIwEiAhUGD/2gAIAQIBAT8B97ygYxjGMdMcD0sdTkeTHG4qOqviLpG+N8b47oQhfBf/xAAsEAABAQUGBQQDAAAAAAAAAAAAMwECEaGiECAxQIGxAxIhMGETIjKAQVHw/9oACAEBAAY/AvofyenHzESqE6hKoSqEqhKoTmJTE5icxOYnM+ExOYnMTmJzEahGoSqEqhKoTmJzEqhKoY7yQj5tb1/odnE/ORdtf02uYNudGnsaw9zshkWQt6DDAhDtOWv6bXet3Fp+7OrbmHact4mm1yN5mRctf027TMi7a/pm3LeJpsRzTtvF02MIsOjIXMDC7h33LeJptm3LX9Ns25a1/wBSEfArSK0itIrSK0itIrSK0itIrSKSFJCkj5yFJCtIpIUkKSFJCkhSQpIVpFaRSkY9zxh4+iH/xAAoEAACAQIFBAIDAQEAAAAAAAAAAREh8BAxQWHxUXGBsaHBIJHh0YD/2gAIAQEAAT8h/wCD3upVs6diJotsWr/Cd3+F3AcLvor8ttjJb6GNV+xZxHCFv6LuJdxLeI7P5LuJdxFpLt8F3ATOz6GpN36E7bWm2hKz/BUX+h3/AMlnAu4HU/Vr+sUyPM1TwGlvhDtJC1E6mwThEgn0bSFNxUP4XQTuCTfgpzRBmeDaTNjZtNCVGuUMSZBogeZNMff9PFna+gXkZlC3HQBRVQI2shrPA2nKkqb7KCqOV8CCRknmhyzQx1TN2FFWcroU1MkxyGdbiijMqVCZJJ/Ahvk9PFatqBZREWq1RJwVB3d7krXUL86lCjDIJRGmtTMm5/cyangjMRQG20smMjqoY6zYnaikUHgzsJwus2ZX08fleoeZvIlhFJJLETfBkdhApTgW4mEgtRphO2DY8ExOEksljBj83p4/P9A2hrGrUjETQQ2u8ipKoFcsRWYloQ2JbYSN4NMhCSIX4lpJ7vp4521EZ48MjMmQ4E6aEtxRqOiFAinKqNOhK0R4KdCScGxiRBCEYIJg9r08WbTFFm8BkTGREjCE5yEYiRCXc8McNMMuj/R2M8EXJHYg1E5rJEdh2Eh58vp40bi9A6aGomNJbtge4TOwdA9Is22KyghCWslA2GMr1O7BCB9Cg0xg29BzQ9j08Uq7+jBCKCQikjpkSZ/gjCoUgxhcKB1kJCwhIW5qe16eN9sHmZixzzHsZYbIKn4ZxoM3iymQoFkIUvBfm9PHo+qV6dy3kW8i3kK/+i7kW8izkX8i/kQ2fYmV/wBl3Ms5lvMc7fscrPsUL/ss5lnMd39l3Mu5jkr/AGXciBRZ+xX/ANHhcUad/wDhD//aAAwDAQACAAMAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACBDPPJHPGEDHPAHP2TdnqMZ0YTXjBXTrjSFC99Ws4BTJXuWfrPrfzro4AzhTMJNT/3/AO0+uFAIV6AA/wDeM/sc/wA4CBAiTDTTjjDDTzCDiAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//EAB0RAAMAAgMBAQAAAAAAAAAAAAABERAxICEwUEH/2gAIAQMBAT8Q+6neajIRkZMpNkI8LYnBMY9kRBoYqEil1kxbNCY30PFyp/Bs+DFvLfmxF8ZwYvZ4pSlKUpSlKUv3v//EAB4RAAMBAAEFAQAAAAAAAAAAAAABETEQICEwQVBh/9oACAECAQE/EPutHakkEEEEEFRB+xBUUeEvcSnLbLFQn7HLBtmex84HhTJzCCEIEi6MDwSi8uB55sDzzY4iIiIiIiCCCCIiIiISn3f/xAAnEAEAAgICAQUAAgIDAAAAAAABABEhMUFRYRBxgZGhILGAwdHw8f/aAAgBAQABPxD/AAPYRoVtWHVu5fuQarKH7YYLEkApfyIXHaszqLR74G23q6lkajuCBrbpg5It8kt6gLQUkAaygXPQRk56OcOWI9JOaG83hRXz9FLbNHqVJfqgj8dCULqnXrd5eowVZ/qKC6OEwEdgG4tIaOZYaOfPMvaaJzcbVZYsy5R0i39Q49gzUo7l0FwQofLwmmLvGkHunuSthhksMEZKgLZb95UOiLXp4ZhPGJL6lC3UAlLlzCNlFywyP8Pqm5MBChO1yx/ZFpQO5eUofDUzR90UNkEF6hGr7+4lFhBlx8xODHLb+oZNqs35aiZAwqbbI9JmFrftCoFla25qupgJRelsOk/4jXug3cUEna7mFa1cEAjkBceLMaMco0FsadQUxuZgPXfNDChmgJQ0o/ZYKUzYagsqv2tY9pl78QCKxSFeuHDFXUXy9hqOQVHLgzABbW9dxjM8TSO8PBiF533zLQK0FvRojwj2qDex7Al4QqBkuqiK1WZtxAFa1CwXSEGfEd7TAgsWzQ5qOwbOL36zu/ij9JV1yZId48QFXFm4S0zV8ErYKCgTCMGmXxBqvOGLkH+4FckPECq8LuKeQhsQDA2zm1fghXApjayxxqZkVHBKuWoupfmXHDFnbDyQhtgo3Xj6wyUbbqBFfNlbz4gF9I6Nbccmi1AlOCVMaqCq90TqkYNq8+Jcae8doWU8/ll1wfcfbLJT/wBJyLiDm4/TEohwRQ4CI4lrL7GA4b9cXOxc18/cE1ycncoKVvFxNKY1Cnxca6RnzGhfwCXoAAxiIzvHvAbsezBmvtgHT6gg0iK0fUX0RaYncNx16j5Qg8xhlSVP/YaBIW7j122FWX4QwF1uag+8u8sJdH7gUJ3FhlnlLx17S2iKqpjiCbyg9JBtaI31LHECr/YVMplfZLVo+YKeijOz5lPSwDygkxGfRHt+uwbpB7kDDsukxMkeWn9xcfwwaYX4lThsohZgfqawp4KmeVfmFchEOBrqe592AcPsZUuiZO8xyzGHKFrtmCYQloZgRmXqF6T6mmpkT8/wWOwgoGcpABi4bF/I9LhcjAdXGgEIl3+IQqPJBmvoSIFcQMOpVGpc1MkBCYLhzIbxKiWBKAoqtMM5alSo/hgN0pgUwqsQXglg8OYBMpblEKGMeYaVLH1sBJlZ3LgKJc4owKskWw1Eg9ShnUS0AlWL134cUoG6dRs+jNh0RFSpFMRMUxlY01vDcWlaAp6BEESK4Ll5et3CswKqJLFaHKSUSDlmFO7w7F3etG7d/wCCH//Z",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046977.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "spinner",
+      "primaryCategory": "Ferskvann – Gjedde",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.42,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.88,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "aktiv fisk, vegetasjon og firetigerfarger",
+      "notes": "Tydelig perch/firetiger-profil; meget aktuell til abbor og gjedde.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L121",
+      "groupName": "Inline-spinner med dressing",
       "variantIndex": 1,
       "variantCount": 1
     }

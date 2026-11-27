@@ -522,7 +522,7 @@ async function depthProfileAtPoint(lat,lon,coastNormal){
 
 const lureCatalog = Object.freeze(USER_LURE_DATA.lures.map(item=>Object.freeze(item)));
 
-// REV43: the user's lure box contains 98 individually photographed lures; strategy is computed before inventory matching.
+// REV45: the user's lure box contains 121 individually registered lure entries; strategy is computed before inventory matching.
 // Water environment is a hard gate; speciesPrior is an evidence-weighted suitability prior,
 // not a catch probability. BiteGuide is calculated independently before this matcher runs.
 function lureIsVerifiedForSpecies(item, fishType) {
