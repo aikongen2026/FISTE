@@ -1,8 +1,8 @@
 {
-  "name": "Christian sin analyserte slukboks – REV43",
-  "version": "rev42-owned-v2",
-  "count": 98,
-  "method": "98 enkeltbilder analysert og klassifisert før appintegrasjon. Artspoeng er egnethetspriorer, ikke fangstsannsynlighet. Salt/fersk-gating er hard i automatisk anbefaling.",
+  "name": "Christian sin analyserte slukboks – REV45",
+  "version": "rev45-owned-v3",
+  "count": 121,
+  "method": "121 individuelt registrerte sluker/agn og tilbehør. Nye abbor-/gjeddeagn L099–L121 er lagt til som enkeltbilder; løse jighoder er registrert, men sperret fra automatisk anbefaling alene. Artspoeng er egnethetspriorer, ikke fangstsannsynlighet. Salt/fersk-gating er hard i automatisk anbefaling.",
   "lures": [
     {
       "id": "L001",
@@ -50,7 +50,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Slank gruntgående minnow; sterk ørretprofil, også abbor.",
@@ -111,7 +111,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Naturtro minnow; klart til normalt vann.",
@@ -172,7 +172,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Attraktor-/ørretmønster; god ved lavt lys eller litt farget vann.",
@@ -229,7 +229,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast",
       "notes": "Perch/brown-trout-lignende mønster; ørret og abbor.",
@@ -289,7 +289,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Ørret-/regnbuemønster; naturtro med ekstra trigger.",
@@ -348,7 +348,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk, klart vann, presset fisk, naturlig imitasjon",
       "notes": "Litt fyldigere minnow; stor ørret og abbor.",
@@ -407,7 +407,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Flash + rosa trigger; ørret først, abbor sekundært.",
@@ -466,7 +466,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Kontrast/attraktor; passer mørkere eller farget vann.",
@@ -525,7 +525,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Liten slank wobbler; ørret, særlig når varme toner fungerer.",
@@ -585,7 +585,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Liten minnow; ørret og abbor, synlig farge.",
@@ -638,7 +638,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, presset fisk, naturlig imitasjon",
       "notes": "Naturtro brunørret-/småfiskmønster.",
@@ -695,7 +695,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast",
       "notes": "Klassisk småfiskprofil, klarvann/allround.",
@@ -753,7 +753,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Ørret-/regnbuemønster.",
@@ -814,7 +814,7 @@
         "gjedde": 0.62,
         "laks": 0.1,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Kort/fyldig crankbait; abbor svært relevant, ørret sekundært.",
@@ -877,7 +877,7 @@
         "gjedde": 0.78,
         "laks": 0.1,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk, klart vann, presset fisk, naturlig imitasjon",
       "notes": "Lipless/vibe-profil; abbor og gjedde før ørret.",
@@ -938,7 +938,7 @@
         "gjedde": 0.78,
         "laks": 0.1,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Lipless/vibe-profil; dypere/aktivt fiske etter abbor og gjedde.",
@@ -999,7 +999,7 @@
         "gjedde": 0.42,
         "laks": 0.35,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk, klart vann, presset fisk, naturlig imitasjon",
       "notes": "Abborimitasjon; abbor og stor ørret, gjedde sekundært.",
@@ -2332,7 +2332,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Kompakt ørretskje; høy kontrast og varme toner.",
@@ -2391,7 +2391,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Kompakt skje; ørret/abbor.",
@@ -2451,7 +2451,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Sølvkroken-markering og 18 g er synlig. Spesial Classic finnes i 18 g og er dokumentert ørretfavoritt.",
@@ -2511,7 +2511,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Nær identisk Sølvkroken 18 g. Primært ørret, også annen edelfisk.",
@@ -2568,7 +2568,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Smalere skje; ørret og abbor.",
@@ -2689,7 +2689,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Klassisk bred skje; ørret, gjedde sekundært.",
@@ -2748,7 +2748,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Sterk kontrast; overskyet/skumring/farget vann.",
@@ -2805,7 +2805,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Kompakt ørretskje med rosa trigger.",
@@ -2864,7 +2864,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Flash + grønn; ørret/abbor.",
@@ -2919,7 +2919,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast",
       "notes": "Mørk silhuett; lavt lys.",
@@ -2975,7 +2975,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash",
       "notes": "Sterk flash; klart vann/dagslys, også abbor.",
@@ -3033,7 +3033,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Naturlig grønn-sølv; klart vann.",
@@ -3091,7 +3091,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Naturlig grønn-sølv; ørret/abbor.",
@@ -3214,7 +3214,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Dressed skje; ørret/abbor, ekstra puls ved lav fart.",
@@ -3275,7 +3275,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Lang ørretskje; lavt lys/farget vann.",
@@ -3333,7 +3333,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast",
       "notes": "Småfiskprofil; ørret/abbor.",
@@ -3389,7 +3389,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann",
       "notes": "Varm farge; overskyet/torv-/farget vann.",
@@ -3450,7 +3450,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Klassisk ørretmønster.",
@@ -3629,7 +3629,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Sterk attraktor; kaldt/farget vann.",
@@ -3688,7 +3688,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Rosa attraktor; ørret.",
@@ -3746,7 +3746,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Sterk kontrast; ørret i kaldt/lavt lys.",
@@ -3804,7 +3804,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Sterk kontrast; ørret i kaldt/lavt lys.",
@@ -3865,7 +3865,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Skje/spinner-hybrid med dressing; ørret/abbor, gjedde sekundært.",
@@ -4041,7 +4041,7 @@
         "gjedde": 0.48,
         "laks": 0.35,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast",
       "notes": "Mørk silhuett; skumring/overskyet, ørret/abbor.",
@@ -4099,7 +4099,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast",
       "notes": "Mepps/Black-Fury-lignende profil; ørret og abbor.",
@@ -4157,7 +4157,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "attraktor, farget vann eller aktiv fisk",
       "notes": "Høy synlighet; ørret/abbor i farget vann.",
@@ -4216,7 +4216,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Black-Fury-lignende; ørret/abbor, lavt lys.",
@@ -4277,7 +4277,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Klassisk spinner; ørret/abbor, pike sekundært hvis stor.",
@@ -4334,7 +4334,7 @@
         "gjedde": 0.5,
         "laks": 0.3,
         "makrell": 0.05,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, skumring/lavt lys, kontrast",
       "notes": "Dressed spinner; ørret/abbor.",
@@ -4757,7 +4757,7 @@
         "gjedde": 0.96,
         "laks": 0.7,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Stor profil/dressing; typisk gjedde først, stor ørret/laks sekundært.",
@@ -4816,7 +4816,7 @@
         "gjedde": 0.96,
         "laks": 0.7,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk",
       "notes": "Stor attraktorprofil; gjedde først.",
@@ -4877,7 +4877,7 @@
         "gjedde": 0.96,
         "laks": 0.7,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, attraktor, farget vann eller aktiv fisk",
       "notes": "Stor spinner; gjedde først, stor laksefisk sekundært.",
@@ -4939,7 +4939,7 @@
         "gjedde": 0.82,
         "laks": 0.52,
         "makrell": 0.15,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast, attraktor, farget vann eller aktiv fisk",
       "notes": "Større minnow/deep-runner; gjedde og stor ørret, abbor sekundært.",
@@ -5058,7 +5058,7 @@
         "gjedde": 0.88,
         "laks": 0.4,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, skumring/lavt lys, kontrast",
       "notes": "Dypgående wobbler; gjedde/stor ørret/abbor, ikke typisk kyst-sjøørret.",
@@ -5175,7 +5175,7 @@
         "gjedde": 0.88,
         "laks": 0.4,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash",
       "notes": "Trolling-/deep-diver-profil; gjedde og stor innsjøørret.",
@@ -5234,7 +5234,7 @@
         "gjedde": 0.88,
         "laks": 0.4,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "overskyet/lav sol, svakt farget vann, klart vann, presset fisk, naturlig imitasjon",
       "notes": "Stor dypgående predatorwobbler; gjedde/stor ørret.",
@@ -5707,7 +5707,7 @@
         "gjedde": 0.74,
         "laks": 0.42,
         "makrell": 0.1,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "klart vann, dagslys, naturlig småfisk/flash, overskyet/lav sol, svakt farget vann, attraktor, farget vann eller aktiv fisk, presset fisk, naturlig imitasjon",
       "notes": "Rapala minnow-design er dokumentert allround for salmonider, abbor og gjedde avhengig av størrelse. Standardmodellens saltvannshardware er ukjent.",
@@ -5817,7 +5817,7 @@
         "gjedde": 0.08,
         "laks": 0.42,
         "makrell": 0.02,
-        "sei": 0.0
+        "sei": 0
       },
       "bestConditions": "skumring/lavt lys, kontrast",
       "notes": "Primært ferskvannsørret; mørke streamere kan også brukes sjøørret/elv.",
@@ -5827,6 +5827,1197 @@
       "saltwaterHardware": "ukjent",
       "groupId": "L098",
       "groupName": "Ferskvannsflue",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L099",
+      "slug": "sluk-l099",
+      "name": "L099 · Inline-spinner · sort/gulprikket",
+      "family": "Liten inline-spinner",
+      "color": "sort med gule prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "black",
+        "yellow",
+        "low-light",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l099.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.88,
+        "sjoorret": 0.02,
+        "abbor": 0.93,
+        "gjedde": 0.42,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "lavt lys og svakt farget vann",
+      "notes": "Kontrastspinner med gule prikker; fin til abbor og ørret.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L099",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L100",
+      "slug": "sluk-l100",
+      "name": "L100 · Inline-spinner · sort/rødprikket med mørk kropp",
+      "family": "Liten inline-spinner",
+      "color": "sort med røde prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "black",
+        "red",
+        "contrast",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l100.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.86,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.45,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "aktiv fisk og litt mørkere vann",
+      "notes": "Mørk spinner med røde prikker og ekstra kropp.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L100",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L101",
+      "slug": "sluk-l101",
+      "name": "L101 · Inline-spinner · hvit/gulprikket",
+      "family": "Liten inline-spinner",
+      "color": "hvit med gule prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "white",
+        "yellow",
+        "bright",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l101.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.88,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.42,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart til moderat farget vann",
+      "notes": "Lys spinner med gule prikker.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L101",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L102",
+      "slug": "sluk-l102",
+      "name": "L102 · Inline-spinner · hvit/rosa-prikket",
+      "family": "Liten inline-spinner",
+      "color": "hvit med rosa prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "white",
+        "pink",
+        "bright",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l102.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.87,
+        "sjoorret": 0.02,
+        "abbor": 0.91,
+        "gjedde": 0.4,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart vann og nøytral presentasjon",
+      "notes": "Lys spinner med rosa prikker.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L102",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L103",
+      "slug": "sluk-l103",
+      "name": "L103 · Inline-spinner · sort/rosa-prikket",
+      "family": "Liten inline-spinner",
+      "color": "sort med rosa prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "inline",
+        "black",
+        "pink",
+        "low-light",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l103.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046975.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.84,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.42,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "lavt lys og kontrastbehov",
+      "notes": "Mørk kontrastspinner med rosa prikker.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L103",
+      "groupName": "Liten inline-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L104",
+      "slug": "sluk-l104",
+      "name": "L104 · Bell-spinner · rosa/sølv med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "rosa/sølv med mørke prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "pink",
+        "silver",
+        "bright",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l104.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.9,
+        "sjoorret": 0.02,
+        "abbor": 0.9,
+        "gjedde": 0.44,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart vann og aktiv fisk",
+      "notes": "Bell-spinner med rosa/sølv-blad.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L104",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L105",
+      "slug": "sluk-l105",
+      "name": "L105 · Bell-spinner · sort/sølv med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "sort/sølv med mørke prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "black",
+        "silver",
+        "low-light",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l105.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.88,
+        "sjoorret": 0.02,
+        "abbor": 0.91,
+        "gjedde": 0.44,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "skumring og kontrast",
+      "notes": "Mørk/sølv bell-spinner.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L105",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L106",
+      "slug": "sluk-l106",
+      "name": "L106 · Bell-spinner · grønn/sølv med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "grønn/sølv med mørke prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "green",
+        "silver",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l106.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.89,
+        "sjoorret": 0.02,
+        "abbor": 0.9,
+        "gjedde": 0.46,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "normalt klart vann",
+      "notes": "Grønn/sølv bell-spinner.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L106",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L107",
+      "slug": "sluk-l107",
+      "name": "L107 · Bell-spinner · blå/sølv med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "blå/sølv med mørke prikker",
+      "species": [
+        "abbor",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "blue",
+        "silver",
+        "bright",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l107.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.89,
+        "sjoorret": 0.02,
+        "abbor": 0.9,
+        "gjedde": 0.46,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart vann og dagslys",
+      "notes": "Blå/sølv bell-spinner.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L107",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L108",
+      "slug": "sluk-l108",
+      "name": "L108 · Bell-spinner · gull/sort med prikker",
+      "family": "Bell-spinner / trout-spinner",
+      "color": "gull/sort med mørke prikker",
+      "species": [
+        "abbor",
+        "orret",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "gold",
+        "black",
+        "stained-water",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l108.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046976.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "small_spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.87,
+        "sjoorret": 0.02,
+        "abbor": 0.91,
+        "gjedde": 0.58,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "svakt farget vann og når gulltoner fisker godt",
+      "notes": "Gull/sort bell-spinner; også aktuell til mindre gjedde.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L108",
+      "groupName": "Bell-spinner / trout-spinner",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L109",
+      "slug": "sluk-l109",
+      "name": "L109 · Soft shad · oransje med abborstriper",
+      "family": "Soft shad / jigg",
+      "color": "oransje med mørke abborstriper",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "orange",
+        "dark",
+        "perch-specialist",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l109.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.35,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.84,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "svakt farget vann, aktiv fisk og struktur",
+      "notes": "Liten/middels shad med abborstriper.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L109",
+      "groupName": "Soft shad / jigg",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L110",
+      "slug": "sluk-l110",
+      "name": "L110 · Jighode · liten rund blyjigg",
+      "family": "Jighode",
+      "color": "matt bly",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "jighead",
+        "terminal",
+        "freshwater"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l110.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "jig_head",
+      "primaryCategory": "Tilbehør – jighode",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": false,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.05,
+        "sjoorret": 0.02,
+        "abbor": 0.2,
+        "gjedde": 0.2,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "brukes sammen med softbait",
+      "notes": "Løst jighode. Registrert i boksen, men anbefales ikke alene.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L110",
+      "groupName": "Jighode",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L111",
+      "slug": "sluk-l111",
+      "name": "L111 · Jighode · liten rund blyjigg nr. 2",
+      "family": "Jighode",
+      "color": "matt bly",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "jighead",
+        "terminal",
+        "freshwater"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l111.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "jig_head",
+      "primaryCategory": "Tilbehør – jighode",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": false,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.05,
+        "sjoorret": 0.02,
+        "abbor": 0.2,
+        "gjedde": 0.2,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "brukes sammen med softbait",
+      "notes": "Løst jighode. Registrert i boksen, men anbefales ikke alene.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L111",
+      "groupName": "Jighode",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L112",
+      "slug": "sluk-l112",
+      "name": "L112 · Ribbet softbait · brun/oransje glitter",
+      "family": "Softbait / paddle tail",
+      "color": "brun/oransje med glitter",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "glitter",
+        "brown",
+        "orange",
+        "freshwater-specialist"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l112.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.12,
+        "sjoorret": 0.02,
+        "abbor": 0.93,
+        "gjedde": 0.82,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "normalt til svakt farget vann, langs bunn og kanter",
+      "notes": "Ribbet shad med padletail; sterk abborprofil.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L112",
+      "groupName": "Softbait / paddle tail",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L113",
+      "slug": "sluk-l113",
+      "name": "L113 · Soft shad · chartreuse/perch-striper",
+      "family": "Soft shad / jigg",
+      "color": "chartreuse/gulgrønn med mørke striper",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "chartreuse",
+        "green",
+        "yellow",
+        "perch-specialist",
+        "stained-water"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l113.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Gjedde",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.08,
+        "sjoorret": 0.02,
+        "abbor": 0.9,
+        "gjedde": 0.95,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "farget vann og aktiv fisk",
+      "notes": "Sterk signalfarge; svært aktuell til gjedde og aktiv abbor.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L113",
+      "groupName": "Soft shad / jigg",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L114",
+      "slug": "sluk-l114",
+      "name": "L114 · Slim softbait · hvit/sølv natur",
+      "family": "Soft shad / jigg",
+      "color": "hvit/sølv naturlig",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "white",
+        "silver",
+        "natural"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l114.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.42,
+        "sjoorret": 0.02,
+        "abbor": 0.89,
+        "gjedde": 0.75,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart vann og naturtro byttefisk",
+      "notes": "Naturtro lys softbait.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L114",
+      "groupName": "Soft shad / jigg",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L115",
+      "slug": "sluk-l115",
+      "name": "L115 · Ribbet softbait · hvit/rød glitter",
+      "family": "Softbait / paddle tail",
+      "color": "hvit/rød med glitter",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "glitter",
+        "white",
+        "red",
+        "stained-water"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l115.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.15,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.8,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "farget vann, overskyet vær og aktiv fisk",
+      "notes": "Ribbet softbait med tydelig kontrast.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L115",
+      "groupName": "Softbait / paddle tail",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L116",
+      "slug": "sluk-l116",
+      "name": "L116 · Ribbet softbait · mørk blå/sort glitter",
+      "family": "Softbait / paddle tail",
+      "color": "mørk blå/sort med glitter",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "softbait",
+        "shad",
+        "dark",
+        "blue",
+        "black",
+        "glitter",
+        "low-light"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l116.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "soft_shad",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.1,
+        "sjoorret": 0.02,
+        "abbor": 0.91,
+        "gjedde": 0.78,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "lavt lys, skumring og mørkere vann",
+      "notes": "Mørk softbait med glitter.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L116",
+      "groupName": "Softbait / paddle tail",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L117",
+      "slug": "sluk-l117",
+      "name": "L117 · Jighode · middels rund blyjigg",
+      "family": "Jighode",
+      "color": "matt bly",
+      "species": [
+        "abbor",
+        "gjedde"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "jighead",
+        "terminal",
+        "freshwater"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l117.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046978.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "jig_head",
+      "primaryCategory": "Tilbehør – jighode",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": false,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.05,
+        "sjoorret": 0.02,
+        "abbor": 0.2,
+        "gjedde": 0.25,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "brukes sammen med større softbait",
+      "notes": "Løst jighode. Registrert i boksen, men anbefales ikke alene.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L117",
+      "groupName": "Jighode",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L118",
+      "slug": "sluk-l118",
+      "name": "L118 · Inline-spinner med dressing · gul/oransje tiger",
+      "family": "Inline-spinner med dressing",
+      "color": "gul/oransje tiger",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "yellow",
+        "orange",
+        "tiger",
+        "dressing",
+        "stained-water",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l118.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046977.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.52,
+        "sjoorret": 0.02,
+        "abbor": 0.94,
+        "gjedde": 0.83,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "grumsete/farget vann og aktiv fisk",
+      "notes": "Fjærkledd spinner med sterk attraktorprofil.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L118",
+      "groupName": "Inline-spinner med dressing",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L119",
+      "slug": "sluk-l119",
+      "name": "L119 · Inline-spinner med dressing · kobber/natur og hvit kropp",
+      "family": "Inline-spinner med dressing",
+      "color": "kobber/natur med hvit kropp",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "copper",
+        "white",
+        "natural",
+        "dressing",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l119.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046977.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.56,
+        "sjoorret": 0.02,
+        "abbor": 0.93,
+        "gjedde": 0.82,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "klart til moderat farget vann",
+      "notes": "Allround spinner med naturtro kobberblad.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L119",
+      "groupName": "Inline-spinner med dressing",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L120",
+      "slug": "sluk-l120",
+      "name": "L120 · Inline-spinner med dressing · sort/sølv med prikker",
+      "family": "Inline-spinner med dressing",
+      "color": "sort/sølv med lyse prikker",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "black",
+        "silver",
+        "dressing",
+        "low-light",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l120.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046977.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "spinner",
+      "primaryCategory": "Ferskvann – Abbor",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.48,
+        "sjoorret": 0.02,
+        "abbor": 0.93,
+        "gjedde": 0.8,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "lavt lys og mørkere vann",
+      "notes": "Mørkere spinner med punktmønstret blad.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L120",
+      "groupName": "Inline-spinner med dressing",
+      "variantIndex": 1,
+      "variantCount": 1
+    },
+    {
+      "id": "L121",
+      "slug": "sluk-l121",
+      "name": "L121 · Inline-spinner med dressing · grønn/oransje tiger",
+      "family": "Inline-spinner med dressing",
+      "color": "grønn/oransje tiger",
+      "species": [
+        "abbor",
+        "gjedde",
+        "orret"
+      ],
+      "waterTypes": [
+        "freshwater"
+      ],
+      "tags": [
+        "spinner",
+        "green",
+        "orange",
+        "tiger",
+        "dressing",
+        "perch-specialist",
+        "vibration"
+      ],
+      "count": "1 fotografert agn",
+      "image": "/lures/owned-v2/l121.jpg",
+      "inventoryNote": "Ditt foto · ny abbor/gjedde-boks 28.11.2026",
+      "sourceFile": "1000046977.jpg",
+      "modelIdentification": "Eksakt merke/modell er ikke fastslått fra bildet.",
+      "identificationConfidence": 0.82,
+      "lureType": "spinner",
+      "primaryCategory": "Ferskvann – Gjedde",
+      "waterUse": "fresh",
+      "allowFreshwaterAuto": true,
+      "allowSaltwaterAuto": false,
+      "speciesPrior": {
+        "orret": 0.42,
+        "sjoorret": 0.02,
+        "abbor": 0.92,
+        "gjedde": 0.88,
+        "laks": 0,
+        "makrell": 0,
+        "sei": 0
+      },
+      "bestConditions": "aktiv fisk, vegetasjon og firetigerfarger",
+      "notes": "Tydelig perch/firetiger-profil; meget aktuell til abbor og gjedde.",
+      "evidenceGroup": "generic",
+      "weightG": null,
+      "lengthCm": null,
+      "saltwaterHardware": "ukjent",
+      "groupId": "L121",
+      "groupName": "Inline-spinner med dressing",
       "variantIndex": 1,
       "variantCount": 1
     }
