@@ -489,6 +489,121 @@
       "id": "L098",
       "name": "L098 · Flueboks – flere mørke våtfluer/nymfer · boks med hovedsakelig sorte/brune våtfluer/nymfer/streamere",
       "type": "Ferskvannsflue"
+    },
+    {
+      "id": "L099",
+      "name": "L099 · Inline-spinner · sort/gulprikket",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L100",
+      "name": "L100 · Inline-spinner · sort/rødprikket med mørk kropp",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L101",
+      "name": "L101 · Inline-spinner · hvit/gulprikket",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L102",
+      "name": "L102 · Inline-spinner · hvit/rosa-prikket",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L103",
+      "name": "L103 · Inline-spinner · sort/rosa-prikket",
+      "type": "Liten inline-spinner"
+    },
+    {
+      "id": "L104",
+      "name": "L104 · Bell-spinner · rosa/sølv med prikker",
+      "type": "Bell-spinner / trout-spinner"
+    },
+    {
+      "id": "L105",
+      "name": "L105 · Bell-spinner · sort/sølv med prikker",
+      "type": "Bell-spinner / trout-spinner"
+    },
+    {
+      "id": "L106",
+      "name": "L106 · Bell-spinner · grønn/sølv med prikker",
+      "type": "Bell-spinner / trout-spinner"
+    },
+    {
+      "id": "L107",
+      "name": "L107 · Bell-spinner · blå/sølv med prikker",
+      "type": "Bell-spinner / trout-spinner"
+    },
+    {
+      "id": "L108",
+      "name": "L108 · Bell-spinner · gull/sort med prikker",
+      "type": "Bell-spinner / trout-spinner"
+    },
+    {
+      "id": "L109",
+      "name": "L109 · Soft shad · oransje med abborstriper",
+      "type": "Soft shad / jigg"
+    },
+    {
+      "id": "L110",
+      "name": "L110 · Jighode · liten rund blyjigg",
+      "type": "Jighode"
+    },
+    {
+      "id": "L111",
+      "name": "L111 · Jighode · liten rund blyjigg nr. 2",
+      "type": "Jighode"
+    },
+    {
+      "id": "L112",
+      "name": "L112 · Ribbet softbait · brun/oransje glitter",
+      "type": "Softbait / paddle tail"
+    },
+    {
+      "id": "L113",
+      "name": "L113 · Soft shad · chartreuse/perch-striper",
+      "type": "Soft shad / jigg"
+    },
+    {
+      "id": "L114",
+      "name": "L114 · Slim softbait · hvit/sølv natur",
+      "type": "Soft shad / jigg"
+    },
+    {
+      "id": "L115",
+      "name": "L115 · Ribbet softbait · hvit/rød glitter",
+      "type": "Softbait / paddle tail"
+    },
+    {
+      "id": "L116",
+      "name": "L116 · Ribbet softbait · mørk blå/sort glitter",
+      "type": "Softbait / paddle tail"
+    },
+    {
+      "id": "L117",
+      "name": "L117 · Jighode · middels rund blyjigg",
+      "type": "Jighode"
+    },
+    {
+      "id": "L118",
+      "name": "L118 · Inline-spinner med dressing · gul/oransje tiger",
+      "type": "Inline-spinner med dressing"
+    },
+    {
+      "id": "L119",
+      "name": "L119 · Inline-spinner med dressing · kobber/natur og hvit kropp",
+      "type": "Inline-spinner med dressing"
+    },
+    {
+      "id": "L120",
+      "name": "L120 · Inline-spinner med dressing · sort/sølv med prikker",
+      "type": "Inline-spinner med dressing"
+    },
+    {
+      "id": "L121",
+      "name": "L121 · Inline-spinner med dressing · grønn/oransje tiger",
+      "type": "Inline-spinner med dressing"
     }
   ]
 }
